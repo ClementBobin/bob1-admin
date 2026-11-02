@@ -442,9 +442,11 @@ export function AppTourProvider({ children }: { children: ReactNode }) {
   // Offer the full tour once on the dashboard.
   useEffect(() => {
     if (pathname !== "/" || autoStartedRef.current) return;
-    autoStartedRef.current = true;
     if (window.localStorage.getItem(SEEN_KEY)) return;
-    const timer = window.setTimeout(startTour, 1400);
+    const timer = window.setTimeout(() => {
+      autoStartedRef.current = true;
+      startTour();
+    }, 1400);
     return () => window.clearTimeout(timer);
   }, [pathname, startTour]);
 
