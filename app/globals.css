@@ -1,0 +1,242 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap");
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-card: var(--card);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-soft: var(--soft);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-soft: var(--brand-soft);
+  --color-green: var(--green);
+  --color-mint: var(--mint);
+  --color-mint-foreground: var(--mint-foreground);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+
+  /* shadcn/ui tokens (used by DiceUI and registry components) */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Manrope", "DM Sans", ui-sans-serif, system-ui, sans-serif;
+
+  --shadow-soft: 0 16px 40px rgba(57, 37, 20, 0.07);
+  --shadow-float: 0 24px 60px rgba(44, 29, 17, 0.18);
+}
+
+:root {
+  --canvas: #f4f0ea;
+  --card: #ffffff;
+  --muted: #f0eae3;
+  --line: #dcd6d0;
+  --ink: #211b17;
+  --soft: #6b645c;
+  --brand: #e86602;
+  --brand-foreground: #faf7f5;
+  --brand-soft: #fdecdd;
+  --green: #056037;
+  --mint: #cce5d6;
+  --mint-foreground: #0a4527;
+  --danger: #df202e;
+  --danger-soft: #fbe9ea;
+  --info: #197bc2;
+  --info-soft: #e7f2fb;
+
+  --background: #f4f0ea;
+  --foreground: #211b17;
+  --card-foreground: #211b17;
+  --popover: #ffffff;
+  --popover-foreground: #211b17;
+  --primary: #e86602;
+  --primary-foreground: #faf7f5;
+  --secondary: #f0eae3;
+  --secondary-foreground: #211b17;
+  --muted-foreground: #6b645c;
+  --accent: #fdecdd;
+  --accent-foreground: #211b17;
+  --destructive: #df202e;
+  --destructive-foreground: #faf7f5;
+  --border: #dcd6d0;
+  --input: #dcd6d0;
+  --ring: #e86602;
+  --radius: 0.75rem;
+}
+
+.dark {
+  --canvas: #080503;
+  --card: #110b08;
+  --muted: #211711;
+  --line: rgba(255, 255, 255, 0.1);
+  --ink: #faf7f5;
+  --soft: #aaa099;
+  --brand: #ff8a33;
+  --brand-foreground: #080503;
+  --brand-soft: #352010;
+  --green: #9dddb8;
+  --mint: #0a2a1a;
+  --mint-foreground: #9dddb8;
+  --danger: #f94144;
+  --danger-soft: #2c1113;
+  --info: #5eb3f0;
+  --info-soft: #10202c;
+
+  --background: #080503;
+  --foreground: #faf7f5;
+  --card-foreground: #faf7f5;
+  --popover: #110b08;
+  --popover-foreground: #faf7f5;
+  --primary: #ff8a33;
+  --primary-foreground: #080503;
+  --secondary: #211711;
+  --secondary-foreground: #faf7f5;
+  --muted-foreground: #aaa099;
+  --accent: #352010;
+  --accent-foreground: #faf7f5;
+  --destructive: #f94144;
+  --destructive-foreground: #080503;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: #ff8a33;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: light;
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--brand) 28%, transparent);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--soft) 35%, transparent) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--soft) 35%, transparent);
+  border-radius: 99px;
+}
+
+@keyframes drawer-in {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-drawer {
+  animation: drawer-in 0.22s ease-out;
+}
+
+.animate-fade {
+  animation: fade-in 0.18s ease-out;
+}
+
+.animate-toast {
+  animation: toast-in 0.2s ease-out;
+}
+
+.animate-pop {
+  animation: pop-in 0.16s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
