@@ -1,15 +1,6 @@
 "use client";
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import {
@@ -28,7 +19,7 @@ import {
   TourStep,
   TourTitle,
 } from "@/components/ui/tour";
-import { useToast } from "@/components/toast";
+import { toast } from "sonner";
 
 const SEEN_KEY = "bob1-tour-seen";
 const COMPLETE_KEY = "bob1-tour-complete";
@@ -49,8 +40,7 @@ const allSteps: TourStepConfig[] = [
     side: "right",
     align: "start",
     title: "Votre menu de gestion",
-    description:
-      "Naviguez entre les matchs, les équipes, les personnes, les classements et les paramètres du club.",
+    description: "Naviguez entre les matchs, les équipes, les personnes, les classements et les paramètres du club.",
     page: "/",
     desktopOnly: true,
   },
@@ -59,8 +49,7 @@ const allSteps: TourStepConfig[] = [
     side: "bottom",
     align: "start",
     title: "Recherche globale",
-    description:
-      "Retrouvez n'importe quelle page en un instant. Astuce : appuyez sur Ctrl + K depuis n'importe où.",
+    description: "Retrouvez n'importe quelle page en un instant. Astuce : appuyez sur Ctrl + K depuis n'importe où.",
     page: "/",
   },
   {
@@ -68,8 +57,7 @@ const allSteps: TourStepConfig[] = [
     side: "bottom",
     align: "end",
     title: "Notifications",
-    description:
-      "Les alertes du club arrivent ici : convocations, feuilles de match, paiements et rappels.",
+    description: "Les alertes du club arrivent ici : convocations, feuilles de match, paiements et rappels.",
     page: "/",
   },
   {
@@ -85,8 +73,7 @@ const allSteps: TourStepConfig[] = [
     side: "bottom",
     align: "end",
     title: "Votre espace",
-    description:
-      "Accédez à votre profil, aux paramètres du club et relancez la visite guidée depuis ce menu.",
+    description: "Accédez à votre profil, aux paramètres du club et relancez la visite guidée depuis ce menu.",
     page: "/",
   },
   {
@@ -94,8 +81,7 @@ const allSteps: TourStepConfig[] = [
     side: "bottom",
     align: "start",
     title: "L'essentiel en un coup d'œil",
-    description:
-      "Les indicateurs clés : matchs à venir, postes non pourvus, confirmations en attente et pénalités.",
+    description: "Les indicateurs clés : matchs à venir, postes non pourvus, confirmations en attente et pénalités.",
     page: "/",
   },
   {
@@ -120,8 +106,7 @@ const allSteps: TourStepConfig[] = [
     side: "left",
     align: "start",
     title: "Activité récente",
-    description:
-      "Suivez les dernières actions des bénévoles et administrateurs pour ne rien manquer.",
+    description: "Suivez les dernières actions des bénévoles et administrateurs pour ne rien manquer.",
     page: "/",
   },
   {
@@ -129,8 +114,7 @@ const allSteps: TourStepConfig[] = [
     side: "bottom",
     align: "start",
     title: "Gérer les matchs",
-    description:
-      "Créez, modifiez et suivez l'état de chaque rencontre. Les statuts indiquent ce qu'il reste à faire.",
+    description: "Créez, modifiez et suivez l'état de chaque rencontre. Les statuts indiquent ce qu'il reste à faire.",
     page: "/matches",
   },
   {
@@ -360,7 +344,6 @@ function getElement(selector: string) {
 export function AppTourProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [index, setIndex] = useState(0);
   const [isDesktop, setIsDesktop] = useState(true);
@@ -376,10 +359,7 @@ export function AppTourProvider({ children }: { children: ReactNode }) {
     return () => query.removeEventListener("change", update);
   }, []);
 
-  const steps = useMemo(
-    () => allSteps.filter((item) => !item.desktopOnly || isDesktop),
-    [isDesktop]
-  );
+  const steps = useMemo(() => allSteps.filter((item) => !item.desktopOnly || isDesktop), [isDesktop]);
 
   const current = steps[index];
 
@@ -424,7 +404,7 @@ export function AppTourProvider({ children }: { children: ReactNode }) {
       }
       return false;
     },
-    [pathname, router, steps]
+    [pathname, router, steps],
   );
 
   const startTour = useCallback(() => {
@@ -470,7 +450,7 @@ export function AppTourProvider({ children }: { children: ReactNode }) {
     if (index >= steps.length - 1) {
       setOpen(false);
       window.localStorage.setItem(COMPLETE_KEY, "1");
-      toast("Visite complète terminée. Vous connaissez tout le back-office BOB1.");
+      toast.success("Visite complète terminée. Vous connaissez tout le back-office BOB1.");
       return;
     }
     const nextIndex = index + 1;
@@ -478,7 +458,7 @@ export function AppTourProvider({ children }: { children: ReactNode }) {
     setIndex(nextIndex);
     setOpen(true);
     if (steps[nextIndex]) reveal(steps[nextIndex].target);
-  }, [ensureOnPage, index, reveal, steps, toast]);
+  }, [ensureOnPage, index, reveal, steps]);
 
   const goPrev = useCallback(() => {
     if (index <= 0) return;
@@ -492,8 +472,8 @@ export function AppTourProvider({ children }: { children: ReactNode }) {
   const skip = useCallback(() => {
     setOpen(false);
     window.localStorage.setItem(COMPLETE_KEY, "1");
-    toast("Visite ignorée. Relancez-la depuis le menu profil ou la barre latérale.", "info");
-  }, [toast]);
+    toast.info("Visite ignorée. Relancez-la depuis le menu profil ou la barre latérale.");
+  }, []);
 
   const contextValue = useMemo(() => ({ startTour }), [startTour]);
 
@@ -516,11 +496,7 @@ export function AppTourProvider({ children }: { children: ReactNode }) {
               {pageName} • Étape {index + 1} / {steps.length}
             </span>
             <div className="flex flex-wrap items-center justify-end gap-1.5">
-              <TourSkip
-                variant="ghost"
-                className="h-8 px-2.5 text-[11.5px] font-bold text-soft"
-                onClick={skip}
-              >
+              <TourSkip variant="ghost" className="h-8 px-2.5 text-[11.5px] font-bold text-soft" onClick={skip}>
                 Passer
               </TourSkip>
               <TourPrev
@@ -559,12 +535,8 @@ export function AppTourProvider({ children }: { children: ReactNode }) {
               <TourArrow />
               <TourClose aria-label="Fermer la visite guidée" className="text-soft hover:text-ink" />
               <TourHeader className="text-left">
-                <TourTitle className="font-display text-[15px] font-extrabold">
-                  {step.title}
-                </TourTitle>
-                <TourDescription className="text-[12px] leading-relaxed">
-                  {step.description}
-                </TourDescription>
+                <TourTitle className="font-display text-[15px] font-extrabold">{step.title}</TourTitle>
+                <TourDescription className="text-[12px] leading-relaxed">{step.description}</TourDescription>
               </TourHeader>
             </TourStep>
           ))}

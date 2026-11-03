@@ -1,40 +1,44 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { MapPin, MoreHorizontal, Plus } from "lucide-react";
+import { MapPin, MoreHorizontal, Plus, Map, Globe } from "lucide-react";
 import { venues } from "@/lib/data";
 import { api, errorMessage, USE_MOCK, type VenueDto } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
-import { useToast } from "@/components/toast";
-import {
-  DataTable,
-  Drawer,
-  DrawerFooter,
-  Filters,
-  FormField,
-  PageHeader,
-  SelectInput,
-  Status,
-  TextInput,
-} from "@/components/ui";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { OptionSelect } from "@/components/option-select";
+import { Status } from "@/components/status";
+import { DataTable } from "@/components/data-table";
+import { Filters } from "@/components/filters";
+import { PageHeader } from "@/components/page-header";
+import { FormSheet, FormSheetFooter } from "@/components/form-sheet";
 
 type VenueRow = {
   id: string;
   name: string;
   address: string;
   city: string;
+  postalCode: string;
   matches: string;
-  status: string;
 };
 
-const initial: VenueRow[] = venues.map((item) => ({ ...item }));
+const initial: VenueRow[] = venues.map((item) => ({
+  id: item.id,
+  name: item.name,
+  address: item.address,
+  city: item.city,
+  postalCode: item.postalCode,
+  matches: item.matches,
+}));
 
 function Form({ row, onSave }: { row: VenueRow | null; onSave: (row: VenueRow) => void }) {
   const [name, setName] = useState(row?.name ?? "Nouveau gymnase");
   const [address, setAddress] = useState(row?.address ?? "12 rue des Sports");
   const [city, setCity] = useState(row?.city ?? "Montpellier");
-  const [postal, setPostal] = useState("34000");
-  const [status, setStatus] = useState(row?.status ?? "Actif");
+  const [postalCode, setPostalCode] = useState(row?.postalCode ?? "34000");
 
   return (
     <form
@@ -46,62 +50,132 @@ function Form({ row, onSave }: { row: VenueRow | null; onSave: (row: VenueRow) =
           name,
           address,
           city,
+          postalCode,
           matches: row?.matches ?? "—",
-          status,
         });
       }}
       className="flex flex-col gap-4"
     >
       <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
-        <FormField label="Nom du lieu" wide>
-          <TextInput value={name} onChange={(event) => setName(event.target.value)} required />
-        </FormField>
-        <FormField label="Adresse" wide>
-          <TextInput value={address} onChange={(event) => setAddress(event.target.value)} required />
-        </FormField>
-        {USE_MOCK ? (
-          <>
-            <FormField label="Ville">
-              <TextInput value={city} onChange={(event) => setCity(event.target.value)} required />
-            </FormField>
-            <FormField label="Code postal">
-              <TextInput value={postal} onChange={(event) => setPostal(event.target.value)} inputMode="numeric" />
-            </FormField>
-            <FormField label="Statut" wide>
-              <SelectInput value={status} onChange={(event) => setStatus(event.target.value)} options={["Actif", "Externe", "Fermé"]} />
-            </FormField>
-          </>
-        ) : (
-          <p className="col-span-full rounded-xl bg-muted px-3.5 py-3 text-[11px] leading-relaxed text-soft">
-            L&apos;API enregistre une adresse libre. La ville, le code postal et le statut ne sont pas encore
-            modélisés.
-          </p>
-        )}
+        <Field className="col-span-full">
+          <FieldLabel htmlFor="venues-field-32" className="text-[11px] font-bold text-muted-foreground">
+            Nom du lieu
+          </FieldLabel>
+          <Input id="venues-field-32" value={name} onChange={(event) => setName(event.target.value)} required />
+        </Field>
+        <Field className="col-span-full">
+          <FieldLabel htmlFor="venues-field-33" className="text-[11px] font-bold text-muted-foreground">
+            Adresse
+          </FieldLabel>
+          <Input id="venues-field-33" value={address} onChange={(event) => setAddress(event.target.value)} required />
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="venues-field-34" className="text-[11px] font-bold text-muted-foreground">
+            Ville
+          </FieldLabel>
+          <Input id="venues-field-34" value={city} onChange={(event) => setCity(event.target.value)} required />
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="venues-field-35" className="text-[11px] font-bold text-muted-foreground">
+            Code postal
+          </FieldLabel>
+          <Input
+            id="venues-field-35"
+            value={postalCode}
+            onChange={(event) => setPostalCode(event.target.value)}
+            inputMode="numeric"
+            maxLength={5}
+          />
+        </Field>
       </div>
 
-      {USE_MOCK && (
-        <div>
-          <span className="mb-1.5 block text-[11px] font-bold text-soft">Aperçu de la position</span>
-          <div className="flex h-[142px] flex-col items-center justify-center gap-2 rounded-[13px] bg-[linear-gradient(135deg,var(--muted),color-mix(in_srgb,var(--mint)_60%,var(--muted)))] text-[11px] font-semibold text-mint-foreground">
-            <MapPin size={26} />
-            <span>
-              {address}, {postal} {city}
-            </span>
-            <small className="text-[10px] font-medium opacity-70">Aperçu cartographique de démonstration</small>
-          </div>
-        </div>
-      )}
+      <div>
+        <span className="mb-1.5 block text-[11px] font-bold text-soft">Aperçu de la position</span>
+        <MapPreview address={address} city={city} postalCode={postalCode} />
+      </div>
     </form>
+  );
+}
+
+// Map preview component using Leaflet
+function MapPreview({ address, city, postalCode }: { address: string; city: string; postalCode: string }) {
+  const [map, setMap] = useState<any>(null);
+  const mapContainerRef = useState<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (map) return;
+
+    // Dynamic import to avoid SSR issues
+    import("leaflet").then((L) => {
+      import("leaflet/dist/leaflet.css").catch(() => {});
+
+      // Fix default marker icons
+      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+        iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+        shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+      });
+
+      const container = document.getElementById("venue-map-preview");
+      if (!container) return;
+
+      const newMap = L.map(container, {
+        zoomControl: false,
+        attributionControl: false,
+        dragging: false,
+        scrollWheelZoom: false,
+        doubleClickZoom: false,
+        boxZoom: false,
+        keyboard: false,
+      } as L.MapOptions).setView([43.6108, 3.8767], 13); // Default to Montpellier
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+      }).addTo(newMap);
+
+      // Geocode address using Nominatim
+      const fullAddress = `${address}, ${postalCode} ${city}, France`;
+      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddress)}&limit=1`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.length > 0) {
+            const lat = parseFloat(data[0].lat);
+            const lon = parseFloat(data[0].lon);
+            newMap.setView([lat, lon], 15);
+            L.marker([lat, lon]).addTo(newMap).bindPopup(`${address}<br>${postalCode} ${city}`).openPopup();
+          }
+        })
+        .catch(() => {
+          // Fallback to default location
+        });
+
+      setMap(newMap);
+    });
+
+    return () => {
+      if (map) {
+        map.remove();
+        setMap(null);
+      }
+    };
+  }, [address, city, postalCode, map]);
+
+  return (
+    <div
+      id="venue-map-preview"
+      className="flex h-[200px] flex-col items-center justify-center gap-2 rounded-[13px] bg-[linear-gradient(135deg,var(--muted),color-mix(in_srgb,var(--mint)_60%,var(--muted)))] text-[11px] font-semibold text-mint-foreground"
+    >
+      <div className="w-full h-full" style={{ minHeight: 200 }} />
+    </div>
   );
 }
 
 export default function VenuesPage() {
   const [rows, setRows] = useState<VenueRow[]>(USE_MOCK ? initial : []);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("Tous les statuts");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<VenueRow | null>(null);
-  const { toast } = useToast();
 
   const { data: apiVenues, loading, error, reload } = useApiData<VenueDto[]>(() => api.venues.list(), []);
 
@@ -112,21 +186,20 @@ export default function VenuesPage() {
         id: venue.id,
         name: venue.name,
         address: venue.address ?? "—",
-        city: "—",
+        city: venue.city ?? "—",
+        postalCode: venue.postalCode ?? "—",
         matches: "—",
-        status: "Actif",
-      }))
+      })),
     );
   }, [apiVenues]);
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
     return rows.filter((row) => {
-      const matchSearch = `${row.name} ${row.address} ${row.city}`.toLowerCase().includes(needle);
-      const matchStatus = status === "Tous les statuts" || row.status === status;
-      return matchSearch && matchStatus;
+      const matchSearch = `${row.name} ${row.address} ${row.city} ${row.postalCode}`.toLowerCase().includes(needle);
+      return matchSearch;
     });
-  }, [rows, search, status]);
+  }, [rows, search]);
 
   const openCreate = () => {
     setEditing(null);
@@ -142,25 +215,28 @@ export default function VenuesPage() {
     if (USE_MOCK) {
       if (editing) {
         setRows((current) => current.map((item) => (item.id === row.id ? row : item)));
-        toast("Le lieu a été mis à jour.");
+        toast.success("Le lieu a été mis à jour.");
       } else {
         setRows((current) => [row, ...current]);
-        toast("Le lieu a été ajouté.");
+        toast.success("Le lieu a été ajouté.");
       }
       setDrawerOpen(false);
       setEditing(null);
       return;
     }
 
+    const address = row.address.trim() === "" || row.address === "—" ? null : row.address.trim();
+    const city = row.city.trim() === "" || row.city === "—" ? null : row.city.trim();
+    const postalCode = row.postalCode.trim() === "" || row.postalCode === "—" ? null : row.postalCode.trim();
     try {
-      if (editing) await api.venues.update(row.id, { name: row.name, address: row.address });
-      else await api.venues.create({ name: row.name, address: row.address });
+      if (editing) await api.venues.update(row.id, { name: row.name, address, city, postalCode });
+      else await api.venues.create({ name: row.name, address, city, postalCode });
       await reload();
-      toast(editing ? "Le lieu a été mis à jour." : "Le lieu a été ajouté.");
+      toast.success(editing ? "Le lieu a été mis à jour." : "Le lieu a été ajouté.");
       setDrawerOpen(false);
       setEditing(null);
     } catch (cause) {
-      toast(errorMessage(cause), "danger");
+      toast.error(errorMessage(cause));
     }
   };
 
@@ -170,25 +246,16 @@ export default function VenuesPage() {
         id="tour-venues-header"
         eyebrow="Référentiels"
         title="Lieux"
-        description="Centralisez les gymnases et adresses."
+        description="Centralisez les gymnases et adresses avec ville et code postal."
         action={{ label: "Ajouter un lieu", icon: Plus, onClick: openCreate }}
       />
 
       <Filters
         search={search}
         onSearch={setSearch}
-        searchPlaceholder="Rechercher un gymnase, une ville…"
-        selects={[
-          {
-            label: "Statut",
-            value: status,
-            options: ["Tous les statuts", "Actif", "Externe", "Fermé"],
-            onChange: setStatus,
-          },
-        ]}
+        searchPlaceholder="Rechercher un gymnase, une ville, un code postal…"
         onReset={() => {
           setSearch("");
-          setStatus("Tous les statuts");
         }}
       />
 
@@ -200,8 +267,8 @@ export default function VenuesPage() {
         id="tour-venues-table"
         rows={filtered}
         rowKey={(row) => row.id}
-        minWidth={820}
-        grid="1.3fr 1.3fr 1fr .9fr .8fr 36px"
+        minWidth={900}
+        grid="1.3fr 1.3fr 1fr .8fr .8fr 36px"
         emptyMessage={loading ? "Chargement des lieux…" : undefined}
         columns={[
           {
@@ -215,36 +282,37 @@ export default function VenuesPage() {
             ),
           },
           { key: "address", label: "Adresse", render: (row) => row.address },
-          { key: "city", label: "Ville", render: (row) => row.city },
-          { key: "matches", label: "Matchs à venir", render: (row) => row.matches },
           {
-            key: "status",
-            label: "Statut",
-            render: (row) => (
-              <Status tone={row.status === "Actif" ? "success" : row.status === "Externe" ? "info" : "neutral"}>
-                {row.status}
-              </Status>
-            ),
+            key: "city",
+            label: "Ville / CP",
+            render: (row) => `${row.city} ${row.postalCode !== "—" ? row.postalCode : ""}`.trim(),
           },
+          { key: "matches", label: "Matchs à venir", render: (row) => row.matches },
           {
             key: "actions",
             label: "",
             render: (row) => (
-              <button onClick={() => openEdit(row)} aria-label="Modifier" className="grid size-8 place-items-center rounded-lg text-soft transition hover:bg-muted">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="text-muted-foreground"
+                onClick={() => openEdit(row)}
+                aria-label="Modifier"
+              >
                 <MoreHorizontal size={16} />
-              </button>
+              </Button>
             ),
           },
         ]}
       />
 
-      <Drawer
+      <FormSheet
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         title={editing ? "Modifier le lieu" : "Ajouter un lieu"}
         subtitle="Adresse et géolocalisation"
         footer={
-          <DrawerFooter
+          <FormSheetFooter
             onCancel={() => setDrawerOpen(false)}
             submitLabel={editing ? "Enregistrer" : "Ajouter le lieu"}
             form="venue-form"
@@ -252,7 +320,7 @@ export default function VenuesPage() {
         }
       >
         {drawerOpen && <Form key={editing?.id ?? "new"} row={editing} onSave={save} />}
-      </Drawer>
+      </FormSheet>
     </>
   );
 }

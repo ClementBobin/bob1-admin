@@ -1,6 +1,8 @@
 import {
   Bell,
   CalendarDays,
+  Clock,
+  History,
   LayoutDashboard,
   MapPin,
   ShieldAlert,
@@ -30,6 +32,6 @@ export const adminNav: NavItem[] = [
   { href: "/families", label: "Familles", icon: UsersRound },
   { href: "/rankings", label: "Classements", icon: Trophy },
   { href: "/rules", label: "Règles de points", icon: SlidersHorizontal },
-  { href: "/penalties", label: "Pénalités", icon: ShieldAlert, badge: "3" },
+  { href: "/points-history", label: "Historique des points", icon: History },
   { href: "/notifications", label: "Notifications", icon: Bell },
 ];

@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
-import { ToastProvider } from "@/components/toast";
+import { ThemeProvider } from "next-themes";
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/components/auth-provider";
 import { AppTourProvider } from "@/components/app-tour";
 
@@ -14,20 +16,24 @@ export const metadata: Metadata = {
     "Back-office du club de basket BOB1 Montpellier : matchs, équipes, membres, classements et communication.",
 };
 
-const themeScript = `try{var t=localStorage.getItem("bob1-theme");if(t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.classList.add("dark")}}catch(e){}`;
-
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="fr" suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-      </head>
       <body>
-        <ToastProvider>
-          <AuthProvider>
-            <AppTourProvider>{children}</AppTourProvider>
-          </AuthProvider>
-        </ToastProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          storageKey="bob1-theme"
+          disableTransitionOnChange
+        >
+          <TooltipProvider>
+            <AuthProvider>
+              <AppTourProvider>{children}</AppTourProvider>
+            </AuthProvider>
+          </TooltipProvider>
+          <Toaster richColors position="bottom-right" />
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -1,24 +1,21 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { MoreHorizontal, Plus } from "lucide-react";
+import { MoreHorizontal, Plus, Shield } from "lucide-react";
 import { divisions } from "@/lib/data";
 import { divisionToRow, teamCountByDivision } from "@/lib/adapters";
 import { api, errorMessage, USE_MOCK, type DivisionDto, type TeamDto } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
-import { useToast } from "@/components/toast";
-import {
-  Button,
-  DataTable,
-  Drawer,
-  DrawerFooter,
-  Filters,
-  FormField,
-  PageHeader,
-  SelectInput,
-  Status,
-  TextInput,
-} from "@/components/ui";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { OptionSelect } from "@/components/option-select";
+import { Status } from "@/components/status";
+import { DataTable } from "@/components/data-table";
+import { Filters } from "@/components/filters";
+import { PageHeader } from "@/components/page-header";
+import { FormSheet, FormSheetFooter } from "@/components/form-sheet";
 
 type DivisionRow = {
   id: string;
@@ -33,18 +30,16 @@ type DivisionRow = {
 const initial: DivisionRow[] = divisions.map((item, index) => ({ ...item, sortOrder: index + 1 }));
 
 const statusTone = (status: string) => (status === "Active" ? ("success" as const) : ("neutral" as const));
+const categoryOptions = ["U11", "U13", "U15", "U17", "U18", "Senior"];
+const genderOptions = ["Masculin", "Féminin", "Mixte"];
+const statusOptions = ["Active", "Inactive"];
 
-function Form({
-  row,
-  onSave,
-}: {
-  row: DivisionRow | null;
-  onSave: (row: DivisionRow) => void;
-}) {
+function Form({ row, onSave }: { row: DivisionRow | null; onSave: (row: DivisionRow) => void }) {
   const [name, setName] = useState(row?.name ?? "U18 Masculins");
   const [category, setCategory] = useState(row?.category ?? "U18");
   const [gender, setGender] = useState(row?.gender ?? "Masculin");
   const [status, setStatus] = useState(row?.status ?? "Active");
+  const [sortOrder, setSortOrder] = useState(row?.sortOrder ?? 99);
 
   return (
     <form
@@ -58,34 +53,49 @@ function Form({
           gender,
           teams: row?.teams ?? "0 équipe",
           status,
-          sortOrder: row?.sortOrder ?? 99,
+          sortOrder,
         });
       }}
       className="flex flex-col gap-4"
     >
       <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
-        <FormField label="Nom" wide>
-          <TextInput value={name} onChange={(event) => setName(event.target.value)} required />
-        </FormField>
-        {USE_MOCK && (
-          <>
-            <FormField label="Catégorie">
-              <SelectInput value={category} onChange={(event) => setCategory(event.target.value)} options={["U11", "U13", "U15", "U17", "U18", "Senior"]} />
-            </FormField>
-            <FormField label="Genre">
-              <SelectInput value={gender} onChange={(event) => setGender(event.target.value)} options={["Masculin", "Féminin", "Mixte"]} />
-            </FormField>
-            <FormField label="Statut">
-              <SelectInput value={status} onChange={(event) => setStatus(event.target.value)} options={["Active", "Archivée"]} />
-            </FormField>
-          </>
-        )}
+        <Field className="col-span-full">
+          <FieldLabel htmlFor="divisions-field-1" className="text-[11px] font-bold text-muted-foreground">
+            Nom
+          </FieldLabel>
+          <Input id="divisions-field-1" value={name} onChange={(event) => setName(event.target.value)} required />
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="divisions-field-2" className="text-[11px] font-bold text-muted-foreground">
+            Ordre d'affichage
+          </FieldLabel>
+          <Input
+            id="divisions-field-2"
+            type="number"
+            value={String(sortOrder)}
+            onChange={(event) => setSortOrder(Number(event.target.value))}
+            min={0}
+          />
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="divisions-field-3" className="text-[11px] font-bold text-muted-foreground">
+            Catégorie
+          </FieldLabel>
+          <OptionSelect id="divisions-field-3" value={category} onValueChange={setCategory} options={categoryOptions} />
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="divisions-field-4" className="text-[11px] font-bold text-muted-foreground">
+            Genre
+          </FieldLabel>
+          <OptionSelect id="divisions-field-4" value={gender} onValueChange={setGender} options={genderOptions} />
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="divisions-field-5" className="text-[11px] font-bold text-muted-foreground">
+            Statut
+          </FieldLabel>
+          <OptionSelect id="divisions-field-5" value={status} onValueChange={setStatus} options={statusOptions} />
+        </Field>
       </div>
-      {!USE_MOCK && (
-        <p className="rounded-xl bg-muted px-3.5 py-3 text-[11px] leading-relaxed text-soft">
-          La catégorie et le genre sont déduits du nom de la division (par exemple « U13 M »).
-        </p>
-      )}
     </form>
   );
 }
@@ -95,12 +105,8 @@ export default function DivisionsPage() {
   const [search, setSearch] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<DivisionRow | null>(null);
-  const { toast } = useToast();
 
-  const { data: apiDivisions, loading, error, reload } = useApiData<DivisionDto[]>(
-    () => api.divisions.list(),
-    []
-  );
+  const { data: apiDivisions, loading, error, reload } = useApiData<DivisionDto[]>(() => api.divisions.list(), []);
   const { data: apiTeams } = useApiData<TeamDto[]>(() => api.teams.list(), []);
 
   useEffect(() => {
@@ -128,10 +134,10 @@ export default function DivisionsPage() {
     if (USE_MOCK) {
       if (editing) {
         setRows((current) => current.map((item) => (item.id === row.id ? row : item)));
-        toast("La division a été mise à jour.");
+        toast.success("La division a été mise à jour.");
       } else {
         setRows((current) => [row, ...current]);
-        toast("La division a été créée.");
+        toast.success("La division a été créée.");
       }
       setDrawerOpen(false);
       setEditing(null);
@@ -139,14 +145,28 @@ export default function DivisionsPage() {
     }
 
     try {
-      if (editing) await api.divisions.update(row.id, { name: row.name, sortOrder: row.sortOrder });
-      else await api.divisions.create({ name: row.name, sortOrder: rows.length + 1 });
+      if (editing)
+        await api.divisions.update(row.id, {
+          name: row.name,
+          sortOrder: row.sortOrder,
+          category: row.category,
+          gender: row.gender,
+          isActive: row.status === "Active",
+        });
+      else
+        await api.divisions.create({
+          name: row.name,
+          sortOrder: row.sortOrder,
+          category: row.category,
+          gender: row.gender,
+          isActive: row.status === "Active",
+        });
       await reload();
-      toast(editing ? "La division a été mise à jour." : "La division a été créée.");
+      toast.success(editing ? "La division a été mise à jour." : "La division a été créée.");
       setDrawerOpen(false);
       setEditing(null);
     } catch (cause) {
-      toast(errorMessage(cause), "danger");
+      toast.error(errorMessage(cause));
     }
   };
 
@@ -156,7 +176,7 @@ export default function DivisionsPage() {
         id="tour-divisions-header"
         eyebrow="Référentiels"
         title="Divisions"
-        description="Structurez les catégories du club."
+        description="Structurez les catégories du club (nom, catégorie, genre, statut)."
         action={{ label: "Créer une division", icon: Plus, onClick: openCreate }}
       />
 
@@ -176,33 +196,44 @@ export default function DivisionsPage() {
         rows={filtered}
         rowKey={(row) => row.id}
         minWidth={760}
-        grid="1.4fr 1fr 1fr 1fr .8fr 36px"
+        grid="1.4fr 1fr 1fr 1fr .8fr .8fr 36px"
         emptyMessage={loading ? "Chargement des divisions…" : undefined}
         columns={[
           { key: "name", label: "Nom", render: (row) => <strong>{row.name}</strong> },
           { key: "category", label: "Catégorie", render: (row) => row.category },
           { key: "gender", label: "Genre", render: (row) => row.gender },
           { key: "teams", label: "Équipes", render: (row) => row.teams },
-          { key: "status", label: "Statut", render: (row) => <Status tone={statusTone(row.status)}>{row.status}</Status> },
+          { key: "sortOrder", label: "Ordre", render: (row) => String(row.sortOrder) },
+          {
+            key: "status",
+            label: "Statut",
+            render: (row) => <Status tone={statusTone(row.status)}>{row.status}</Status>,
+          },
           {
             key: "actions",
             label: "",
             render: (row) => (
-              <button onClick={() => openEdit(row)} aria-label="Modifier" className="grid size-8 place-items-center rounded-lg text-soft transition hover:bg-muted">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="text-muted-foreground"
+                onClick={() => openEdit(row)}
+                aria-label="Modifier"
+              >
                 <MoreHorizontal size={16} />
-              </button>
+              </Button>
             ),
           },
         ]}
       />
 
-      <Drawer
+      <FormSheet
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         title={editing ? "Modifier la division" : "Créer une division"}
         subtitle="Informations générales"
         footer={
-          <DrawerFooter
+          <FormSheetFooter
             onCancel={() => setDrawerOpen(false)}
             submitLabel={editing ? "Enregistrer" : "Créer la division"}
             form="division-form"
@@ -210,7 +241,7 @@ export default function DivisionsPage() {
         }
       >
         {drawerOpen && <Form key={editing?.id ?? "new"} row={editing} onSave={save} />}
-      </Drawer>
+      </FormSheet>
     </>
   );
 }

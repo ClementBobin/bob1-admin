@@ -5,10 +5,14 @@ import type {
   MatchStatus,
   PenaltyDto,
   PersonDto,
-  RankingRowDto,
+  PersonRankingRowDto,
+  FamilyRankingRowDto,
+  RankingRuleDto,
   TeamDto,
+  VenueDto,
+  EntryDto,
 } from "@/lib/api";
-import type { Family, MatchRow, PenaltyRow, Person, RankingRow } from "@/lib/data";
+import type { Family, MatchRow, HistoryEntry, Person, PersonRankingRow, FamilyRankingRow, RuleRow } from "@/lib/data";
 
 export function formatDateTime(iso: string): string {
   const date = new Date(iso);
@@ -43,7 +47,6 @@ export function matchToRow(match: MatchDto): MatchRow {
     home: match.isHome ? "BOB1" : match.opponent,
     away: match.isHome ? match.opponent : "BOB1",
     venue: match.venueName,
-    // The admin API does not expose aggregate slot/carpool fill yet.
     officials: [0, 0],
     buvette: [0, 0],
     carpool: "—",
@@ -66,6 +69,7 @@ export function familyToRow(family: AdminFamilyDto): Family {
   const parents = family.members.map((member) => `${member.firstName} ${member.lastName}`.trim());
   const children = family.children.map((child) => child.firstName);
   const size = family.members.length + family.children.length;
+  const hasInactiveAccounts = family.members.some((m) => !m.isActive);
   return {
     id: family.id,
     name: family.name,
@@ -74,32 +78,66 @@ export function familyToRow(family: AdminFamilyDto): Family {
     size: `${size} membre${size > 1 ? "s" : ""}`,
     accounts: `${family.members.length} compte${family.members.length > 1 ? "s" : ""}`,
     status: family.members.length > 0 ? "Complet" : "À compléter",
+    hasInactiveAccounts,
   };
 }
 
-export function rankingToRow(row: RankingRowDto): RankingRow {
+export function personRankingToRow(row: PersonRankingRowDto): PersonRankingRow {
   return {
     rank: row.rank,
-    member: row.familyName,
-    participations: 0,
-    bonus: row.points > 0 ? row.points : 0,
-    penalties: row.points < 0 ? row.points : 0,
-    total: row.points,
+    person: row.personName,
+    family: row.familyName ?? "—",
+    points: row.points,
     highlight: row.isMine,
   };
 }
 
-export function penaltyToRow(penalty: PenaltyDto): PenaltyRow {
+export function familyRankingToRow(row: FamilyRankingRowDto): FamilyRankingRow {
+  return {
+    rank: row.rank,
+    family: row.familyName,
+    points: row.points,
+    highlight: row.isMine,
+  };
+}
+
+export function ruleToRow(rule: RankingRuleDto): RuleRow {
+  return {
+    key: rule.key,
+    category: rule.category,
+    label: rule.label,
+    points: rule.points,
+    pointsJ15: rule.pointsJ15 ?? undefined,
+    pointsJ4: rule.pointsJ4 ?? undefined,
+    hasJ15J4: rule.hasJ15J4,
+  };
+}
+
+export function historyEntryToRow(entry: EntryDto): HistoryEntry {
+  return {
+    id: entry.id,
+    person: entry.personName,
+    category: entry.category,
+    points: entry.points,
+    reason: entry.reason,
+    match: entry.matchId ? `Match ${entry.matchId.slice(0, 8)}` : "—",
+    date: formatDate(entry.createdAtUtc),
+    isPenalty: entry.category === "penalty" && entry.points < 0,
+    isRevoked: entry.points > 0 && entry.reason.startsWith("Annulation"),
+  };
+}
+
+export function penaltyToRow(penalty: PenaltyDto): HistoryEntry {
   return {
     id: penalty.id,
-    person: penalty.familyName,
-    match: penalty.matchId ? `Match ${penalty.matchId.slice(0, 8)}` : "—",
-    reason: penalty.reason,
+    person: penalty.personName,
+    category: "penalty",
     points: penalty.points,
-    exclusion: false,
-    created: formatDate(penalty.createdAtUtc),
-    // The API has no "read" state for penalties; a ledger entry is final until revoked.
-    status: "Reconnue",
+    reason: penalty.reason,
+    match: penalty.matchId ? `Match ${penalty.matchId.slice(0, 8)}` : "—",
+    date: formatDate(penalty.createdAtUtc),
+    isPenalty: penalty.points < 0,
+    isRevoked: false,
   };
 }
 
@@ -130,10 +168,10 @@ export function divisionToRow(division: DivisionDto, teamCount = 0) {
   return {
     id: division.id,
     name: division.name,
-    category: divisionCategory(division.name),
-    gender: divisionGender(division.name),
+    category: division.category || divisionCategory(division.name),
+    gender: division.gender || divisionGender(division.name),
     teams: `${teamCount} équipe${teamCount > 1 ? "s" : ""}`,
-    status: "Active",
+    status: division.isActive ? "Active" : "Inactive",
     sortOrder: division.sortOrder,
   };
 }

@@ -4,30 +4,38 @@ import { useEffect, useMemo, useState } from "react";
 import { Minus, MoreHorizontal, Plus } from "lucide-react";
 import { divisions, matches, type MatchRow } from "@/lib/data";
 import { matchToRow } from "@/lib/adapters";
-import {
-  api,
-  errorMessage,
-  USE_MOCK,
-  type DivisionDto,
-  type MatchDto,
-  type VenueDto,
-} from "@/lib/api";
+import { api, errorMessage, USE_MOCK, type DivisionDto, type MatchDto, type VenueDto } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/components/toast";
-import {
-  Button,
-  DataTable,
-  Drawer,
-  DrawerFooter,
-  FillMeter,
-  Filters,
-  FormField,
-  PageHeader,
-  SelectInput,
-  Status,
-  TextInput,
-} from "@/components/ui";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { OptionSelect } from "@/components/option-select";
+import { Status } from "@/components/status";
+import { DataTable } from "@/components/data-table";
+import { Filters } from "@/components/filters";
+import { PageHeader } from "@/components/page-header";
+import { FormSheet, FormSheetFooter } from "@/components/form-sheet";
+import { Progress } from "@/components/ui/progress";
+
+function FillMeter({ value, total }: { value: number; total: number }) {
+  const ratio = total === 0 ? 0 : Math.min(100, Math.round((value / total) * 100));
+  const color =
+    value === 0
+      ? "[&>[data-slot=progress-indicator]]:bg-danger"
+      : value === total
+        ? "[&>[data-slot=progress-indicator]]:bg-green"
+        : "[&>[data-slot=progress-indicator]]:bg-brand";
+  return (
+    <span className="flex items-center gap-2">
+      <Progress value={ratio} className={cn("h-1.5 w-11 bg-muted", color)} />
+      <b className="text-[11px] font-semibold text-muted-foreground">
+        {value}/{total}
+      </b>
+    </span>
+  );
+}
 
 type MatchRowEx = MatchRow & {
   opponent?: string;
@@ -136,7 +144,7 @@ function MatchForm({
   const [home, setHome] = useState(match?.home ?? "BOB1");
   const [away, setAway] = useState(match?.away ?? "Castelnau Basket");
   const [opponent, setOpponent] = useState(
-    match?.opponent ?? (match ? (match.home === "BOB1" ? match.away : match.home) : "Castelnau Basket")
+    match?.opponent ?? (match ? (match.home === "BOB1" ? match.away : match.home) : "Castelnau Basket"),
   );
   const [isHome, setIsHome] = useState(match?.isHome ?? true);
   const [date, setDate] = useState(initial.date);
@@ -149,6 +157,15 @@ function MatchForm({
     buvette: match?.buvette[1] || 2,
     covoiturage: 4,
   });
+
+  // Divisions/venues load asynchronously; keep the selects on a valid option.
+  useEffect(() => {
+    if (divisionOptions.length > 0 && !divisionOptions.includes(division)) setDivision(divisionOptions[0]);
+  }, [divisionOptions, division]);
+
+  useEffect(() => {
+    if (venueOptions.length > 0 && !venueOptions.includes(venue)) setVenue(venueOptions[0]);
+  }, [venueOptions, venue]);
 
   const updateSlot = (key: string, amount: number) => {
     setSlots((current) => ({ ...current, [key]: Math.max(0, Math.min(12, current[key] + amount)) }));
@@ -189,53 +206,89 @@ function MatchForm({
       className="flex flex-col gap-4"
     >
       <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
-        <FormField label="Division" wide>
-          <SelectInput
-            value={division}
-            onChange={(event) => setDivision(event.target.value)}
-            options={divisionOptions}
-          />
-        </FormField>
+        <Field className="col-span-full">
+          <FieldLabel htmlFor="matches-field-1" className="text-[11px] font-bold text-muted-foreground">
+            Division
+          </FieldLabel>
+          <OptionSelect id="matches-field-1" value={division} onValueChange={setDivision} options={divisionOptions} />
+        </Field>
 
         {live ? (
           <>
-            <FormField label="Adversaire">
-              <TextInput
+            <Field>
+              <FieldLabel htmlFor="matches-field-2" className="text-[11px] font-bold text-muted-foreground">
+                Adversaire
+              </FieldLabel>
+              <Input
+                id="matches-field-2"
                 value={opponent}
                 onChange={(event) => setOpponent(event.target.value)}
                 placeholder="Castelnau Basket"
                 required
               />
-            </FormField>
-            <FormField label="Lieu de la rencontre">
-              <SelectInput value={isHome ? "Domicile" : "Extérieur"} onChange={(event) => setIsHome(event.target.value === "Domicile")} options={["Domicile", "Extérieur"]} />
-            </FormField>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="matches-field-3" className="text-[11px] font-bold text-muted-foreground">
+                Lieu de la rencontre
+              </FieldLabel>
+              <OptionSelect
+                id="matches-field-3"
+                value={isHome ? "Domicile" : "Extérieur"}
+                onValueChange={(value) => setIsHome(value === "Domicile")}
+                options={["Domicile", "Extérieur"]}
+              />
+            </Field>
           </>
         ) : (
           <>
-            <FormField label="Équipe à domicile">
-              <SelectInput value={home} onChange={(event) => setHome(event.target.value)} options={teamOptions} />
-            </FormField>
-            <FormField label="Équipe à l'extérieur">
-              <SelectInput value={away} onChange={(event) => setAway(event.target.value)} options={teamOptions} />
-            </FormField>
+            <Field>
+              <FieldLabel htmlFor="matches-field-4" className="text-[11px] font-bold text-muted-foreground">
+                Équipe à domicile
+              </FieldLabel>
+              <OptionSelect id="matches-field-4" value={home} onValueChange={setHome} options={teamOptions} />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="matches-field-5" className="text-[11px] font-bold text-muted-foreground">
+                Équipe à l'extérieur
+              </FieldLabel>
+              <OptionSelect id="matches-field-5" value={away} onValueChange={setAway} options={teamOptions} />
+            </Field>
           </>
         )}
 
-        <FormField label="Date">
-          <TextInput type="date" value={date} onChange={(event) => setDate(event.target.value)} required />
-        </FormField>
-        <FormField label="Heure">
-          <TextInput type="time" value={time} onChange={(event) => setTime(event.target.value)} required />
-        </FormField>
-        <FormField label="Lieu" wide>
-          <SelectInput value={venue} onChange={(event) => setVenue(event.target.value)} options={venueOptions} />
-        </FormField>
+        <Field>
+          <FieldLabel htmlFor="matches-field-6" className="text-[11px] font-bold text-muted-foreground">
+            Date
+          </FieldLabel>
+          <Input
+            id="matches-field-6"
+            type="date"
+            value={date}
+            onChange={(event) => setDate(event.target.value)}
+            required
+          />
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="matches-field-7" className="text-[11px] font-bold text-muted-foreground">
+            Heure
+          </FieldLabel>
+          <Input
+            id="matches-field-7"
+            type="time"
+            value={time}
+            onChange={(event) => setTime(event.target.value)}
+            required
+          />
+        </Field>
+        <Field className="col-span-full">
+          <FieldLabel htmlFor="matches-field-8" className="text-[11px] font-bold text-muted-foreground">
+            Lieu
+          </FieldLabel>
+          <OptionSelect id="matches-field-8" value={venue} onValueChange={setVenue} options={venueOptions} />
+        </Field>
       </div>
 
-      <span className="mt-2 text-[10px] font-extrabold uppercase tracking-[0.08em] text-soft">
-        Postes nécessaires
-      </span>
+      <span className="mt-2 text-[10px] font-extrabold uppercase tracking-[0.08em] text-soft">Postes nécessaires</span>
       <div className="overflow-hidden rounded-[13px] border border-line">
         {slotLabels.map(({ key, label }) => (
           <div
@@ -284,7 +337,7 @@ export default function MatchesPage() {
           opponent: item.home === "BOB1" ? item.away : item.home,
           isHome: item.home === "BOB1",
         }))
-      : []
+      : [],
   );
   const [search, setSearch] = useState("");
   const [division, setDivision] = useState("Toutes les divisions");
@@ -292,12 +345,8 @@ export default function MatchesPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<MatchRowEx | null>(null);
   const [saving, setSaving] = useState(false);
-  const { toast } = useToast();
 
-  const { data: apiMatches, loading, error, reload } = useApiData<MatchDto[]>(
-    () => api.matches.list(),
-    []
-  );
+  const { data: apiMatches, loading, error, reload } = useApiData<MatchDto[]>(() => api.matches.list(), []);
   const { data: apiDivisions } = useApiData<DivisionDto[]>(() => api.divisions.list(), []);
   const { data: apiVenues } = useApiData<VenueDto[]>(() => api.venues.list(), []);
 
@@ -309,7 +358,7 @@ export default function MatchesPage() {
         opponent: match.opponent,
         isHome: match.isHome,
         startsAtUtc: match.startsAtUtc,
-      }))
+      })),
     );
   }, [apiMatches]);
 
@@ -363,10 +412,10 @@ export default function MatchesPage() {
     if (USE_MOCK) {
       if (editing) {
         setRows((current) => current.map((item) => (item.id === payload.row.id ? payload.row : item)));
-        toast("Le match a été mis à jour.");
+        toast.success("Le match a été mis à jour.");
       } else {
         setRows((current) => [payload.row, ...current]);
-        toast("Le match a été créé et publié au calendrier.");
+        toast.success("Le match a été créé et publié au calendrier.");
       }
       setDrawerOpen(false);
       setEditing(null);
@@ -376,7 +425,7 @@ export default function MatchesPage() {
     const divisionId = divisionOptions.find((item) => item.name === payload.divisionName)?.id;
     const venueId = venueOptions.find((item) => item.name === payload.venueName)?.id;
     if (!divisionId || !venueId) {
-      toast("Sélectionnez une division et un lieu existants.", "danger");
+      toast.error("Sélectionnez une division et un lieu existants.");
       return;
     }
 
@@ -392,7 +441,7 @@ export default function MatchesPage() {
     try {
       if (editing) {
         await api.matches.update(editing.id, input);
-        toast("Le match a été mis à jour.");
+        toast.success("Le match a été mis à jour.");
       } else {
         const created = await api.matches.create(input);
         const failures: string[] = [];
@@ -405,18 +454,17 @@ export default function MatchesPage() {
             failures.push(spec.label);
           }
         }
-        toast(
+        (failures.length ? toast.error : toast.success)(
           failures.length
             ? `Le match a été créé, mais les postes suivants n'ont pas pu être ajoutés : ${failures.join(", ")}.`
             : "Le match a été créé et publié au calendrier.",
-          failures.length ? "danger" : "success"
         );
       }
       await reload();
       setDrawerOpen(false);
       setEditing(null);
     } catch (cause) {
-      toast(errorMessage(cause), "danger");
+      toast.error(errorMessage(cause));
     } finally {
       setSaving(false);
     }
@@ -497,13 +545,21 @@ export default function MatchesPage() {
             key: "officials",
             label: "Officiels",
             render: (row) =>
-              USE_MOCK ? <FillMeter value={row.officials[0]} total={row.officials[1]} /> : <span className="text-soft">—</span>,
+              USE_MOCK ? (
+                <FillMeter value={row.officials[0]} total={row.officials[1]} />
+              ) : (
+                <span className="text-soft">—</span>
+              ),
           },
           {
             key: "buvette",
             label: "Buvette",
             render: (row) =>
-              USE_MOCK ? <FillMeter value={row.buvette[0]} total={row.buvette[1]} /> : <span className="text-soft">—</span>,
+              USE_MOCK ? (
+                <FillMeter value={row.buvette[0]} total={row.buvette[1]} />
+              ) : (
+                <span className="text-soft">—</span>
+              ),
           },
           {
             key: "carpool",
@@ -523,25 +579,27 @@ export default function MatchesPage() {
             key: "actions",
             label: "",
             render: (row) => (
-              <button
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="text-muted-foreground"
                 onClick={() => openEdit(row)}
                 aria-label={`Modifier le match ${row.home} — ${row.away}`}
-                className="grid size-8 place-items-center rounded-lg text-soft transition hover:bg-muted hover:text-ink"
               >
                 <MoreHorizontal size={16} />
-              </button>
+              </Button>
             ),
           },
         ]}
       />
 
-      <Drawer
+      <FormSheet
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         title={editing ? "Modifier le match" : "Créer un match"}
         subtitle={editing ? `${editing.home} — ${editing.away}` : "Nouvelle rencontre"}
         footer={
-          <DrawerFooter
+          <FormSheetFooter
             onCancel={() => setDrawerOpen(false)}
             submitLabel={saving ? "Enregistrement…" : editing ? "Enregistrer les modifications" : "Créer le match"}
             form="match-form"
@@ -558,7 +616,7 @@ export default function MatchesPage() {
             onSave={save}
           />
         )}
-      </Drawer>
+      </FormSheet>
     </>
   );
 }

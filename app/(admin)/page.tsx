@@ -3,18 +3,15 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CalendarDays, ChevronRight, Clock, Plus, ShieldAlert, Users } from "lucide-react";
-import {
-  activity as mockActivity,
-  attentionMatches as mockAttention,
-  kpis as mockKpis,
-  type Tone,
-} from "@/lib/data";
+import { activity as mockActivity, attentionMatches as mockAttention, kpis as mockKpis, type Tone } from "@/lib/data";
 import { api, USE_MOCK, type MatchDto, type PenaltyDto, type UrgentSlotDto } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
 import { formatDate, formatDateTime } from "@/lib/adapters";
 import { displayName, useAuth } from "@/components/auth-provider";
 import { cn } from "@/lib/utils";
-import { Card, CardHeading, PageHeader, Status } from "@/components/ui";
+import { Card } from "@/components/ui/card";
+import { Status } from "@/components/status";
+import { PageHeader, CardHeading } from "@/components/page-header";
 import MiniCalendar from "@/components/mini-calendar";
 
 const kpiIcons = {
@@ -44,7 +41,8 @@ const kpiLinks: Record<string, string> = {
   "Matchs à venir": "/matches",
   "Postes non pourvus": "/matches",
   "Confirmations en attente": "/matches",
-  "Pénalités récentes": "/penalties",
+  "Points récents": "/points-history",
+  "Pénalités récentes": "/points-history",
 };
 
 type KpiTone = keyof typeof kpiTones;
@@ -91,11 +89,9 @@ export default function DashboardPage() {
 
   const now = Date.now();
   const upcomingMatches = apiMatches.filter(
-    (match) => match.status === "Scheduled" && new Date(match.startsAtUtc).getTime() >= now
+    (match) => match.status === "Scheduled" && new Date(match.startsAtUtc).getTime() >= now,
   );
-  const recentPenalties = apiPenalties.filter(
-    (penalty) => now - new Date(penalty.createdAtUtc).getTime() <= WEEK_MS
-  );
+  const recentPenalties = apiPenalties.filter((penalty) => now - new Date(penalty.createdAtUtc).getTime() <= WEEK_MS);
 
   const byMatch = new Map<string, { startsAt: string; title: string; missing: number }>();
   for (const slot of apiUrgent) {
@@ -142,13 +138,6 @@ export default function DashboardPage() {
       tone: openSlots > 0 ? "warning" : "success",
     },
     {
-      label: "Confirmations en attente",
-      value: "—",
-      detail: "Non exposé par l'API",
-      icon: "clock",
-      tone: "info",
-    },
-    {
       label: "Pénalités récentes",
       value: String(recentPenalties.length),
       detail: "Cette semaine",
@@ -160,7 +149,7 @@ export default function DashboardPage() {
   const liveActivity: ActivityItem[] = [
     ...recentPenalties.slice(0, 3).map((penalty) => ({
       id: penalty.id,
-      text: `Pénalité de ${penalty.points} pts pour ${penalty.familyName} : ${penalty.reason}`,
+      text: `Pénalité de ${penalty.points} pts pour ${penalty.personName} : ${penalty.reason}`,
       time: formatDate(penalty.createdAtUtc),
       tone: "danger" as Tone,
     })),
@@ -194,7 +183,7 @@ export default function DashboardPage() {
           return (
             <Link
               key={kpi.label}
-              href={kpiLinks[kpi.label]}
+              href={kpiLinks[kpi.label] ?? "/matches"}
               className="group flex min-h-[132px] items-start gap-3.5 rounded-[17px] border border-line bg-card p-5 shadow-soft transition hover:-translate-y-0.5 hover:border-brand/30"
             >
               <span className={cn("grid size-11 shrink-0 place-items-center rounded-[13px]", kpiTones[kpi.tone])}>
@@ -212,7 +201,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-[1.45fr_0.8fr]">
-        <Card id="tour-alerts">
+        <Card id="tour-alerts" className="gap-0 py-0 shadow-soft">
           <CardHeading
             title="Matchs à compléter"
             subtitle="Postes encore non pourvus"
@@ -268,7 +257,7 @@ export default function DashboardPage() {
             {USE_MOCK ? (
               <MiniCalendar />
             ) : (
-              <Card>
+              <Card className="gap-0 py-0 shadow-soft">
                 <CardHeading title="Prochains matchs" subtitle="Calendrier du club" />
                 <div>
                   {upcomingMatches.length === 0 && (
@@ -295,7 +284,7 @@ export default function DashboardPage() {
               </Card>
             )}
           </div>
-          <Card id="tour-activity">
+          <Card id="tour-activity" className="gap-0 py-0 shadow-soft">
             <CardHeading title="Activité récente" subtitle="Les dernières actions du club" />
             <div className="px-5 py-1">
               {activity.length === 0 && (

@@ -7,21 +7,20 @@ import { personToRow } from "@/lib/adapters";
 import { api, errorMessage, USE_MOCK, type PersonDto } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/components/toast";
-import {
-  Avatar,
-  DataTable,
-  Drawer,
-  DrawerFooter,
-  Filters,
-  FormField,
-  PageHeader,
-  SelectInput,
-  Status,
-  TextInput,
-} from "@/components/ui";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { OptionSelect } from "@/components/option-select";
+import { InitialsAvatar } from "@/components/initials-avatar";
+import { Status } from "@/components/status";
+import { DataTable } from "@/components/data-table";
+import { Filters } from "@/components/filters";
+import { PageHeader } from "@/components/page-header";
+import { FormSheet, FormSheetFooter } from "@/components/form-sheet";
 
-type PersonRowEx = Person & { familyId?: string | null };
+type PersonRowEx = Person & { familyId?: string | null; personId?: string };
 
 type PeopleResponse = { total: number; items: PersonDto[] };
 
@@ -33,15 +32,6 @@ const roleTone: Record<string, string> = {
   Admin: "bg-brand-soft text-brand",
 };
 
-type PersonPayload = {
-  row: PersonRowEx;
-  firstName: string;
-  lastName: string;
-  roles: string[];
-  isActive: boolean;
-  familyId: string | null;
-};
-
 function PersonForm({
   person,
   live,
@@ -49,7 +39,14 @@ function PersonForm({
 }: {
   person: PersonRowEx | null;
   live: boolean;
-  onSave: (payload: PersonPayload) => void;
+  onSave: (payload: {
+    personId: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    roles: string[];
+    isActive: boolean;
+  }) => void;
 }) {
   const [firstName, setFirstName] = useState(person?.name.split(" ")[0] ?? "");
   const [lastName, setLastName] = useState(person?.name.split(" ").slice(1).join(" ") ?? "");
@@ -58,9 +55,7 @@ function PersonForm({
   const [status, setStatus] = useState(person?.status ?? (live ? "Actif" : "En attente"));
 
   const toggleRole = (role: string) => {
-    setRoles((current) =>
-      current.includes(role) ? current.filter((item) => item !== role) : [...current, role]
-    );
+    setRoles((current) => (current.includes(role) ? current.filter((item) => item !== role) : [...current, role]));
   };
 
   return (
@@ -70,44 +65,60 @@ function PersonForm({
         event.preventDefault();
         const finalRoles = roles.length ? roles : ["Parent"];
         onSave({
-          row: {
-            id: person?.id ?? `p${Date.now()}`,
-            name: `${firstName} ${lastName}`.trim() || "Nouvelle personne",
-            email,
-            roles: finalRoles,
-            status,
-            lastLogin: person?.lastLogin ?? (live ? "—" : "Invitation envoyée"),
-            familyId: person?.familyId ?? null,
-          },
+          personId: person?.personId ?? person?.id ?? "",
           firstName: firstName.trim(),
           lastName: lastName.trim(),
+          email: email.trim(),
           roles: finalRoles,
           isActive: status === "Actif",
-          familyId: person?.familyId ?? null,
         });
       }}
       className="flex flex-col gap-4"
     >
       <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
-        <FormField label="Prénom">
-          <TextInput value={firstName} onChange={(event) => setFirstName(event.target.value)} required />
-        </FormField>
-        <FormField label="Nom">
-          <TextInput value={lastName} onChange={(event) => setLastName(event.target.value)} required />
-        </FormField>
-        <FormField label="E-mail" wide>
-          <TextInput type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
-        </FormField>
-        <FormField label="Statut" wide>
-          <SelectInput
+        <Field>
+          <FieldLabel htmlFor="people-field-14" className="text-[11px] font-bold text-muted-foreground">
+            Prénom
+          </FieldLabel>
+          <Input
+            id="people-field-14"
+            value={firstName}
+            onChange={(event) => setFirstName(event.target.value)}
+            required
+          />
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="people-field-15" className="text-[11px] font-bold text-muted-foreground">
+            Nom
+          </FieldLabel>
+          <Input id="people-field-15" value={lastName} onChange={(event) => setLastName(event.target.value)} required />
+        </Field>
+        <Field className="col-span-full">
+          <FieldLabel htmlFor="people-field-16" className="text-[11px] font-bold text-muted-foreground">
+            E-mail
+          </FieldLabel>
+          <Input
+            id="people-field-16"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            required
+          />
+        </Field>
+        <Field className="col-span-full">
+          <FieldLabel htmlFor="people-field-17" className="text-[11px] font-bold text-muted-foreground">
+            Statut
+          </FieldLabel>
+          <OptionSelect
+            id="people-field-17"
             value={status}
-            onChange={(event) => setStatus(event.target.value)}
+            onValueChange={setStatus}
             options={live ? ["Actif", "Suspendu"] : ["Actif", "En attente", "Suspendu"]}
           />
-        </FormField>
+        </Field>
       </div>
 
-      <span className="mt-1 text-[10px] font-extrabold uppercase tracking-[0.08em] text-soft">Rôles et rangs</span>
+      <span className="mt-1 text-[10px] font-extrabold uppercase tracking-[0.08em] text-soft">Rôles</span>
       <div className="flex flex-wrap gap-2">
         {roleOptions.map((role) => {
           const active = roles.includes(role);
@@ -121,7 +132,7 @@ function PersonForm({
                 "flex h-9 items-center gap-1.5 rounded-[10px] border px-3 text-[11.5px] font-semibold transition",
                 active
                   ? "border-transparent bg-mint text-mint-foreground"
-                  : "border-line bg-card text-soft hover:bg-muted"
+                  : "border-line bg-card text-soft hover:bg-muted",
               )}
             >
               {active && <ShieldCheck size={14} />}
@@ -131,25 +142,17 @@ function PersonForm({
         })}
       </div>
 
-      {!live && (
-        <div className="flex items-start gap-3 rounded-xl bg-info-soft px-3.5 py-3 text-[11px] leading-relaxed text-info">
-          <ShieldCheck size={16} className="mt-0.5 shrink-0" />
-          <span>
-            Les administrateurs peuvent gérer les matchs, les membres et les pénalités. Les rôles sont cumulables
-            au sein d&apos;un même compte.
-          </span>
-        </div>
-      )}
+      <div className="flex items-center justify-between gap-3 rounded-xl bg-muted px-3.5 py-3">
+        <span className="flex flex-col">
+          <strong className="text-[12px]">Statut du compte</strong>
+          <small className="mt-0.5 text-[10.5px] text-soft">Activer ou suspendre l'accès à l'application</small>
+        </span>
+        <Switch checked={status === "Actif"} onCheckedChange={(checked) => setStatus(checked ? "Actif" : "Suspendu")} />
+      </div>
 
-      {live && !person && (
-        <div className="flex items-start gap-3 rounded-xl bg-muted px-3.5 py-3 text-[11px] leading-relaxed text-soft">
-          <ShieldCheck size={16} className="mt-0.5 shrink-0" />
-          <span>
-            Un mot de passe temporaire sera généré et affiché après la création. Communiquez-le à la personne,
-            qui pourra le modifier ensuite.
-          </span>
-        </div>
-      )}
+      <div className="rounded-xl bg-brand-soft px-3.5 py-3 text-[11px] leading-relaxed text-[#8e4200] dark:text-[#ffc48f]">
+        La modification prend effet immédiatement. Une personne suspendue ne peut plus se connecter.
+      </div>
     </form>
   );
 }
@@ -163,12 +166,13 @@ export default function PeoplePage() {
   const [editing, setEditing] = useState<PersonRowEx | null>(null);
   const [tempPassword, setTempPassword] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const { toast } = useToast();
 
-  const { data: apiPeople, loading, error, reload } = useApiData<PeopleResponse>(
-    () => api.people.list({ take: 200 }),
-    { total: 0, items: [] }
-  );
+  const {
+    data: apiPeople,
+    loading,
+    error,
+    reload,
+  } = useApiData<PeopleResponse>(() => api.people.list({ take: 200 }), { total: 0, items: [] });
 
   useEffect(() => {
     if (USE_MOCK) return;
@@ -176,7 +180,8 @@ export default function PeoplePage() {
       apiPeople.items.map((person) => ({
         ...personToRow(person),
         familyId: person.familyId,
-      }))
+        personId: person.id,
+      })),
     );
   }, [apiPeople]);
 
@@ -200,14 +205,43 @@ export default function PeoplePage() {
     setDrawerOpen(true);
   };
 
-  const save = async (payload: PersonPayload) => {
+  const save = async (payload: {
+    personId: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    roles: string[];
+    isActive: boolean;
+  }) => {
     if (USE_MOCK) {
       if (editing) {
-        setRows((current) => current.map((item) => (item.id === payload.row.id ? payload.row : item)));
-        toast("Le compte a été mis à jour.");
+        setRows((current) =>
+          current.map((item) =>
+            item.id === payload.personId
+              ? {
+                  ...item,
+                  name: `${payload.firstName} ${payload.lastName}`,
+                  email: payload.email,
+                  roles: payload.roles,
+                  status: payload.isActive ? "Actif" : "Suspendu",
+                }
+              : item,
+          ),
+        );
+        toast.success("Le compte a été mis à jour.");
       } else {
-        setRows((current) => [payload.row, ...current]);
-        toast("La personne a été ajoutée. Une invitation lui sera envoyée.");
+        setRows((current) => [
+          {
+            id: `p${Date.now()}`,
+            name: `${payload.firstName} ${payload.lastName}`,
+            email: payload.email,
+            roles: payload.roles,
+            status: payload.isActive ? "Actif" : "Suspendu",
+            lastLogin: "Invitation envoyée",
+          },
+          ...current,
+        ]);
+        toast.success("La personne a été ajoutée. Une invitation lui sera envoyée.");
       }
       setDrawerOpen(false);
       setEditing(null);
@@ -218,36 +252,35 @@ export default function PeoplePage() {
     try {
       if (editing) {
         await api.people.update(editing.id, {
-          email: payload.row.email,
+          email: payload.email,
           firstName: payload.firstName,
           lastName: payload.lastName,
-          familyId: payload.familyId,
+          familyId: editing.familyId,
         });
 
         const rolesChanged =
-          editing.roles.length !== payload.roles.length ||
-          editing.roles.some((item) => !payload.roles.includes(item));
+          editing.roles.length !== payload.roles.length || editing.roles.some((item) => !payload.roles.includes(item));
         if (rolesChanged) await api.people.setRoles(editing.id, payload.roles);
 
         if ((editing.status === "Actif") !== payload.isActive) {
           await api.people.setActive(editing.id, payload.isActive);
         }
 
-        toast("Le compte a été mis à jour.");
+        toast.success("Le compte a été mis à jour.");
       } else {
         const created = await api.people.create({
-          email: payload.row.email,
+          email: payload.email,
           firstName: payload.firstName,
           lastName: payload.lastName,
           roles: payload.roles,
-          familyId: payload.familyId,
+          familyId: null,
           password: null,
         });
         setTempPassword(created.temporaryPassword);
-        toast(
+        toast.success(
           created.temporaryPassword
             ? "La personne a été ajoutée. Un mot de passe temporaire a été généré."
-            : "La personne a été ajoutée."
+            : "La personne a été ajoutée.",
         );
       }
 
@@ -255,7 +288,7 @@ export default function PeoplePage() {
       setDrawerOpen(false);
       setEditing(null);
     } catch (cause) {
-      toast(errorMessage(cause), "danger");
+      toast.error(errorMessage(cause));
     } finally {
       setSaving(false);
     }
@@ -337,7 +370,11 @@ export default function PeoplePage() {
             label: "Personne",
             render: (row, index) => (
               <span className="flex items-center gap-2.5">
-                <Avatar name={row.name} tone={index % 3 === 0 ? "orange" : index % 3 === 1 ? "green" : "purple"} size="sm" />
+                <InitialsAvatar
+                  name={row.name}
+                  tone={index % 3 === 0 ? "orange" : index % 3 === 1 ? "green" : "purple"}
+                  size="sm"
+                />
                 <strong className="truncate">{row.name}</strong>
               </span>
             ),
@@ -365,36 +402,44 @@ export default function PeoplePage() {
               </Status>
             ),
           },
-          { key: "lastLogin", label: "Dernière connexion", render: (row) => <span className="text-soft">{row.lastLogin}</span> },
+          {
+            key: "lastLogin",
+            label: "Dernière connexion",
+            render: (row) => <span className="text-soft">{row.lastLogin}</span>,
+          },
           {
             key: "actions",
             label: "",
             render: (row) => (
-              <button onClick={() => openEdit(row)} aria-label="Modifier" className="grid size-8 place-items-center rounded-lg text-soft transition hover:bg-muted">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="text-muted-foreground"
+                onClick={() => openEdit(row)}
+                aria-label="Modifier"
+              >
                 <MoreHorizontal size={16} />
-              </button>
+              </Button>
             ),
           },
         ]}
       />
 
-      <Drawer
+      <FormSheet
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         title={editing ? "Modifier la personne" : "Ajouter une personne"}
         subtitle="Compte et autorisations"
         footer={
-          <DrawerFooter
+          <FormSheetFooter
             onCancel={() => setDrawerOpen(false)}
             submitLabel={saving ? "Enregistrement…" : editing ? "Enregistrer" : "Envoyer l'invitation"}
             form="person-form"
           />
         }
       >
-        {drawerOpen && (
-          <PersonForm key={editing?.id ?? "new"} person={editing} live={!USE_MOCK} onSave={save} />
-        )}
-      </Drawer>
+        {drawerOpen && <PersonForm key={editing?.id ?? "new"} person={editing} live={!USE_MOCK} onSave={save} />}
+      </FormSheet>
     </>
   );
 }
