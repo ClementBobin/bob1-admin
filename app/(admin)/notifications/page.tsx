@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Bell, CalendarDays, Send, Users } from "lucide-react";
+import { api, errorMessage, USE_MOCK, type DivisionDto } from "@/lib/api";
+import { useApiData } from "@/lib/use-api-data";
 import { useToast } from "@/components/toast";
 import {
   Button,
@@ -16,7 +18,7 @@ import {
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
-const targets = [
+const mockTargets = [
   { id: "all", label: "Tous les membres", count: "184 destinataires", icon: Users },
   { id: "division", label: "U13 Masculins", count: "26 destinataires", icon: Users },
   { id: "match", label: "BOB1 vs Castelnau", count: "12 officiels concernés", icon: CalendarDays },
@@ -33,14 +35,61 @@ export default function NotificationsPage() {
   const [recurring, setRecurring] = useState(false);
   const [startup, setStartup] = useState(true);
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [recipients, setRecipients] = useState<number | null>(null);
   const { toast } = useToast();
 
-  const send = () => {
-    setSent(true);
-    toast("La notification a été envoyée aux destinataires sélectionnés.");
+  const { data: apiDivisions } = useApiData<DivisionDto[]>(() => api.divisions.list(), []);
+
+  const targetOptions = USE_MOCK
+    ? mockTargets.map((item) => item.label)
+    : ["Tous les membres", ...apiDivisions.map((division) => division.name)];
+
+  const send = async () => {
+    if (USE_MOCK) {
+      setSent(true);
+      toast("La notification a été envoyée aux destinataires sélectionnés.");
+      return;
+    }
+
+    if (!title.trim() || !message.trim()) {
+      toast("Renseignez un titre et un message.", "danger");
+      return;
+    }
+
+    const divisionId =
+      target === "Tous les membres"
+        ? null
+        : apiDivisions.find((division) => division.name === target)?.id ?? null;
+
+    setSending(true);
+    try {
+      const response = await api.notifications.broadcast(title.trim(), message.trim(), divisionId);
+      setSent(true);
+      setRecipients(response.recipients);
+      toast(
+        `Notification envoyée à ${response.recipients} destinataire${response.recipients > 1 ? "s" : ""}.`
+      );
+    } catch (cause) {
+      toast(errorMessage(cause), "danger");
+    } finally {
+      setSending(false);
+    }
   };
 
-  const activeTarget = targets.find((item) => item.label === target) ?? targets[0];
+  const activeTarget = USE_MOCK
+    ? mockTargets.find((item) => item.label === target) ?? mockTargets[0]
+    : {
+        id: target,
+        label: target,
+        count:
+          recipients !== null
+            ? `${recipients} destinataire${recipients > 1 ? "s" : ""}`
+            : target === "Tous les membres"
+              ? "Tous les membres du club"
+              : `Membres de la division ${target}`,
+        icon: Users,
+      };
   const TargetIcon = activeTarget.icon;
 
   return (
@@ -63,7 +112,7 @@ export default function NotificationsPage() {
               <SelectInput value={type} onChange={(event) => setType(event.target.value)} options={["Général", "Match", "Urgent", "Pénalité"]} />
             </FormField>
             <FormField label="Destinataires">
-              <SelectInput value={target} onChange={(event) => setTarget(event.target.value)} options={targets.map((item) => item.label)} />
+              <SelectInput value={target} onChange={(event) => setTarget(event.target.value)} options={targetOptions} />
             </FormField>
             <FormField label="Titre" wide>
               <TextInput value={title} onChange={(event) => setTitle(event.target.value)} />
@@ -76,36 +125,47 @@ export default function NotificationsPage() {
               />
               <div className="flex justify-end text-[10px] text-soft">{message.length} / 240 caractères</div>
             </FormField>
-            <FormField label="Date d'expiration" wide>
-              <TextInput type="date" value={expiry} onChange={(event) => setExpiry(event.target.value)} />
-            </FormField>
+            {USE_MOCK && (
+              <FormField label="Date d'expiration" wide>
+                <TextInput type="date" value={expiry} onChange={(event) => setExpiry(event.target.value)} />
+              </FormField>
+            )}
           </div>
 
-          <div className="border-t border-line">
-            {[
-              { label: "Notification récurrente", desc: "Renvoyer selon une fréquence définie", checked: recurring, onChange: setRecurring },
-              { label: "Afficher au démarrage", desc: "Présenter comme message prioritaire", checked: startup, onChange: setStartup },
-            ].map((item) => (
-              <div key={item.label} className="flex min-h-[64px] items-center justify-between gap-4 px-5 py-3">
-                <span className="flex flex-col">
-                  <strong className="text-[12.5px]">{item.label}</strong>
-                  <small className="mt-0.5 text-[11px] text-soft">{item.desc}</small>
-                </span>
-                <Toggle checked={item.checked} onChange={item.onChange} label={item.label} />
-              </div>
-            ))}
-          </div>
+          {USE_MOCK ? (
+            <div className="border-t border-line">
+              {[
+                { label: "Notification récurrente", desc: "Renvoyer selon une fréquence définie", checked: recurring, onChange: setRecurring },
+                { label: "Afficher au démarrage", desc: "Présenter comme message prioritaire", checked: startup, onChange: setStartup },
+              ].map((item) => (
+                <div key={item.label} className="flex min-h-[64px] items-center justify-between gap-4 px-5 py-3">
+                  <span className="flex flex-col">
+                    <strong className="text-[12.5px]">{item.label}</strong>
+                    <small className="mt-0.5 text-[11px] text-soft">{item.desc}</small>
+                  </span>
+                  <Toggle checked={item.checked} onChange={item.onChange} label={item.label} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="border-t border-line px-5 py-3.5 text-[11px] leading-relaxed text-soft">
+              L&apos;envoi est immédiat. Les options d&apos;expiration, de récurrence et d&apos;affichage au démarrage
+              ne sont pas encore exposées par l&apos;API.
+            </p>
+          )}
 
           <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line px-5 py-4">
-            <Button
-              variant="outline"
-              icon={CalendarDays}
-              onClick={() => toast("Le brouillon de notification a été enregistré.", "info")}
-            >
-              Enregistrer le brouillon
-            </Button>
-            <Button icon={Send} onClick={send}>
-              {sent ? "Envoyer à nouveau" : "Envoyer la notification"}
+            {USE_MOCK && (
+              <Button
+                variant="outline"
+                icon={CalendarDays}
+                onClick={() => toast("Le brouillon de notification a été enregistré.", "info")}
+              >
+                Enregistrer le brouillon
+              </Button>
+            )}
+            <Button icon={Send} onClick={() => void send()} disabled={sending}>
+              {sending ? "Envoi…" : sent ? "Envoyer à nouveau" : "Envoyer la notification"}
             </Button>
           </div>
         </Card>
@@ -124,7 +184,7 @@ export default function NotificationsPage() {
             </div>
             <div className="flex flex-col gap-2 border-t border-line px-5 py-4">
               <span className="flex items-center gap-2 text-[11px] font-bold text-soft">
-                <Bell size={14} /> Canal d'envoi
+                <Bell size={14} /> Canal d&apos;envoi
               </span>
               <div className="flex flex-wrap gap-2">
                 {["Push", "E-mail"].map((item) => (
@@ -139,6 +199,12 @@ export default function NotificationsPage() {
                   </span>
                 ))}
               </div>
+              {!USE_MOCK && (
+                <small className="text-[10.5px] leading-relaxed text-soft">
+                  Les notifications sont diffusées dans l&apos;application et par push. L&apos;e-mail n&apos;est pas
+                  encore branché.
+                </small>
+              )}
             </div>
           </Card>
 

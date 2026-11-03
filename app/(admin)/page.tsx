@@ -3,7 +3,16 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CalendarDays, ChevronRight, Clock, Plus, ShieldAlert, Users } from "lucide-react";
-import { activity, attentionMatches, kpis } from "@/lib/data";
+import {
+  activity as mockActivity,
+  attentionMatches as mockAttention,
+  kpis as mockKpis,
+  type Tone,
+} from "@/lib/data";
+import { api, USE_MOCK, type MatchDto, type PenaltyDto, type UrgentSlotDto } from "@/lib/api";
+import { useApiData } from "@/lib/use-api-data";
+import { formatDate, formatDateTime } from "@/lib/adapters";
+import { displayName, useAuth } from "@/components/auth-provider";
 import { cn } from "@/lib/utils";
 import { Card, CardHeading, PageHeader, Status } from "@/components/ui";
 import MiniCalendar from "@/components/mini-calendar";
@@ -20,6 +29,7 @@ const kpiTones = {
   warning: "bg-brand-soft text-brand",
   info: "bg-info-soft text-info",
   danger: "bg-danger-soft text-danger",
+  neutral: "bg-muted text-soft",
 };
 
 const dotTones = {
@@ -37,21 +47,150 @@ const kpiLinks: Record<string, string> = {
   "Pénalités récentes": "/penalties",
 };
 
+type KpiTone = keyof typeof kpiTones;
+
+type Kpi = {
+  label: string;
+  value: string;
+  detail: string;
+  icon: keyof typeof kpiIcons;
+  tone: KpiTone;
+};
+
+type Attention = {
+  id: string | number;
+  date: string;
+  division: string;
+  opponent: string;
+  slots: string;
+  urgent: boolean;
+};
+
+type ActivityItem = {
+  id: string | number;
+  text: string;
+  time: string;
+  tone: Tone;
+};
+
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+function opponentFromTitle(title: string) {
+  const [home, away] = title.split(" vs ");
+  if (!away) return title;
+  return home.trim() === "BOB1" ? away.trim() : home.trim();
+}
+
 export default function DashboardPage() {
   const router = useRouter();
+  const { user } = useAuth();
+
+  const { data: apiMatches } = useApiData<MatchDto[]>(() => api.matches.list(), []);
+  const { data: apiUrgent } = useApiData<UrgentSlotDto[]>(() => api.slots.urgent(7), []);
+  const { data: apiPenalties } = useApiData<PenaltyDto[]>(() => api.rankings.penalties(), []);
+
+  const now = Date.now();
+  const upcomingMatches = apiMatches.filter(
+    (match) => match.status === "Scheduled" && new Date(match.startsAtUtc).getTime() >= now
+  );
+  const recentPenalties = apiPenalties.filter(
+    (penalty) => now - new Date(penalty.createdAtUtc).getTime() <= WEEK_MS
+  );
+
+  const byMatch = new Map<string, { startsAt: string; title: string; missing: number }>();
+  for (const slot of apiUrgent) {
+    const entry = byMatch.get(slot.matchId) ?? {
+      startsAt: slot.matchStartsAtUtc,
+      title: slot.matchTitle,
+      missing: 0,
+    };
+    entry.missing += slot.missing;
+    byMatch.set(slot.matchId, entry);
+  }
+
+  const liveAttention: Attention[] = Array.from(byMatch.entries())
+    .sort((a, b) => new Date(a[1].startsAt).getTime() - new Date(b[1].startsAt).getTime())
+    .slice(0, 4)
+    .map(([matchId, entry]) => {
+      const match = apiMatches.find((item) => item.id === matchId);
+      const days = (new Date(entry.startsAt).getTime() - now) / (24 * 60 * 60 * 1000);
+      return {
+        id: matchId,
+        date: formatDateTime(entry.startsAt),
+        division: match?.divisionName ?? "—",
+        opponent: match?.opponent ?? opponentFromTitle(entry.title),
+        slots: `${entry.missing} poste${entry.missing > 1 ? "s" : ""}`,
+        urgent: days <= 3,
+      };
+    });
+
+  const openSlots = apiUrgent.reduce((total, slot) => total + slot.missing, 0);
+
+  const liveKpis: Kpi[] = [
+    {
+      label: "Matchs à venir",
+      value: String(upcomingMatches.length),
+      detail: "Sur les 120 prochains jours",
+      icon: "calendar",
+      tone: "success",
+    },
+    {
+      label: "Postes non pourvus",
+      value: String(openSlots),
+      detail: openSlots > 0 ? "Action requise" : "Tout est pourvu",
+      icon: "users",
+      tone: openSlots > 0 ? "warning" : "success",
+    },
+    {
+      label: "Confirmations en attente",
+      value: "—",
+      detail: "Non exposé par l'API",
+      icon: "clock",
+      tone: "info",
+    },
+    {
+      label: "Pénalités récentes",
+      value: String(recentPenalties.length),
+      detail: "Cette semaine",
+      icon: "shield",
+      tone: recentPenalties.length > 0 ? "danger" : "neutral",
+    },
+  ];
+
+  const liveActivity: ActivityItem[] = [
+    ...recentPenalties.slice(0, 3).map((penalty) => ({
+      id: penalty.id,
+      text: `Pénalité de ${penalty.points} pts pour ${penalty.familyName} : ${penalty.reason}`,
+      time: formatDate(penalty.createdAtUtc),
+      tone: "danger" as Tone,
+    })),
+    ...liveAttention.slice(0, 2).map((item) => ({
+      id: `slot-${item.id}`,
+      text: `${item.slots} non pourvu${item.slots.startsWith("1 ") ? "" : "s"} pour ${item.opponent}`,
+      time: item.date,
+      tone: "warning" as Tone,
+    })),
+  ].slice(0, 4);
+
+  const kpis: Kpi[] = USE_MOCK ? (mockKpis as Kpi[]) : liveKpis;
+  const attention: Attention[] = USE_MOCK ? mockAttention : liveAttention;
+  const activity: ActivityItem[] = USE_MOCK ? mockActivity : liveActivity;
+
+  const name = displayName(user);
+  const firstName = name ? name.split(" ")[0] : "Camille";
 
   return (
     <>
       <PageHeader
         eyebrow="Vue d'ensemble"
-        title="Bonjour Camille"
+        title={`Bonjour ${firstName}`}
         description="Voici ce qui se passe au club aujourd'hui."
         action={{ label: "Créer un match", icon: Plus, onClick: () => router.push("/matches") }}
       />
 
       <div id="tour-kpis" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {kpis.map((kpi) => {
-          const Icon = kpiIcons[kpi.icon as keyof typeof kpiIcons];
+          const Icon = kpiIcons[kpi.icon];
           return (
             <Link
               key={kpi.label}
@@ -87,7 +226,12 @@ export default function DashboardPage() {
             }
           />
           <div>
-            {attentionMatches.map((match) => (
+            {attention.length === 0 && (
+              <p className="px-5 py-8 text-center text-[11.5px] text-soft">
+                Aucun poste non pourvu sur les prochains matchs.
+              </p>
+            )}
+            {attention.map((match) => (
               <Link
                 key={match.id}
                 href="/matches"
@@ -108,7 +252,11 @@ export default function DashboardPage() {
             ))}
           </div>
           <div className="flex items-center justify-between gap-3 border-t border-line px-5 py-3">
-            <span className="text-[11px] text-soft">4 matchs nécessitent votre attention cette semaine.</span>
+            <span className="text-[11px] text-soft">
+              {attention.length === 0
+                ? "Aucun match ne nécessite votre attention cette semaine."
+                : `${attention.length} match${attention.length > 1 ? "s" : ""} nécessite${attention.length > 1 ? "nt" : ""} votre attention cette semaine.`}
+            </span>
             <Link href="/matches" className="flex items-center gap-1 text-[11px] font-bold text-brand">
               Gérer <ChevronRight size={14} />
             </Link>
@@ -117,11 +265,42 @@ export default function DashboardPage() {
 
         <div className="flex flex-col gap-4">
           <div id="tour-calendar">
-            <MiniCalendar />
+            {USE_MOCK ? (
+              <MiniCalendar />
+            ) : (
+              <Card>
+                <CardHeading title="Prochains matchs" subtitle="Calendrier du club" />
+                <div>
+                  {upcomingMatches.length === 0 && (
+                    <p className="px-5 py-8 text-center text-[11.5px] text-soft">Aucun match à venir.</p>
+                  )}
+                  {upcomingMatches.slice(0, 4).map((match) => (
+                    <Link
+                      key={match.id}
+                      href="/matches"
+                      className="flex items-center gap-3 border-b border-line px-5 py-3 last:border-b-0 transition hover:bg-muted/40"
+                    >
+                      <span className="flex w-[52px] shrink-0 flex-col items-center rounded-lg bg-muted py-1.5">
+                        <b className="text-[12px] font-extrabold leading-none">{formatDate(match.startsAtUtc)}</b>
+                      </span>
+                      <span className="flex min-w-0 flex-col">
+                        <strong className="truncate text-[12px]">{match.title}</strong>
+                        <small className="mt-0.5 truncate text-[10.5px] text-soft">
+                          {match.divisionName} · {match.venueName}
+                        </small>
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </Card>
+            )}
           </div>
           <Card id="tour-activity">
             <CardHeading title="Activité récente" subtitle="Les dernières actions du club" />
             <div className="px-5 py-1">
+              {activity.length === 0 && (
+                <p className="py-6 text-center text-[11px] text-soft">Aucune activité récente.</p>
+              )}
               {activity.map((item) => (
                 <div key={item.id} className="flex items-start gap-3 border-b border-line py-3 last:border-b-0">
                   <span className={cn("mt-1.5 size-2 shrink-0 rounded-full", dotTones[item.tone])} />

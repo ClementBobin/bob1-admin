@@ -22,6 +22,7 @@ import { Logo } from "@/components/logo";
 import { Avatar, Button } from "@/components/ui";
 import { useToast } from "@/components/toast";
 import { useAppTour } from "@/components/app-tour";
+import { displayName, primaryRole, useAuth } from "@/components/auth-provider";
 
 function GlobalSearch() {
   const router = useRouter();
@@ -182,12 +183,28 @@ function SidebarContent({
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const profileRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const { startTour } = useAppTour();
+  const { user, logout, isMock } = useAuth();
+
+  const name = displayName(user) || "Utilisateur";
+  const roleLabel = primaryRole(user);
+  const email = user?.email ?? "";
+
+  const signOut = () => {
+    setProfileOpen(false);
+    if (isMock) {
+      toast("Mode démonstration : la déconnexion est simulée.", "info");
+      return;
+    }
+    logout();
+    router.replace("/login");
+  };
 
   useEffect(() => {
     setTheme(document.documentElement.classList.contains("dark") ? "dark" : "light");
@@ -287,10 +304,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 aria-haspopup="menu"
                 className="flex h-10 items-center gap-2.5 rounded-xl pl-1.5 pr-1.5 transition hover:bg-muted sm:border-l sm:border-line sm:pl-3.5 sm:pr-1"
               >
-                <Avatar name="Camille Martin" tone="orange" size="sm" />
+                <Avatar name={name} tone="orange" size="sm" />
                 <span className="hidden flex-col text-left sm:flex">
-                  <strong className="text-[11px] font-bold leading-tight">Camille Martin</strong>
-                  <small className="mt-0.5 text-[9.5px] text-soft">Administratrice</small>
+                  <strong className="text-[11px] font-bold leading-tight">{name}</strong>
+                  <small className="mt-0.5 text-[9.5px] text-soft">{roleLabel}</small>
                 </span>
                 <ChevronDown size={15} className="hidden text-soft sm:block" />
               </button>
@@ -300,8 +317,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
                   className="animate-pop absolute right-0 top-[calc(100%+8px)] w-60 overflow-hidden rounded-xl border border-line bg-card p-1.5 shadow-float"
                 >
                   <div className="px-3 py-2.5">
-                    <strong className="block text-[12.5px]">Camille Martin</strong>
-                    <span className="text-[11px] text-soft">camille@email.fr</span>
+                    <strong className="block text-[12.5px]">{name}</strong>
+                    <span className="text-[11px] text-soft">{email}</span>
                   </div>
                   <div className="my-1 h-px bg-line" />
                   <Link
@@ -331,10 +348,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                   <div className="my-1 h-px bg-line" />
                   <button
                     role="menuitem"
-                    onClick={() => {
-                      setProfileOpen(false);
-                      toast("Mode démonstration : la déconnexion est simulée.", "info");
-                    }}
+                    onClick={signOut}
                     className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[12px] font-semibold text-danger transition hover:bg-danger-soft"
                   >
                     <LogOut size={15} /> Déconnexion

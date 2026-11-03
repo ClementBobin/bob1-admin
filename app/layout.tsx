@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
 import { ToastProvider } from "@/components/toast";
+import { AuthProvider } from "@/components/auth-provider";
 import { AppTourProvider } from "@/components/app-tour";
 
 export const metadata: Metadata = {
@@ -23,7 +24,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body>
         <ToastProvider>
-          <AppTourProvider>{children}</AppTourProvider>
+          <AuthProvider>
+            <AppTourProvider>{children}</AppTourProvider>
+          </AuthProvider>
         </ToastProvider>
       </body>
     </html>

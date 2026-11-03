@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MapPin, MoreHorizontal, Plus } from "lucide-react";
 import { venues } from "@/lib/data";
+import { api, errorMessage, USE_MOCK, type VenueDto } from "@/lib/api";
+import { useApiData } from "@/lib/use-api-data";
 import { useToast } from "@/components/toast";
 import {
   DataTable,
@@ -57,38 +59,65 @@ function Form({ row, onSave }: { row: VenueRow | null; onSave: (row: VenueRow) =
         <FormField label="Adresse" wide>
           <TextInput value={address} onChange={(event) => setAddress(event.target.value)} required />
         </FormField>
-        <FormField label="Ville">
-          <TextInput value={city} onChange={(event) => setCity(event.target.value)} required />
-        </FormField>
-        <FormField label="Code postal">
-          <TextInput value={postal} onChange={(event) => setPostal(event.target.value)} inputMode="numeric" />
-        </FormField>
-        <FormField label="Statut" wide>
-          <SelectInput value={status} onChange={(event) => setStatus(event.target.value)} options={["Actif", "Externe", "Fermé"]} />
-        </FormField>
+        {USE_MOCK ? (
+          <>
+            <FormField label="Ville">
+              <TextInput value={city} onChange={(event) => setCity(event.target.value)} required />
+            </FormField>
+            <FormField label="Code postal">
+              <TextInput value={postal} onChange={(event) => setPostal(event.target.value)} inputMode="numeric" />
+            </FormField>
+            <FormField label="Statut" wide>
+              <SelectInput value={status} onChange={(event) => setStatus(event.target.value)} options={["Actif", "Externe", "Fermé"]} />
+            </FormField>
+          </>
+        ) : (
+          <p className="col-span-full rounded-xl bg-muted px-3.5 py-3 text-[11px] leading-relaxed text-soft">
+            L&apos;API enregistre une adresse libre. La ville, le code postal et le statut ne sont pas encore
+            modélisés.
+          </p>
+        )}
       </div>
 
-      <div>
-        <span className="mb-1.5 block text-[11px] font-bold text-soft">Aperçu de la position</span>
-        <div className="flex h-[142px] flex-col items-center justify-center gap-2 rounded-[13px] bg-[linear-gradient(135deg,var(--muted),color-mix(in_srgb,var(--mint)_60%,var(--muted)))] text-[11px] font-semibold text-mint-foreground">
-          <MapPin size={26} />
-          <span>
-            {address}, {postal} {city}
-          </span>
-          <small className="text-[10px] font-medium opacity-70">Aperçu cartographique de démonstration</small>
+      {USE_MOCK && (
+        <div>
+          <span className="mb-1.5 block text-[11px] font-bold text-soft">Aperçu de la position</span>
+          <div className="flex h-[142px] flex-col items-center justify-center gap-2 rounded-[13px] bg-[linear-gradient(135deg,var(--muted),color-mix(in_srgb,var(--mint)_60%,var(--muted)))] text-[11px] font-semibold text-mint-foreground">
+            <MapPin size={26} />
+            <span>
+              {address}, {postal} {city}
+            </span>
+            <small className="text-[10px] font-medium opacity-70">Aperçu cartographique de démonstration</small>
+          </div>
         </div>
-      </div>
+      )}
     </form>
   );
 }
 
 export default function VenuesPage() {
-  const [rows, setRows] = useState<VenueRow[]>(initial);
+  const [rows, setRows] = useState<VenueRow[]>(USE_MOCK ? initial : []);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("Tous les statuts");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<VenueRow | null>(null);
   const { toast } = useToast();
+
+  const { data: apiVenues, loading, error, reload } = useApiData<VenueDto[]>(() => api.venues.list(), []);
+
+  useEffect(() => {
+    if (USE_MOCK) return;
+    setRows(
+      apiVenues.map((venue) => ({
+        id: venue.id,
+        name: venue.name,
+        address: venue.address ?? "—",
+        city: "—",
+        matches: "—",
+        status: "Actif",
+      }))
+    );
+  }, [apiVenues]);
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -109,16 +138,30 @@ export default function VenuesPage() {
     setDrawerOpen(true);
   };
 
-  const save = (row: VenueRow) => {
-    if (editing) {
-      setRows((current) => current.map((item) => (item.id === row.id ? row : item)));
-      toast("Le lieu a été mis à jour.");
-    } else {
-      setRows((current) => [row, ...current]);
-      toast("Le lieu a été ajouté.");
+  const save = async (row: VenueRow) => {
+    if (USE_MOCK) {
+      if (editing) {
+        setRows((current) => current.map((item) => (item.id === row.id ? row : item)));
+        toast("Le lieu a été mis à jour.");
+      } else {
+        setRows((current) => [row, ...current]);
+        toast("Le lieu a été ajouté.");
+      }
+      setDrawerOpen(false);
+      setEditing(null);
+      return;
     }
-    setDrawerOpen(false);
-    setEditing(null);
+
+    try {
+      if (editing) await api.venues.update(row.id, { name: row.name, address: row.address });
+      else await api.venues.create({ name: row.name, address: row.address });
+      await reload();
+      toast(editing ? "Le lieu a été mis à jour." : "Le lieu a été ajouté.");
+      setDrawerOpen(false);
+      setEditing(null);
+    } catch (cause) {
+      toast(errorMessage(cause), "danger");
+    }
   };
 
   return (
@@ -149,12 +192,17 @@ export default function VenuesPage() {
         }}
       />
 
+      {!USE_MOCK && error && (
+        <div className="mb-4 rounded-xl bg-danger-soft px-4 py-3 text-[12px] font-medium text-danger">{error}</div>
+      )}
+
       <DataTable
         id="tour-venues-table"
         rows={filtered}
         rowKey={(row) => row.id}
         minWidth={820}
         grid="1.3fr 1.3fr 1fr .9fr .8fr 36px"
+        emptyMessage={loading ? "Chargement des lieux…" : undefined}
         columns={[
           {
             key: "name",

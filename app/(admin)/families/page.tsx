@@ -1,8 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Home, MoreHorizontal, Plus, UsersRound } from "lucide-react";
 import { families, type Family } from "@/lib/data";
+import { familyToRow } from "@/lib/adapters";
+import { api, errorMessage, USE_MOCK, type AdminFamilyDto } from "@/lib/api";
+import { useApiData } from "@/lib/use-api-data";
 import { useToast } from "@/components/toast";
 import {
   DataTable,
@@ -16,7 +19,19 @@ import {
   TextInput,
 } from "@/components/ui";
 
-function FamilyForm({ family, onSave }: { family: Family | null; onSave: (family: Family) => void }) {
+type FamiliesResponse = { total: number; items: AdminFamilyDto[] };
+
+type FamilyPayload = { row: Family; name: string };
+
+function FamilyForm({
+  family,
+  live,
+  onSave,
+}: {
+  family: Family | null;
+  live: boolean;
+  onSave: (payload: FamilyPayload) => void;
+}) {
   const [name, setName] = useState(family?.name ?? "Nouvelle famille");
   const [parents, setParents] = useState(family?.parents ?? "");
   const [children, setChildren] = useState(family?.children ?? "");
@@ -30,13 +45,16 @@ function FamilyForm({ family, onSave }: { family: Family | null; onSave: (family
         event.preventDefault();
         const childCount = children.split(",").filter((item) => item.trim()).length;
         onSave({
-          id: family?.id ?? `f${Date.now()}`,
-          name,
-          parents: parents || "À renseigner",
-          children: children || "—",
-          size: `${1 + childCount} membres`,
-          accounts,
-          status,
+          name: name.trim(),
+          row: {
+            id: family?.id ?? `f${Date.now()}`,
+            name: name.trim(),
+            parents: parents || "À renseigner",
+            children: children || "—",
+            size: family?.size ?? `${1 + childCount} membres`,
+            accounts,
+            status,
+          },
         });
       }}
       className="flex flex-col gap-4"
@@ -45,38 +63,61 @@ function FamilyForm({ family, onSave }: { family: Family | null; onSave: (family
         <FormField label="Nom de la famille" wide>
           <TextInput value={name} onChange={(event) => setName(event.target.value)} required />
         </FormField>
-        <FormField label="Parents" wide hint="Séparez plusieurs parents par une virgule.">
-          <TextInput value={parents} onChange={(event) => setParents(event.target.value)} placeholder="Camille & Julien" />
-        </FormField>
-        <FormField label="Enfants" wide hint="Séparez les prénoms par une virgule.">
-          <TextInput value={children} onChange={(event) => setChildren(event.target.value)} placeholder="Léo, Chloé" />
-        </FormField>
-        <FormField label="Comptes">
-          <SelectInput value={accounts} onChange={(event) => setAccounts(event.target.value)} options={["0 compte", "1 compte", "1 sans compte", "2 comptes", "2 sans compte", "3 comptes"]} />
-        </FormField>
-        <FormField label="Statut">
-          <SelectInput value={status} onChange={(event) => setStatus(event.target.value)} options={["Complet", "À compléter"]} />
-        </FormField>
+
+        {live ? (
+          <p className="col-span-full rounded-xl bg-muted px-3.5 py-3 text-[11px] leading-relaxed text-soft">
+            L&apos;API ne permet pour l&apos;instant que de créer et renommer une famille. Rattachez les parents
+            depuis la page Personnes, et les enfants depuis l&apos;application mobile.
+          </p>
+        ) : (
+          <>
+            <FormField label="Parents" wide hint="Séparez plusieurs parents par une virgule.">
+              <TextInput value={parents} onChange={(event) => setParents(event.target.value)} placeholder="Camille & Julien" />
+            </FormField>
+            <FormField label="Enfants" wide hint="Séparez les prénoms par une virgule.">
+              <TextInput value={children} onChange={(event) => setChildren(event.target.value)} placeholder="Léo, Chloé" />
+            </FormField>
+            <FormField label="Comptes">
+              <SelectInput value={accounts} onChange={(event) => setAccounts(event.target.value)} options={["0 compte", "1 compte", "1 sans compte", "2 comptes", "2 sans compte", "3 comptes"]} />
+            </FormField>
+            <FormField label="Statut">
+              <SelectInput value={status} onChange={(event) => setStatus(event.target.value)} options={["Complet", "À compléter"]} />
+            </FormField>
+          </>
+        )}
       </div>
 
-      <div className="flex items-start gap-3 rounded-xl bg-muted px-3.5 py-3 text-[11px] leading-relaxed text-soft">
-        <UsersRound size={16} className="mt-0.5 shrink-0" />
-        <span>
-          Chaque enfant peut être rattaché à ses activités et à ses engagements. Les parents sans compte peuvent
-          être invités depuis la fiche famille.
-        </span>
-      </div>
+      {!live && (
+        <div className="flex items-start gap-3 rounded-xl bg-muted px-3.5 py-3 text-[11px] leading-relaxed text-soft">
+          <UsersRound size={16} className="mt-0.5 shrink-0" />
+          <span>
+            Chaque enfant peut être rattaché à ses activités et à ses engagements. Les parents sans compte peuvent
+            être invités depuis la fiche famille.
+          </span>
+        </div>
+      )}
     </form>
   );
 }
 
 export default function FamiliesPage() {
-  const [rows, setRows] = useState<Family[]>(families);
+  const [rows, setRows] = useState<Family[]>(USE_MOCK ? families : []);
   const [search, setSearch] = useState("");
   const [accounts, setAccounts] = useState("Tous les comptes");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<Family | null>(null);
+  const [saving, setSaving] = useState(false);
   const { toast } = useToast();
+
+  const { data: apiFamilies, loading, error, reload } = useApiData<FamiliesResponse>(
+    () => api.families.list({ take: 300 }),
+    { total: 0, items: [] }
+  );
+
+  useEffect(() => {
+    if (USE_MOCK) return;
+    setRows(apiFamilies.items.map(familyToRow));
+  }, [apiFamilies]);
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -99,16 +140,37 @@ export default function FamiliesPage() {
     setDrawerOpen(true);
   };
 
-  const save = (family: Family) => {
-    if (editing) {
-      setRows((current) => current.map((item) => (item.id === family.id ? family : item)));
-      toast("La famille a été mise à jour.");
-    } else {
-      setRows((current) => [family, ...current]);
-      toast("La famille a été créée.");
+  const save = async (payload: FamilyPayload) => {
+    if (USE_MOCK) {
+      if (editing) {
+        setRows((current) => current.map((item) => (item.id === payload.row.id ? payload.row : item)));
+        toast("La famille a été mise à jour.");
+      } else {
+        setRows((current) => [payload.row, ...current]);
+        toast("La famille a été créée.");
+      }
+      setDrawerOpen(false);
+      setEditing(null);
+      return;
     }
-    setDrawerOpen(false);
-    setEditing(null);
+
+    setSaving(true);
+    try {
+      if (editing) {
+        await api.families.update(editing.id, payload.name);
+        toast("La famille a été mise à jour.");
+      } else {
+        await api.families.create(payload.name);
+        toast("La famille a été créée.");
+      }
+      await reload();
+      setDrawerOpen(false);
+      setEditing(null);
+    } catch (cause) {
+      toast(errorMessage(cause), "danger");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -139,12 +201,17 @@ export default function FamiliesPage() {
         }}
       />
 
+      {!USE_MOCK && error && (
+        <div className="mb-4 rounded-xl bg-danger-soft px-4 py-3 text-[12px] font-medium text-danger">{error}</div>
+      )}
+
       <DataTable
         id="tour-families-table"
         rows={filtered}
         rowKey={(row) => row.id}
         minWidth={900}
         grid="1.2fr 1.25fr 1.3fr .8fr 1fr 36px"
+        emptyMessage={loading ? "Chargement des familles…" : undefined}
         columns={[
           {
             key: "family",
@@ -186,12 +253,14 @@ export default function FamiliesPage() {
         footer={
           <DrawerFooter
             onCancel={() => setDrawerOpen(false)}
-            submitLabel={editing ? "Enregistrer" : "Créer la famille"}
+            submitLabel={saving ? "Enregistrement…" : editing ? "Enregistrer" : "Créer la famille"}
             form="family-form"
           />
         }
       >
-        {drawerOpen && <FamilyForm key={editing?.id ?? "new"} family={editing} onSave={save} />}
+        {drawerOpen && (
+          <FamilyForm key={editing?.id ?? "new"} family={editing} live={!USE_MOCK} onSave={save} />
+        )}
       </Drawer>
     </>
   );

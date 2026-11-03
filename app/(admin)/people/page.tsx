@@ -1,8 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { MoreHorizontal, Plus, ShieldCheck } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { MoreHorizontal, Plus, ShieldCheck, X } from "lucide-react";
 import { people, type Person } from "@/lib/data";
+import { personToRow } from "@/lib/adapters";
+import { api, errorMessage, USE_MOCK, type PersonDto } from "@/lib/api";
+import { useApiData } from "@/lib/use-api-data";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/toast";
 import {
@@ -18,6 +21,10 @@ import {
   TextInput,
 } from "@/components/ui";
 
+type PersonRowEx = Person & { familyId?: string | null };
+
+type PeopleResponse = { total: number; items: PersonDto[] };
+
 const roleOptions = ["Parent", "Staff", "Admin"];
 
 const roleTone: Record<string, string> = {
@@ -26,12 +33,29 @@ const roleTone: Record<string, string> = {
   Admin: "bg-brand-soft text-brand",
 };
 
-function PersonForm({ person, onSave }: { person: Person | null; onSave: (person: Person) => void }) {
+type PersonPayload = {
+  row: PersonRowEx;
+  firstName: string;
+  lastName: string;
+  roles: string[];
+  isActive: boolean;
+  familyId: string | null;
+};
+
+function PersonForm({
+  person,
+  live,
+  onSave,
+}: {
+  person: PersonRowEx | null;
+  live: boolean;
+  onSave: (payload: PersonPayload) => void;
+}) {
   const [firstName, setFirstName] = useState(person?.name.split(" ")[0] ?? "");
   const [lastName, setLastName] = useState(person?.name.split(" ").slice(1).join(" ") ?? "");
   const [email, setEmail] = useState(person?.email ?? "");
   const [roles, setRoles] = useState<string[]>(person?.roles ?? ["Parent"]);
-  const [status, setStatus] = useState(person?.status ?? "En attente");
+  const [status, setStatus] = useState(person?.status ?? (live ? "Actif" : "En attente"));
 
   const toggleRole = (role: string) => {
     setRoles((current) =>
@@ -44,13 +68,22 @@ function PersonForm({ person, onSave }: { person: Person | null; onSave: (person
       id="person-form"
       onSubmit={(event) => {
         event.preventDefault();
+        const finalRoles = roles.length ? roles : ["Parent"];
         onSave({
-          id: person?.id ?? `p${Date.now()}`,
-          name: `${firstName} ${lastName}`.trim() || "Nouvelle personne",
-          email,
-          roles: roles.length ? roles : ["Parent"],
-          status,
-          lastLogin: person?.lastLogin ?? "Invitation envoyée",
+          row: {
+            id: person?.id ?? `p${Date.now()}`,
+            name: `${firstName} ${lastName}`.trim() || "Nouvelle personne",
+            email,
+            roles: finalRoles,
+            status,
+            lastLogin: person?.lastLogin ?? (live ? "—" : "Invitation envoyée"),
+            familyId: person?.familyId ?? null,
+          },
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          roles: finalRoles,
+          isActive: status === "Actif",
+          familyId: person?.familyId ?? null,
         });
       }}
       className="flex flex-col gap-4"
@@ -66,7 +99,11 @@ function PersonForm({ person, onSave }: { person: Person | null; onSave: (person
           <TextInput type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
         </FormField>
         <FormField label="Statut" wide>
-          <SelectInput value={status} onChange={(event) => setStatus(event.target.value)} options={["Actif", "En attente", "Suspendu"]} />
+          <SelectInput
+            value={status}
+            onChange={(event) => setStatus(event.target.value)}
+            options={live ? ["Actif", "Suspendu"] : ["Actif", "En attente", "Suspendu"]}
+          />
         </FormField>
       </div>
 
@@ -94,25 +131,54 @@ function PersonForm({ person, onSave }: { person: Person | null; onSave: (person
         })}
       </div>
 
-      <div className="flex items-start gap-3 rounded-xl bg-info-soft px-3.5 py-3 text-[11px] leading-relaxed text-info">
-        <ShieldCheck size={16} className="mt-0.5 shrink-0" />
-        <span>
-          Les administrateurs peuvent gérer les matchs, les membres et les pénalités. Les rôles sont cumulables
-          au sein d&apos;un même compte.
-        </span>
-      </div>
+      {!live && (
+        <div className="flex items-start gap-3 rounded-xl bg-info-soft px-3.5 py-3 text-[11px] leading-relaxed text-info">
+          <ShieldCheck size={16} className="mt-0.5 shrink-0" />
+          <span>
+            Les administrateurs peuvent gérer les matchs, les membres et les pénalités. Les rôles sont cumulables
+            au sein d&apos;un même compte.
+          </span>
+        </div>
+      )}
+
+      {live && !person && (
+        <div className="flex items-start gap-3 rounded-xl bg-muted px-3.5 py-3 text-[11px] leading-relaxed text-soft">
+          <ShieldCheck size={16} className="mt-0.5 shrink-0" />
+          <span>
+            Un mot de passe temporaire sera généré et affiché après la création. Communiquez-le à la personne,
+            qui pourra le modifier ensuite.
+          </span>
+        </div>
+      )}
     </form>
   );
 }
 
 export default function PeoplePage() {
-  const [rows, setRows] = useState<Person[]>(people);
+  const [rows, setRows] = useState<PersonRowEx[]>(USE_MOCK ? people : []);
   const [search, setSearch] = useState("");
   const [role, setRole] = useState("Tous les rôles");
   const [status, setStatus] = useState("Tous les statuts");
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editing, setEditing] = useState<Person | null>(null);
+  const [editing, setEditing] = useState<PersonRowEx | null>(null);
+  const [tempPassword, setTempPassword] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const { toast } = useToast();
+
+  const { data: apiPeople, loading, error, reload } = useApiData<PeopleResponse>(
+    () => api.people.list({ take: 200 }),
+    { total: 0, items: [] }
+  );
+
+  useEffect(() => {
+    if (USE_MOCK) return;
+    setRows(
+      apiPeople.items.map((person) => ({
+        ...personToRow(person),
+        familyId: person.familyId,
+      }))
+    );
+  }, [apiPeople]);
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -129,22 +195,75 @@ export default function PeoplePage() {
     setDrawerOpen(true);
   };
 
-  const openEdit = (row: Person) => {
+  const openEdit = (row: PersonRowEx) => {
     setEditing(row);
     setDrawerOpen(true);
   };
 
-  const save = (person: Person) => {
-    if (editing) {
-      setRows((current) => current.map((item) => (item.id === person.id ? person : item)));
-      toast("Le compte a été mis à jour.");
-    } else {
-      setRows((current) => [person, ...current]);
-      toast("La personne a été ajoutée. Une invitation lui sera envoyée.");
+  const save = async (payload: PersonPayload) => {
+    if (USE_MOCK) {
+      if (editing) {
+        setRows((current) => current.map((item) => (item.id === payload.row.id ? payload.row : item)));
+        toast("Le compte a été mis à jour.");
+      } else {
+        setRows((current) => [payload.row, ...current]);
+        toast("La personne a été ajoutée. Une invitation lui sera envoyée.");
+      }
+      setDrawerOpen(false);
+      setEditing(null);
+      return;
     }
-    setDrawerOpen(false);
-    setEditing(null);
+
+    setSaving(true);
+    try {
+      if (editing) {
+        await api.people.update(editing.id, {
+          email: payload.row.email,
+          firstName: payload.firstName,
+          lastName: payload.lastName,
+          familyId: payload.familyId,
+        });
+
+        const rolesChanged =
+          editing.roles.length !== payload.roles.length ||
+          editing.roles.some((item) => !payload.roles.includes(item));
+        if (rolesChanged) await api.people.setRoles(editing.id, payload.roles);
+
+        if ((editing.status === "Actif") !== payload.isActive) {
+          await api.people.setActive(editing.id, payload.isActive);
+        }
+
+        toast("Le compte a été mis à jour.");
+      } else {
+        const created = await api.people.create({
+          email: payload.row.email,
+          firstName: payload.firstName,
+          lastName: payload.lastName,
+          roles: payload.roles,
+          familyId: payload.familyId,
+          password: null,
+        });
+        setTempPassword(created.temporaryPassword);
+        toast(
+          created.temporaryPassword
+            ? "La personne a été ajoutée. Un mot de passe temporaire a été généré."
+            : "La personne a été ajoutée."
+        );
+      }
+
+      await reload();
+      setDrawerOpen(false);
+      setEditing(null);
+    } catch (cause) {
+      toast(errorMessage(cause), "danger");
+    } finally {
+      setSaving(false);
+    }
   };
+
+  const statusOptions = USE_MOCK
+    ? ["Tous les statuts", "Actif", "En attente", "Suspendu"]
+    : ["Tous les statuts", "Actif", "Suspendu"];
 
   return (
     <>
@@ -155,6 +274,25 @@ export default function PeoplePage() {
         description="Gérez les comptes et leurs différents rôles."
         action={{ label: "Ajouter une personne", icon: Plus, onClick: openCreate }}
       />
+
+      {tempPassword && (
+        <div className="mb-4 flex items-start justify-between gap-3 rounded-xl bg-info-soft px-4 py-3 text-[11.5px] leading-relaxed text-info">
+          <span>
+            <strong className="block">Mot de passe temporaire généré</strong>
+            <code className="mt-1 block select-all font-mono text-[12.5px]">{tempPassword}</code>
+            <span className="mt-1 block opacity-80">
+              Transmettez-le à la personne : il ne sera plus affiché après la fermeture de ce message.
+            </span>
+          </span>
+          <button
+            onClick={() => setTempPassword(null)}
+            aria-label="Masquer le mot de passe temporaire"
+            className="grid size-7 shrink-0 place-items-center rounded-lg transition hover:bg-info/10"
+          >
+            <X size={15} />
+          </button>
+        </div>
+      )}
 
       <Filters
         id="tour-people-filters"
@@ -171,7 +309,7 @@ export default function PeoplePage() {
           {
             label: "Statut",
             value: status,
-            options: ["Tous les statuts", "Actif", "En attente", "Suspendu"],
+            options: statusOptions,
             onChange: setStatus,
           },
         ]}
@@ -182,12 +320,17 @@ export default function PeoplePage() {
         }}
       />
 
+      {!USE_MOCK && error && (
+        <div className="mb-4 rounded-xl bg-danger-soft px-4 py-3 text-[12px] font-medium text-danger">{error}</div>
+      )}
+
       <DataTable
         id="tour-people-table"
         rows={filtered}
         rowKey={(row) => row.id}
         minWidth={940}
         grid="1.25fr 1.35fr 1.3fr .8fr 1fr 36px"
+        emptyMessage={loading ? "Chargement des comptes…" : undefined}
         columns={[
           {
             key: "person",
@@ -243,12 +386,14 @@ export default function PeoplePage() {
         footer={
           <DrawerFooter
             onCancel={() => setDrawerOpen(false)}
-            submitLabel={editing ? "Enregistrer" : "Envoyer l'invitation"}
+            submitLabel={saving ? "Enregistrement…" : editing ? "Enregistrer" : "Envoyer l'invitation"}
             form="person-form"
           />
         }
       >
-        {drawerOpen && <PersonForm key={editing?.id ?? "new"} person={editing} onSave={save} />}
+        {drawerOpen && (
+          <PersonForm key={editing?.id ?? "new"} person={editing} live={!USE_MOCK} onSave={save} />
+        )}
       </Drawer>
     </>
   );
