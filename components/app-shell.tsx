@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
-import { Bell, ChevronDown, Compass, LogOut, Moon, Search, Settings, Sun, UserRound } from "lucide-react";
+import { Bell, ChevronDown, Compass, LogOut, Moon, Plus, Search, Settings, Sun, UserRound } from "lucide-react";
 import { adminNav } from "@/lib/nav";
 import { NavMain } from "@/components/nav-main";
 import { Logo } from "@/components/logo";
@@ -101,6 +101,20 @@ function GlobalSearch() {
                 </CommandItem>
               );
             })}
+          </CommandGroup>
+          <CommandGroup heading="Actions">
+            <CommandItem value="Créer un match" onSelect={() => go("/matches")}>
+              <Plus />
+              Créer un match
+            </CommandItem>
+            <CommandItem value="Ajouter des points" onSelect={() => go("/points-history")}>
+              <Plus />
+              Ajouter des points
+            </CommandItem>
+            <CommandItem value="Nouvelle notification" onSelect={() => go("/notifications/create")}>
+              <Plus />
+              Nouvelle notification
+            </CommandItem>
           </CommandGroup>
         </CommandList>
       </CommandDialog>

@@ -22,10 +22,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { DataTable } from "@/components/data-table";
 import { Filters } from "@/components/filters";
 import { PageHeader } from "@/components/page-header";
 import { Status } from "@/components/status";
+import { FormSheet, FormSheetFooter } from "@/components/form-sheet";
 
 function notificationType(row: NotificationDto) {
   if (!row.dataJson) return "broadcast";
@@ -41,14 +45,18 @@ export default function NotificationsListPage() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("Tous les types");
   const [statusFilter, setStatusFilter] = useState("Tous les statuts");
-  const [toDelete, setToDelete] = useState<NotificationDto | null>(null);
+  // No delete for sent notifications
 
   const {
     data: rows,
     setData,
     loading,
     error,
-  } = useApiData<NotificationDto[]>(() => api.notifications.list(200), mockNotifications);
+    reload,
+  } = useApiData<NotificationDto[]>(
+    () => api.notifications.adminList({ take: 200 }).then((r) => r.items),
+    mockNotifications,
+  );
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -60,22 +68,7 @@ export default function NotificationsListPage() {
     });
   }, [rows, search, typeFilter, statusFilter]);
 
-  const confirmDelete = () => {
-    if (!toDelete) return;
-    try {
-      if (USE_MOCK) {
-        setData((current) => current.filter((row) => row.id !== toDelete.id));
-        toast.success("Notification supprimée (simulation).");
-      } else {
-        // Bob1-api has no delete endpoint yet.
-        toast.info("La suppression n'est pas encore disponible via l'API.");
-      }
-    } catch (cause) {
-      toast.error(errorMessage(cause));
-    } finally {
-      setToDelete(null);
-    }
-  };
+  // Notifications cannot be deleted once sent
 
   return (
     <>
@@ -146,50 +139,10 @@ export default function NotificationsListPage() {
               <Status tone={row.isRead ? "success" : "warning"}>{row.isRead ? "Lue" : "Non lue"}</Status>
             ),
           },
-          {
-            key: "actions",
-            label: "",
-            render: (row) => (
-              <div className="flex items-center justify-end gap-1">
-                <Button variant="ghost" size="icon-sm" className="text-muted-foreground" asChild>
-                  <Link href={`/notifications/${row.id}/edit`} aria-label={`Modifier ${row.title}`}>
-                    <Pencil />
-                  </Link>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="text-muted-foreground hover:bg-danger-soft hover:text-danger"
-                  onClick={() => setToDelete(row)}
-                  aria-label={`Supprimer ${row.title}`}
-                >
-                  <Trash2 />
-                </Button>
-              </div>
-            ),
-          },
         ]}
       />
 
-      <AlertDialog open={toDelete !== null} onOpenChange={(open) => !open && setToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogMedia className="bg-danger-soft text-danger">
-              <Trash2 />
-            </AlertDialogMedia>
-            <AlertDialogTitle>Supprimer cette notification ?</AlertDialogTitle>
-            <AlertDialogDescription>
-              « {toDelete?.title} » sera retirée de l'historique. Cette action est définitive.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={confirmDelete}>
-              Supprimer
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Notifications cannot be edited or deleted once sent */}
     </>
   );
 }

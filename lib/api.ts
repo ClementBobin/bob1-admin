@@ -35,7 +35,7 @@ export type AuthResponse = {
 };
 
 export type DivisionDto = { id: string; name: string; sortOrder: number; category: string; gender: string; isActive: boolean };
-export type TeamDto = { id: string; name: string; divisionId: string; coachName: string | null; logoUrl: string | null; isActive: boolean; trainingLocation: string | null };
+export type TeamDto = { id: string; name: string; divisionId: string; coachName: string | null; coachUserId: string | null; logoUrl: string | null; isActive: boolean; trainingVenueId: string | null; trainingVenueName: string | null };
 export type VenueDto = { id: string; name: string; address: string | null; city: string | null; postalCode: string | null };
 
 export type MatchStatus = "Scheduled" | "Cancelled" | "Played";
@@ -441,9 +441,9 @@ export const api = {
   teams: {
     list: (divisionId?: string) =>
       apiFetch<TeamDto[]>(`/teams${query({ divisionId })}`),
-    create: (input: { name: string; divisionId: string }) =>
+    create: (input: { name: string; divisionId: string; coachName?: string | null; coachUserId?: string | null; logoUrl?: string | null; isActive?: boolean; trainingVenueId?: string | null }) =>
       apiFetch<TeamDto>("/admin/teams", { method: "POST", body: input }),
-    update: (id: string, input: { name: string; divisionId: string }) =>
+    update: (id: string, input: { name: string; divisionId: string; coachName?: string | null; coachUserId?: string | null; logoUrl?: string | null; isActive?: boolean; trainingVenueId?: string | null }) =>
       apiFetch<TeamDto>(`/admin/teams/${id}`, { method: "PUT", body: input }),
     remove: (id: string) => apiFetch<void>(`/admin/teams/${id}`, { method: "DELETE" }),
   },
@@ -544,5 +544,10 @@ export const api = {
         method: "POST",
         body: { title, body, divisionId, expiresAtUtc, recurring, startup },
       }),
+    adminList: (params: { search?: string; skip?: number; take?: number } = {}) =>
+      apiFetch<{ total: number; items: NotificationDto[] }>(`/admin/notifications${query(params)}`),
+    update: (id: string, input: { title: string; body: string; expiresAtUtc?: string | null; recurring?: boolean; startup?: boolean }) =>
+      apiFetch<NotificationDto>(`/admin/notifications/${id}`, { method: "PUT", body: input }),
+    remove: (id: string) => apiFetch<void>(`/admin/notifications/${id}`, { method: "DELETE" }),
   },
 };

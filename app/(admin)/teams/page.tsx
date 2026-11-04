@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { MoreHorizontal, Plus, Upload, Shield } from "lucide-react";
-import { teams } from "@/lib/data";
-import { api, errorMessage, USE_MOCK, type DivisionDto, type TeamDto } from "@/lib/api";
+import { teams, people } from "@/lib/data";
+import { api, errorMessage, USE_MOCK, type DivisionDto, type TeamDto, type VenueDto, type PersonDto } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -16,28 +16,56 @@ import { Filters } from "@/components/filters";
 import { PageHeader } from "@/components/page-header";
 import { FormSheet, FormSheetFooter } from "@/components/form-sheet";
 
+type NamedOption = { id: string; name: string };
+
+const mockVenueOptions = [
+  "Coubertin",
+  "Palais des sports",
+  "Gymnase de Lattes",
+  "Halle Mauguio",
+  "Complexe de Lunel",
+  "Halle des Sports de Sète",
+];
+
 type TeamRow = {
   id: string;
   name: string;
   division: string;
   coach: string;
+  coachUserId: string | null;
   logo: string | null;
   players: string;
   status: string;
-  trainingLocation: string | null;
+  trainingVenueId: string | null;
+  trainingVenueName: string | null;
 };
 
-const initial: TeamRow[] = teams.map((item) => ({ ...item }));
+const initial: TeamRow[] = teams.map((item) => ({
+  id: item.id,
+  name: item.name,
+  division: item.division,
+  coach: item.coach,
+  coachUserId: null,
+  logo: item.logo ?? null,
+  players: item.players,
+  status: item.status,
+  trainingVenueId: null,
+  trainingVenueName: item.trainingLocation ?? null,
+}));
 const mockDivisionOptions = ["U13 M", "U13 F", "U15 M", "U15 F", "U17 M", "U17 F", "Seniors M", "Seniors F"];
 const mockStatusOptions = ["Active", "Externe", "Archivée"];
 
 function Form({
   row,
   divisionOptions,
+  venueOptions,
+  staffOptions,
   onSave,
 }: {
   row: TeamRow | null;
   divisionOptions: string[];
+  venueOptions: NamedOption[];
+  staffOptions: { id: string; name: string }[];
   onSave: (row: TeamRow) => void;
 }) {
   const [name, setName] = useState(row?.name ?? "BOB1 U18 M");
@@ -45,7 +73,8 @@ function Form({
   const [coach, setCoach] = useState(row?.coach ?? "");
   const [status, setStatus] = useState(row?.status ?? "Active");
   const [logo, setLogo] = useState(row?.logo ?? "");
-  const [trainingLocation, setTrainingLocation] = useState(row?.trainingLocation ?? "");
+  const [trainingVenueId, setTrainingVenueId] = useState(row?.trainingVenueId ?? "");
+  const [trainingVenueName, setTrainingVenueName] = useState(row?.trainingVenueName ?? "");
   const [logoPreview, setLogoPreview] = useState<string | null>(row?.logo ?? null);
 
   // Divisions load asynchronously: keep the select on a valid option.
@@ -58,15 +87,19 @@ function Form({
       id="team-form"
       onSubmit={(event) => {
         event.preventDefault();
+        // Find if coach matches a staff member
+        const staffMatch = staffOptions.find((s) => s.name === coach);
         onSave({
           id: row?.id ?? `t${Date.now()}`,
           name,
           division,
           coach: coach || "À désigner",
+          coachUserId: staffMatch?.id ?? null,
           logo: logoPreview,
           players: row?.players ?? "0 joueur",
           status,
-          trainingLocation: trainingLocation || null,
+          trainingVenueId: trainingVenueId || null,
+          trainingVenueName: trainingVenueName || null,
         });
       }}
       className="flex flex-col gap-4"
@@ -92,8 +125,14 @@ function Form({
             id="teams-field-29"
             value={coach}
             onChange={(event) => setCoach(event.target.value)}
-            placeholder="Nom du coach"
+            placeholder="Nom du coach (staff ou externe)"
+            list="staff-suggestions"
           />
+          <datalist id="staff-suggestions">
+            {staffOptions.map((staff) => (
+              <option key={staff.id} value={staff.name} />
+            ))}
+          </datalist>
         </Field>
         <Field className="col-span-full">
           <FieldLabel htmlFor="teams-field-30" className="text-[11px] font-bold text-muted-foreground">
@@ -105,11 +144,15 @@ function Form({
           <FieldLabel htmlFor="teams-field-31" className="text-[11px] font-bold text-muted-foreground">
             Lieu d'entraînement principal
           </FieldLabel>
-          <Input
+          <OptionSelect
             id="teams-field-31"
-            value={trainingLocation}
-            onChange={(event) => setTrainingLocation(event.target.value)}
-            placeholder="Gymnase, adresse..."
+            value={trainingVenueName || "Aucun"}
+            onValueChange={(value) => {
+              const venue = venueOptions.find((v) => v.name === value);
+              setTrainingVenueId(venue?.id ?? "");
+              setTrainingVenueName(value === "Aucun" ? "" : value);
+            }}
+            options={["Aucun", ...venueOptions.map((v) => v.name)]}
           />
         </Field>
       </div>
@@ -140,6 +183,17 @@ function Form({
         {logoPreview && (
           <div className="relative w-[120px] h-[120px] rounded-xl border border-line bg-card overflow-hidden">
             <img src={logoPreview} alt="Aperçu du logo" className="w-full h-full object-contain" />
+            <button
+              type="button"
+              onClick={() => {
+                setLogoPreview(null);
+                setLogo("");
+              }}
+              className="absolute top-1 right-1 grid size-6 place-items-center rounded-full bg-danger text-white text-[10px] font-bold hover:bg-danger/80"
+              aria-label="Supprimer le logo"
+            >
+              ×
+            </button>
           </div>
         )}
       </div>
@@ -156,30 +210,39 @@ export default function TeamsPage() {
 
   const { data: apiTeams, loading, error, reload } = useApiData<TeamDto[]>(() => api.teams.list(), []);
   const { data: apiDivisions } = useApiData<DivisionDto[]>(() => api.divisions.list(), []);
+  const { data: apiVenues } = useApiData<VenueDto[]>(() => api.venues.list(), []);
+  const { data: apiPeople } = useApiData<{ total: number; items: PersonDto[] }>(() => api.people.list({ take: 200 }), { total: 0, items: [] });
 
   const divisionOptions = USE_MOCK ? mockDivisionOptions : apiDivisions.map((division) => division.name);
+  const venueOptions = USE_MOCK ? mockVenueOptions.map((name) => ({ id: name, name })) : apiVenues.map((v) => ({ id: v.id, name: v.name }));
+  const staffOptions = USE_MOCK
+    ? people.filter((p) => p.roles.includes("Staff")).map((p) => ({ id: p.id, name: p.name }))
+    : apiPeople.items.filter((p) => p.roles.includes("Staff")).map((p) => ({ id: p.id, name: `${p.firstName} ${p.lastName}` }));
 
   useEffect(() => {
     if (USE_MOCK) return;
     const names = new Map(apiDivisions.map((division) => [division.id, division.name]));
+    const venueNames = new Map(apiVenues.map((v) => [v.id, v.name]));
     setRows(
       apiTeams.map((team) => ({
         id: team.id,
         name: team.name,
         division: names.get(team.divisionId) ?? "—",
         coach: team.coachName ?? "—",
+        coachUserId: team.coachUserId ?? null,
         logo: team.logoUrl ?? null,
         players: "—",
         status: team.isActive ? "Active" : "Archivée",
-        trainingLocation: team.trainingLocation ?? null,
+        trainingVenueId: team.trainingVenueId ?? null,
+        trainingVenueName: team.trainingVenueName ?? (team.trainingVenueId ? venueNames.get(team.trainingVenueId) ?? null : null),
       })),
     );
-  }, [apiTeams, apiDivisions]);
+  }, [apiTeams, apiDivisions, apiVenues]);
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
     return rows.filter((row) => {
-      const matchSearch = `${row.name} ${row.division} ${row.coach} ${row.trainingLocation ?? ""}`
+      const matchSearch = `${row.name} ${row.division} ${row.coach} ${row.trainingVenueName ?? ""}`
         .toLowerCase()
         .includes(needle);
       const matchStatus = status === "Tous les statuts" || row.status === status;
@@ -222,9 +285,10 @@ export default function TeamsPage() {
         name: row.name,
         divisionId: division.id,
         coachName: row.coach === "À désigner" ? undefined : row.coach,
+        coachUserId: row.coachUserId || undefined,
         logoUrl: row.logo || undefined,
         isActive: row.status === "Active",
-        trainingLocation: row.trainingLocation || undefined,
+        trainingVenueId: row.trainingVenueId || undefined,
       };
       if (editing) await api.teams.update(row.id, teamData);
       else await api.teams.create(teamData);
@@ -308,9 +372,9 @@ export default function TeamsPage() {
           },
           { key: "coach", label: "Coach", render: (row) => row.coach },
           {
-            key: "trainingLocation",
+            key: "trainingVenueName",
             label: "Lieu d'entraînement",
-            render: (row) => row.trainingLocation ?? <span className="text-soft">—</span>,
+            render: (row) => row.trainingVenueName ?? <span className="text-soft">—</span>,
           },
           {
             key: "status",
@@ -353,7 +417,7 @@ export default function TeamsPage() {
         }
       >
         {drawerOpen && (
-          <Form key={editing?.id ?? "new"} row={editing} divisionOptions={divisionOptions} onSave={save} />
+          <Form key={editing?.id ?? "new"} row={editing} divisionOptions={divisionOptions} venueOptions={venueOptions} staffOptions={staffOptions} onSave={save} />
         )}
       </FormSheet>
     </>
