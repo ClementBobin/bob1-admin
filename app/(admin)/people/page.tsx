@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { MoreHorizontal, Plus, ShieldCheck, X } from "lucide-react";
-import { people, type Person } from "@/lib/data";
+import { type Person } from "@/lib/data";
 import { personToRow } from "@/lib/adapters";
 import { api, errorMessage, USE_MOCK, type PersonDto } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { OptionSelect } from "@/components/option-select";
 import { InitialsAvatar } from "@/components/initials-avatar";
 import { Status } from "@/components/status";
@@ -21,8 +21,6 @@ import { PageHeader } from "@/components/page-header";
 import { FormSheet, FormSheetFooter } from "@/components/form-sheet";
 
 type PersonRowEx = Person & { familyId?: string | null; personId?: string };
-
-type PeopleResponse = { total: number; items: PersonDto[] };
 
 const roleOptions = ["Parent", "Staff", "Admin"];
 
@@ -171,7 +169,7 @@ function PersonForm({
 }
 
 export default function PeoplePage() {
-  const [rows, setRows] = useState<PersonRowEx[]>(USE_MOCK ? people : []);
+  const [rows, setRows] = useState<PersonRowEx[]>([]);
   const [search, setSearch] = useState("");
   const [role, setRole] = useState("Tous les rôles");
   const [status, setStatus] = useState("Tous les statuts");
@@ -185,12 +183,11 @@ export default function PeoplePage() {
     loading,
     error,
     reload,
-  } = useApiData<PeopleResponse>(() => api.people.list({ take: 200 }), { total: 0, items: [] });
+  } = useApiData<PersonDto[]>(() => api.people.list({ take: 200 }).then((response) => response.items));
 
   useEffect(() => {
-    if (USE_MOCK) return;
     setRows(
-      apiPeople.items.map((person) => ({
+      (apiPeople || []).map((person) => ({
         ...personToRow(person),
         familyId: person.familyId,
         personId: person.id,
@@ -227,43 +224,6 @@ export default function PeoplePage() {
     isActive: boolean;
     suspendedFromParticipation: boolean;
   }) => {
-    if (USE_MOCK) {
-      if (editing) {
-        setRows((current) =>
-          current.map((item) =>
-            item.id === payload.personId
-              ? {
-                  ...item,
-                  name: `${payload.firstName} ${payload.lastName}`,
-                  email: payload.email,
-                  roles: payload.roles,
-                  status: payload.isActive ? "Actif" : "Suspendu",
-                  suspendedFromParticipation: payload.suspendedFromParticipation,
-                }
-              : item,
-          ),
-        );
-        toast.success("Le compte a été mis à jour.");
-      } else {
-        setRows((current) => [
-          {
-            id: `p${Date.now()}`,
-            name: `${payload.firstName} ${payload.lastName}`,
-            email: payload.email,
-            roles: payload.roles,
-            status: payload.isActive ? "Actif" : "Suspendu",
-            suspendedFromParticipation: payload.suspendedFromParticipation,
-            lastLogin: "Invitation envoyée",
-          },
-          ...current,
-        ]);
-        toast.success("La personne a été ajoutée. Une invitation lui sera envoyée.");
-      }
-      setDrawerOpen(false);
-      setEditing(null);
-      return;
-    }
-
     setSaving(true);
     try {
       if (editing) {
@@ -314,9 +274,7 @@ export default function PeoplePage() {
     }
   };
 
-  const statusOptions = USE_MOCK
-    ? ["Tous les statuts", "Actif", "En attente", "Suspendu"]
-    : ["Tous les statuts", "Actif", "Suspendu"];
+  const statusOptions = ["Tous les statuts", "Actif", "Suspendu"];
 
   return (
     <>
@@ -373,7 +331,7 @@ export default function PeoplePage() {
         }}
       />
 
-      {!USE_MOCK && error && (
+      {error && (
         <div className="mb-4 rounded-xl bg-danger-soft px-4 py-3 text-[12px] font-medium text-danger">{error}</div>
       )}
 

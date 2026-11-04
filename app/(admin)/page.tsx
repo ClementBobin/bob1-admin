@@ -3,12 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CalendarDays, ChevronRight, Clock, Plus, ShieldAlert, Users } from "lucide-react";
-import { activity as mockActivity, attentionMatches as mockAttention, kpis as mockKpis, type Tone } from "@/lib/data";
-import { api, USE_MOCK, type MatchDto, type PenaltyDto, type UrgentSlotDto } from "@/lib/api";
+import { type Tone } from "@/lib/data";
+import { api, type MatchDto, type PenaltyDto, type UrgentSlotDto } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
-import { formatDate, formatDateTime } from "@/lib/adapters";
 import { displayName, useAuth } from "@/components/auth-provider";
-import { cn } from "@/lib/utils";
+import { cn, formatDate, formatDateTime } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Status } from "@/components/status";
 import { PageHeader, CardHeading } from "@/components/page-header";
@@ -79,7 +78,6 @@ function opponentFromTitle(title: string) {
 }
 
 export default function DashboardPage() {
-  const router = useRouter();
   const { user } = useAuth();
 
   const { data: apiMatches } = useApiData<MatchDto[]>(() => api.matches.list(), []);
@@ -87,27 +85,13 @@ export default function DashboardPage() {
   const { data: apiPenalties } = useApiData<PenaltyDto[]>(() => api.rankings.penalties(), []);
 
   const now = Date.now();
-  const upcomingMatches = USE_MOCK
-    ? mockAttention.map((item, index) => ({
-        id: `mock-${index}`,
-        title: `BOB1 vs ${item.opponent}`,
-        divisionName: item.division,
-        venueName: "Coubertin",
-        startsAtUtc: new Date(now + (index + 1) * 7 * 24 * 60 * 60 * 1000).toISOString(),
-        status: "Scheduled" as const,
-        opponent: item.opponent,
-        homeScore: null,
-        awayScore: null,
-        isHome: true,
-        divisionId: "",
-      }))
-    : apiMatches.filter(
+  const upcomingMatches = (apiMatches ?? []).filter(
         (match) => match.status === "Scheduled" && new Date(match.startsAtUtc).getTime() >= now,
       );
-  const recentPenalties = apiPenalties.filter((penalty) => now - new Date(penalty.createdAtUtc).getTime() <= WEEK_MS);
+  const recentPenalties = (apiPenalties ?? []).filter((penalty) => now - new Date(penalty.createdAtUtc).getTime() <= WEEK_MS);
 
   const byMatch = new Map<string, { startsAt: string; title: string; missing: number }>();
-  for (const slot of apiUrgent) {
+  for (const slot of apiUrgent ?? []) {
     const entry = byMatch.get(slot.matchId) ?? {
       startsAt: slot.matchStartsAtUtc,
       title: slot.matchTitle,
@@ -121,7 +105,7 @@ export default function DashboardPage() {
     .sort((a, b) => new Date(a[1].startsAt).getTime() - new Date(b[1].startsAt).getTime())
     .slice(0, 4)
     .map(([matchId, entry]) => {
-      const match = apiMatches.find((item) => item.id === matchId);
+      const match = apiMatches?.find((item) => item.id === matchId);
       const days = (new Date(entry.startsAt).getTime() - now) / (24 * 60 * 60 * 1000);
       return {
         id: matchId,
@@ -133,7 +117,7 @@ export default function DashboardPage() {
       };
     });
 
-  const openSlots = apiUrgent.reduce((total, slot) => total + slot.missing, 0);
+  const openSlots = (apiUrgent ?? []).reduce((total, slot) => total + slot.missing, 0);
 
   const liveKpis: Kpi[] = [
     {
@@ -174,9 +158,9 @@ export default function DashboardPage() {
     })),
   ].slice(0, 4);
 
-  const kpis: Kpi[] = USE_MOCK ? (mockKpis as Kpi[]) : liveKpis;
-  const attention: Attention[] = USE_MOCK ? mockAttention : liveAttention;
-  const activity: ActivityItem[] = USE_MOCK ? mockActivity : liveActivity;
+  const kpis: Kpi[] = liveKpis;
+  const attention: Attention[] = liveAttention;
+  const activity: ActivityItem[] = liveActivity;
 
   const name = displayName(user);
   const firstName = name ? name.split(" ")[0] : "Camille";

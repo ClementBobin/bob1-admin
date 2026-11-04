@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     template: "%s · BOB1 Administration",
   },
   description:
-    "Back-office du club de basket BOB1 Montpellier : matchs, équipes, membres, classements et communication.",
+    "Back-office du club de basket BOB1 : matchs, équipes, membres, classements et communication.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

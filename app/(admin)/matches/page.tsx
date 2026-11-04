@@ -2,15 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Minus, MoreHorizontal, Plus } from "lucide-react";
-import { divisions, matches, type MatchRow } from "@/lib/data";
+import { type MatchRow } from "@/lib/data";
 import { matchToRow } from "@/lib/adapters";
-import { api, errorMessage, USE_MOCK, type DivisionDto, type MatchDto, type VenueDto } from "@/lib/api";
+import { api, errorMessage, type DivisionDto, type MatchDto, type VenueDto } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { OptionSelect } from "@/components/option-select";
 import { Status } from "@/components/status";
 import { DataTable } from "@/components/data-table";
@@ -55,31 +55,11 @@ const teamOptions = [
   "Sète Basket",
 ];
 
-const mockVenueOptions = [
-  "Coubertin",
-  "Palais des sports",
-  "Gymnase de Lattes",
-  "Halle Mauguio",
-  "Complexe de Lunel",
-  "Halle des Sports de Sète",
-  "Mauguio",
-  "Lunel",
-  "Castelnau",
-];
-
-const mockDivisionOptions: NamedOption[] = divisions
-  .filter((item) => item.status === "Active")
-  .map((item) => ({
-    id: item.id,
-    name: item.name.replace("Masculins", "M").replace("Féminines", "F"),
-  }));
-
 const slotLabels: Array<{ key: string; label: string; kind: "Staff" | "Volunteer" }> = [
   { key: "arbitres", label: "Arbitres", kind: "Staff" },
   { key: "chrono", label: "Chrono", kind: "Staff" },
   { key: "mar", label: "MAR", kind: "Staff" },
   { key: "buvette", label: "Buvette", kind: "Volunteer" },
-  { key: "covoiturage", label: "Covoiturage", kind: "Volunteer" },
 ];
 
 const statusTone = (status: string) => {
@@ -128,34 +108,27 @@ type MatchPayload = {
 
 function MatchForm({
   match,
-  live,
   divisionOptions,
   venueOptions,
   onSave,
 }: {
   match: MatchRowEx | null;
-  live: boolean;
   divisionOptions: string[];
   venueOptions: string[];
   onSave: (payload: MatchPayload) => void;
 }) {
   const initial = localDateParts(match?.startsAtUtc);
   const [division, setDivision] = useState(match?.division ?? divisionOptions[0] ?? "U13 M");
-  const [home, setHome] = useState(match?.home ?? "BOB1");
-  const [away, setAway] = useState(match?.away ?? "Castelnau Basket");
-  const [opponent, setOpponent] = useState(
-    match?.opponent ?? (match ? (match.home === "BOB1" ? match.away : match.home) : "Castelnau Basket"),
-  );
-  const [isHome, setIsHome] = useState(match?.isHome ?? true);
+  const [homeTeam, setHomeTeam] = useState(match?.home ?? "BOB1");
+  const [awayTeam, setAwayTeam] = useState(match?.away ?? "Castelnau Basket");
   const [date, setDate] = useState(initial.date);
   const [time, setTime] = useState(initial.time);
   const [venue, setVenue] = useState(match?.venue ?? venueOptions[0] ?? "Coubertin");
   const [slots, setSlots] = useState<Record<string, number>>({
     arbitres: match?.officials[1] || 4,
-    chrono: 1,
-    mar: 1,
+    chrono: match?.chrono[1] || 1,
+    mar: match?.mar[1] || 1,
     buvette: match?.buvette[1] || 2,
-    covoiturage: 4,
   });
 
   // Divisions/venues load asynchronously; keep the selects on a valid option.
@@ -176,12 +149,12 @@ function MatchForm({
       id="match-form"
       onSubmit={(event) => {
         event.preventDefault();
-        const homeTeam = live ? (isHome ? "BOB1" : opponent.trim()) : home;
-        const awayTeam = live ? (isHome ? opponent.trim() : "BOB1") : away;
+        const isHome = homeTeam === "BOB1" || homeTeam === "BOB1 U13 M" || homeTeam.startsWith("BOB1");
+        const opponentName = isHome ? awayTeam : homeTeam;
         onSave({
           divisionName: division,
-          opponent: live ? opponent.trim() : homeTeam === "BOB1" ? awayTeam : homeTeam,
-          isHome: live ? isHome : homeTeam === "BOB1",
+          opponent: opponentName,
+          isHome,
           venueName: venue,
           date,
           time,
@@ -195,10 +168,12 @@ function MatchForm({
             venue,
             officials: [match?.officials[0] ?? 0, slots.arbitres],
             buvette: [match?.buvette[0] ?? 0, slots.buvette],
+            chrono: [0, slots.chrono],
+            mar: [0, slots.mar],
             carpool: `${slots.covoiturage} places`,
             status: match?.status ?? "Brouillon",
-            opponent: live ? opponent.trim() : homeTeam === "BOB1" ? awayTeam : homeTeam,
-            isHome: live ? isHome : homeTeam === "BOB1",
+            opponent: opponentName,
+            isHome,
             startsAtUtc: new Date(`${date}T${time}:00`).toISOString(),
           },
         });
@@ -213,48 +188,30 @@ function MatchForm({
           <OptionSelect id="matches-field-1" value={division} onValueChange={setDivision} options={divisionOptions} />
         </Field>
 
-        {live ? (
-          <>
-            <Field>
-              <FieldLabel htmlFor="matches-field-2" className="text-[11px] font-bold text-muted-foreground">
-                Adversaire
-              </FieldLabel>
-              <Input
-                id="matches-field-2"
-                value={opponent}
-                onChange={(event) => setOpponent(event.target.value)}
-                placeholder="Castelnau Basket"
-                required
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="matches-field-3" className="text-[11px] font-bold text-muted-foreground">
-                Lieu de la rencontre
-              </FieldLabel>
-              <OptionSelect
-                id="matches-field-3"
-                value={isHome ? "Domicile" : "Extérieur"}
-                onValueChange={(value) => setIsHome(value === "Domicile")}
-                options={["Domicile", "Extérieur"]}
-              />
-            </Field>
-          </>
-        ) : (
-          <>
-            <Field>
-              <FieldLabel htmlFor="matches-field-4" className="text-[11px] font-bold text-muted-foreground">
-                Équipe à domicile
-              </FieldLabel>
-              <OptionSelect id="matches-field-4" value={home} onValueChange={setHome} options={teamOptions} />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="matches-field-5" className="text-[11px] font-bold text-muted-foreground">
-                Équipe à l'extérieur
-              </FieldLabel>
-              <OptionSelect id="matches-field-5" value={away} onValueChange={setAway} options={teamOptions} />
-            </Field>
-          </>
-        )}
+        <>
+          <Field>
+            <FieldLabel htmlFor="matches-field-2" className="text-[11px] font-bold text-muted-foreground">
+              Équipe à domicile
+            </FieldLabel>
+            <OptionSelect
+              id="matches-field-2"
+              value={homeTeam}
+              onValueChange={setHomeTeam}
+              options={teamOptions}
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="matches-field-3" className="text-[11px] font-bold text-muted-foreground">
+              Équipe à l'extérieur
+            </FieldLabel>
+            <OptionSelect
+              id="matches-field-3"
+              value={awayTeam}
+              onValueChange={setAwayTeam}
+              options={teamOptions}
+            />
+          </Field>
+        </>
 
         <Field>
           <FieldLabel htmlFor="matches-field-6" className="text-[11px] font-bold text-muted-foreground">
@@ -321,24 +278,14 @@ function MatchForm({
       </div>
 
       <p className="rounded-xl bg-muted px-3.5 py-3 text-[11px] leading-relaxed text-soft">
-        {live
-          ? "Les postes saisis sont créés en même temps que le match. Vous pourrez les ajuster depuis la fiche du match."
-          : "Les bénévoles recevront une notification dès la publication du match. Vous pourrez ajuster les postes depuis la fiche du match."}
+        Les postes saisis sont créés en même temps que le match. Vous pourrez les ajuster depuis la fiche du match.
       </p>
     </form>
   );
 }
 
 export default function MatchesPage() {
-  const [rows, setRows] = useState<MatchRowEx[]>(
-    USE_MOCK
-      ? matches.map((item) => ({
-          ...item,
-          opponent: item.home === "BOB1" ? item.away : item.home,
-          isHome: item.home === "BOB1",
-        }))
-      : [],
-  );
+  const [rows, setRows] = useState<MatchRowEx[]>([]);
   const [search, setSearch] = useState("");
   const [division, setDivision] = useState("Toutes les divisions");
   const [status, setStatus] = useState("Tous les statuts");
@@ -351,9 +298,8 @@ export default function MatchesPage() {
   const { data: apiVenues } = useApiData<VenueDto[]>(() => api.venues.list(), []);
 
   useEffect(() => {
-    if (USE_MOCK) return;
     setRows(
-      apiMatches.map((match) => ({
+      (apiMatches ?? []).map((match) => ({
         ...matchToRow(match),
         opponent: match.opponent,
         isHome: match.isHome,
@@ -362,13 +308,9 @@ export default function MatchesPage() {
     );
   }, [apiMatches]);
 
-  const divisionOptions: NamedOption[] = USE_MOCK
-    ? mockDivisionOptions
-    : apiDivisions.map((item) => ({ id: item.id, name: item.name }));
+  const divisionOptions: NamedOption[] = (apiDivisions ?? []).map((item) => ({ id: item.id, name: item.name }));
 
-  const venueOptions: NamedOption[] = USE_MOCK
-    ? mockVenueOptions.map((name) => ({ id: name, name }))
-    : apiVenues.map((item) => ({ id: item.id, name: item.name }));
+  const venueOptions: NamedOption[] = (apiVenues ?? []).map((item) => ({ id: item.id, name: item.name }));
 
   const divisionNames = useMemo(() => {
     const names = divisionOptions.map((item) => item.name);
@@ -382,9 +324,7 @@ export default function MatchesPage() {
     return names;
   }, [venueOptions, editing]);
 
-  const statusOptions = USE_MOCK
-    ? ["Tous les statuts", "J-15", "J-4", "Confirmé", "Brouillon"]
-    : ["Tous les statuts", "J-15", "Confirmé", "Annulé"];
+  const statusOptions = ["Tous les statuts", "J-15", "Confirmé", "Annulé"];
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -409,19 +349,6 @@ export default function MatchesPage() {
   };
 
   const save = async (payload: MatchPayload) => {
-    if (USE_MOCK) {
-      if (editing) {
-        setRows((current) => current.map((item) => (item.id === payload.row.id ? payload.row : item)));
-        toast.success("Le match a été mis à jour.");
-      } else {
-        setRows((current) => [payload.row, ...current]);
-        toast.success("Le match a été créé et publié au calendrier.");
-      }
-      setDrawerOpen(false);
-      setEditing(null);
-      return;
-    }
-
     const divisionId = divisionOptions.find((item) => item.name === payload.divisionName)?.id;
     const venueId = venueOptions.find((item) => item.name === payload.venueName)?.id;
     if (!divisionId || !venueId) {
@@ -501,7 +428,7 @@ export default function MatchesPage() {
         }}
       />
 
-      {!USE_MOCK && error && (
+      {error && (
         <div className="mb-4 rounded-xl bg-danger-soft px-4 py-3 text-[12px] font-medium text-danger">{error}</div>
       )}
 
@@ -604,7 +531,6 @@ export default function MatchesPage() {
           <MatchForm
             key={editing?.id ?? "new"}
             match={editing}
-            live={!USE_MOCK}
             divisionOptions={divisionNames}
             venueOptions={venueNames}
             onSave={save}

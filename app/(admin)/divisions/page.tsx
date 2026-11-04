@@ -1,15 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { MoreHorizontal, Plus, Shield } from "lucide-react";
-import { divisions } from "@/lib/data";
+import { MoreHorizontal, Plus } from "lucide-react";
 import { divisionToRow, teamCountByDivision } from "@/lib/adapters";
-import { api, errorMessage, USE_MOCK, type DivisionDto, type TeamDto } from "@/lib/api";
+import { api, errorMessage, type DivisionDto, type TeamDto } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { OptionSelect } from "@/components/option-select";
 import { Status } from "@/components/status";
 import { DataTable } from "@/components/data-table";
@@ -20,24 +19,21 @@ import { FormSheet, FormSheetFooter } from "@/components/form-sheet";
 type DivisionRow = {
   id: string;
   name: string;
-  category: string;
-  gender: string;
+  category: string | null;
+  gender: string | null;
   teams: string;
   status: string;
 };
 
-const initial: DivisionRow[] = divisions.map((item) => ({ ...item }));
-
 const statusTone = (status: string) => (status === "Active" ? ("success" as const) : ("neutral" as const));
-const categoryOptions = ["U11", "U13", "U15", "U17", "U18", "Senior"];
 const genderOptions = ["Masculin", "Féminin", "Mixte"];
 const statusOptions = ["Active", "Inactive"];
 
 function Form({ row, onSave }: { row: DivisionRow | null; onSave: (row: DivisionRow) => void }) {
-  const [name, setName] = useState(row?.name ?? "U18 Masculins");
-  const [category, setCategory] = useState(row?.category ?? "U18");
-  const [gender, setGender] = useState(row?.gender ?? "Masculin");
-  const [status, setStatus] = useState(row?.status ?? "Active");
+  const [name, setName] = useState(row?.name ?? "");
+  const [category, setCategory] = useState(row?.category ?? "");
+  const [gender, setGender] = useState(row?.gender ?? genderOptions[0]);
+  const [status, setStatus] = useState(row?.status ?? statusOptions[0]);
 
   return (
     <form
@@ -66,7 +62,7 @@ function Form({ row, onSave }: { row: DivisionRow | null; onSave: (row: Division
           <FieldLabel htmlFor="divisions-field-2" className="text-[11px] font-bold text-muted-foreground">
             Catégorie
           </FieldLabel>
-          <OptionSelect id="divisions-field-2" value={category} onValueChange={setCategory} options={categoryOptions} />
+          <Input id="divisions-field-2" value={category} onChange={(event) => setCategory(event.target.value)} />
         </Field>
         <Field>
           <FieldLabel htmlFor="divisions-field-3" className="text-[11px] font-bold text-muted-foreground">
@@ -86,18 +82,17 @@ function Form({ row, onSave }: { row: DivisionRow | null; onSave: (row: Division
 }
 
 export default function DivisionsPage() {
-  const [rows, setRows] = useState<DivisionRow[]>(USE_MOCK ? initial : []);
+  const [rows, setRows] = useState<DivisionRow[]>([]);
   const [search, setSearch] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<DivisionRow | null>(null);
 
   const { data: apiDivisions, loading, error, reload } = useApiData<DivisionDto[]>(() => api.divisions.list(), []);
-  const { data: apiTeams } = useApiData<TeamDto[]>(() => api.teams.list(), []);
+  const { data: apiTeams } = useApiData<TeamDto[]>(() => api.teams.list());
 
   useEffect(() => {
-    if (USE_MOCK) return;
-    const counts = teamCountByDivision(apiTeams);
-    setRows(apiDivisions.map((division) => divisionToRow(division, counts.get(division.id) ?? 0)));
+    const counts = teamCountByDivision(apiTeams ?? []);
+    setRows((apiDivisions ?? []).map((division) => divisionToRow(division, counts.get(division.id))));
   }, [apiDivisions, apiTeams]);
 
   const filtered = useMemo(() => {
@@ -116,34 +111,21 @@ export default function DivisionsPage() {
   };
 
   const save = async (row: DivisionRow) => {
-    if (USE_MOCK) {
-      if (editing) {
-        setRows((current) => current.map((item) => (item.id === row.id ? row : item)));
-        toast.success("La division a été mise à jour.");
-      } else {
-        setRows((current) => [row, ...current]);
-        toast.success("La division a été créée.");
-      }
-      setDrawerOpen(false);
-      setEditing(null);
-      return;
-    }
-
     try {
       if (editing)
         await api.divisions.update(row.id, {
           name: row.name,
           sortOrder: 0,
-          category: row.category,
-          gender: row.gender,
+          category: row.category ?? "",
+          gender: row.gender ?? "",
           isActive: row.status === "Active",
         });
       else
         await api.divisions.create({
           name: row.name,
           sortOrder: 0,
-          category: row.category,
-          gender: row.gender,
+          category: row.category ?? "",
+          gender: row.gender ?? "",
           isActive: row.status === "Active",
         });
       await reload();
@@ -172,7 +154,7 @@ export default function DivisionsPage() {
         onReset={() => setSearch("")}
       />
 
-      {!USE_MOCK && error && (
+      {error && (
         <div className="mb-4 rounded-xl bg-danger-soft px-4 py-3 text-[12px] font-medium text-danger">{error}</div>
       )}
 

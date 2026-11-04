@@ -1,35 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Pencil, Plus, Trash2 } from "lucide-react";
-import { toast } from "sonner";
-import { api, errorMessage, USE_MOCK, type NotificationDto } from "@/lib/api";
-import { mockNotifications } from "@/lib/data";
+import { Plus } from "lucide-react";
+import { api, type NotificationDto } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
-import { formatDateTime } from "@/lib/adapters";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogMedia,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Field, FieldLabel } from "@/components/ui/field";
 import { DataTable } from "@/components/data-table";
 import { Filters } from "@/components/filters";
 import { PageHeader } from "@/components/page-header";
 import { Status } from "@/components/status";
-import { FormSheet, FormSheetFooter } from "@/components/form-sheet";
+import { formatDateTime } from "@/lib/utils";
 
 function notificationType(row: NotificationDto) {
   if (!row.dataJson) return "broadcast";
@@ -54,13 +35,12 @@ export default function NotificationsListPage() {
     error,
     reload,
   } = useApiData<NotificationDto[]>(
-    () => api.notifications.adminList({ take: 200 }).then((r) => r.items),
-    mockNotifications,
+    () => api.notifications.adminList({ take: 200 }).then((r) => r.items)
   );
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    return rows.filter((row) => {
+    return (rows ?? []).filter((row) => {
       const matchSearch = `${row.title} ${row.body}`.toLowerCase().includes(needle);
       const matchType = typeFilter === "Tous les types" || notificationType(row) === typeFilter;
       const matchStatus = statusFilter === "Tous les statuts" || (statusFilter === "Lue" ? row.isRead : !row.isRead);
@@ -105,7 +85,7 @@ export default function NotificationsListPage() {
         }}
       />
 
-      {!USE_MOCK && error && (
+      {error && (
         <div className="mb-4 rounded-xl bg-danger-soft px-4 py-3 text-[12px] font-medium text-danger">{error}</div>
       )}
 
@@ -141,8 +121,6 @@ export default function NotificationsListPage() {
           },
         ]}
       />
-
-      {/* Notifications cannot be edited or deleted once sent */}
     </>
   );
 }

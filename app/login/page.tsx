@@ -10,12 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
-import { API_BASE_URL, USE_MOCK, errorMessage } from "@/lib/api";
+import { API_BASE_URL, errorMessage } from "@/lib/api";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, login, isMock } = useAuth();
+  const { user, login } = useAuth();
 
   const next = searchParams.get("next") || "/";
   const [email, setEmail] = useState("admin@bob1.local");
@@ -29,10 +29,6 @@ function LoginForm() {
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (isMock) {
-      router.replace(next);
-      return;
-    }
     setSubmitting(true);
     setError(null);
     try {
@@ -72,16 +68,6 @@ function LoginForm() {
           <CardContent className="px-6 py-6">
             <form onSubmit={submit}>
               <FieldGroup className="gap-4">
-                {isMock && (
-                  <Alert variant="info">
-                    <Sparkles />
-                    <AlertTitle>Mode démonstration actif</AlertTitle>
-                    <AlertDescription className="text-current opacity-90">
-                      Les données affichées proviennent des fixtures locales. Aucun compte n&apos;est nécessaire.
-                    </AlertDescription>
-                  </Alert>
-                )}
-
                 <Field>
                   <FieldLabel htmlFor="email">Adresse e-mail</FieldLabel>
                   <InputGroup className="h-10">
@@ -125,32 +111,30 @@ function LoginForm() {
                 )}
 
                 <Button type="submit" disabled={submitting} className="mt-1 h-10 w-full">
-                  {submitting ? "Connexion…" : isMock ? "Entrer dans la démonstration" : "Se connecter"}
+                  {submitting ? "Connexion…" : "Se connecter"}
                   {!submitting && <ArrowRight />}
                 </Button>
 
-                {!isMock && (
-                  <div className="rounded-xl bg-muted px-3.5 py-3 text-[11px] leading-relaxed text-muted-foreground">
-                    <strong className="mb-1 block text-[10.5px] uppercase tracking-[0.08em]">
-                      Comptes de développement
-                    </strong>
-                    <code className="block">admin@bob1.local / Admin123!</code>
-                    <code className="block">staff@bob1.local / Staff123!</code>
-                    <code className="block">parent@bob1.local / Parent123!</code>
-                  </div>
-                )}
+                <div className="rounded-xl bg-muted px-3.5 py-3 text-[11px] leading-relaxed text-muted-foreground">
+                  <strong className="mb-1 block text-[10.5px] uppercase tracking-[0.08em]">
+                    Comptes de développement
+                  </strong>
+                  <code className="block">admin@bob1.local / Admin123!</code>
+                  <code className="block">staff@bob1.local / Staff123!</code>
+                  <code className="block">parent@bob1.local / Parent123!</code>
+                </div>
               </FieldGroup>
             </form>
           </CardContent>
 
           <CardFooter className="gap-2 border-t px-6 py-3.5 text-[10.5px] text-muted-foreground">
             <ShieldCheck className="size-3.5 shrink-0" />
-            <span className="truncate">{isMock ? "Démo locale · aucune requête réseau" : `API : ${API_BASE_URL}`}</span>
+            <span className="truncate">{`API : ${API_BASE_URL}`}</span>
           </CardFooter>
         </Card>
 
         <p className="mt-4 text-center text-[10.5px] text-soft">
-          BOB1 Montpellier · Administration {USE_MOCK ? "démonstration" : "sécurisée"}
+          BOB1 · Administration
         </p>
       </div>
     </div>

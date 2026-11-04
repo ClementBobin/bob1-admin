@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Filter, Plus, Undo2, Download } from "lucide-react";
-import { historyEntries, people, type HistoryEntry } from "@/lib/data";
-import { historyEntryToRow, penaltyToRow, ruleCategoryLabel } from "@/lib/adapters";
+import { useMemo, useState } from "react";
+import { Filter, Plus, Undo2 } from "lucide-react";
+import { type HistoryEntry } from "@/lib/data";
+import { ruleCategoryLabel } from "@/lib/adapters";
 import {
   api,
   errorMessage,
@@ -16,8 +16,6 @@ import {
 import { useApiData } from "@/lib/use-api-data";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { OptionSelect } from "@/components/option-select";
@@ -29,17 +27,6 @@ import { PageHeader } from "@/components/page-header";
 import { FormSheet, FormSheetFooter } from "@/components/form-sheet";
 
 const CATEGORIES = ["presence", "volunteer", "staff", "carpool", "penalty"];
-const REASONS = [
-  "Présence confirmée",
-  "Bénévolat (buvette...)",
-  "Poste de staff (MAR, arbitre...)",
-  "Covoiturage proposé",
-  "Absence non excusée",
-  "Désistement tardif",
-  "Retard important",
-  "Oubli de matériel",
-  "Autre",
-];
 
 type HistoryRow = HistoryEntry & { familyName?: string; categoryLabel?: string };
 
@@ -55,39 +42,24 @@ export default function PointsHistoryPage() {
     loading,
     error,
     reload,
-  } = useApiData<{ total: number; items: EntryDto[] }>(() => api.rankings.history({ take: 500 }), {
-    total: 0,
-    items: [],
-  });
-
-  const { data: apiFamilies } = useApiData<{ total: number; items: AdminFamilyDto[] }>(
-    () => api.families.list({ take: 300 }),
-    { total: 0, items: [] },
+  } = useApiData<EntryDto[]>(
+    async () => (await api.rankings.history({ take: 500 })).items,
+    [],
   );
 
-  const { data: apiPenalties } = useApiData<PenaltyDto[]>(() => api.rankings.penalties(), []);
+  const { data: apiFamilies } = useApiData<AdminFamilyDto[]>(
+    async () => (await api.families.list({ take: 300 })).items,
+    [],
+  );
 
   const { data: apiRules } = useApiData<RankingRuleDto[]>(() => api.rankings.rules(), []);
 
-  const penaltyReasonOptions = USE_MOCK
-    ? REASONS
-    : ["Autre", ...Array.from(new Set(apiPenalties.map((p) => p.reason)))];
+  const penaltyCategoryOptions = [
+    "Toutes les catégories",
+    ...Array.from(new Set((apiRules ?? []).map((r) => ruleCategoryLabel(r.category)))),
+  ];
 
-  const penaltyCategoryOptions = USE_MOCK
-    ? ["Toutes les catégories", ...CATEGORIES.map((c) => ruleCategoryLabel(c))]
-    : ["Toutes les catégories", ...Array.from(new Set(apiRules.map((r) => ruleCategoryLabel(r.category))))];
-
-  useEffect(() => {
-    if (USE_MOCK) return;
-    // In mock mode we use historyEntries from data.ts
-  }, [apiHistory]);
-
-  const rows = USE_MOCK
-    ? historyEntries.map((entry) => ({
-        ...entry,
-        categoryLabel: ruleCategoryLabel(entry.category),
-      }))
-    : apiHistory.items.map((entry) => {
+  const rows = (apiHistory ?? []).map((entry) => {
         const isPenalty = entry.category === "penalty" && entry.points < 0;
         const isRevoked = entry.points > 0 && entry.reason.startsWith("Annulation");
         return {
@@ -104,8 +76,8 @@ export default function PointsHistoryPage() {
         };
       });
 
-  const familyOptions = apiFamilies.items.map((family) => family.name);
-  const personOptions = people.map((person) => person.name);
+  const familyOptions = (apiFamilies ?? []).map((family) => family.name);
+  const personOptions = Array.from(new Set((apiHistory ?? []).map((entry) => entry.personName)));
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -136,14 +108,9 @@ export default function PointsHistoryPage() {
     )
       return;
     try {
-      // In real API, we'd call revokePenalty with the entry ID
-      if (USE_MOCK) {
-        toast.success("L'ajustement a été révoqué (simulation).");
-      } else {
-        await api.rankings.revokePenalty(row.id);
-        await reload();
-        toast.success("L'ajustement a été révoqué.");
-      }
+      await api.rankings.revokePenalty(row.id);
+      await reload();
+      toast.success("L'ajustement a été révoqué.");
     } catch (cause) {
       toast.error(errorMessage(cause));
     }
@@ -158,15 +125,6 @@ export default function PointsHistoryPage() {
   }) => {
     if (!Number.isFinite(payload.points) || payload.points === 0) {
       toast.error("Saisissez un nombre de points non nul.");
-      return;
-    }
-
-    if (USE_MOCK) {
-      toast.success(
-        `L'ajustement de ${payload.points > 0 ? "+" : ""}${payload.points} points a été appliqué à ${payload.target}.`,
-      );
-      setDrawerOpen(false);
-      setEditing(null);
       return;
     }
 
@@ -217,7 +175,7 @@ export default function PointsHistoryPage() {
         }}
       />
 
-      {!USE_MOCK && error && (
+      {error && (
         <div className="mb-4 rounded-xl bg-danger-soft px-4 py-3 text-[12px] font-medium text-danger">{error}</div>
       )}
 

@@ -2,42 +2,16 @@ import type {
   AdminFamilyDto,
   DivisionDto,
   MatchDto,
-  MatchStatus,
   PenaltyDto,
   PersonDto,
   PersonRankingRowDto,
   FamilyRankingRowDto,
   RankingRuleDto,
   TeamDto,
-  VenueDto,
   EntryDto,
 } from "@/lib/api";
-import type { Family, MatchRow, HistoryEntry, Person, PersonRankingRow, FamilyRankingRow, RuleRow } from "@/lib/data";
-
-export function formatDateTime(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "—";
-  const day = date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" }).replace(".", "");
-  const time = date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-  return `${day} · ${time}`;
-}
-
-export function formatDate(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" }).replace(".", "");
-}
-
-export function matchStatusLabel(status: MatchStatus): string {
-  switch (status) {
-    case "Cancelled":
-      return "Annulé";
-    case "Played":
-      return "Confirmé";
-    default:
-      return "J-15";
-  }
-}
+import { type Family, type MatchRow, type HistoryEntry, type Person, type PersonRankingRow, type FamilyRankingRow, type RuleRow, RULE_CATEGORY_LABELS } from "@/lib/data";
+import { formatDate, formatDateTime, matchStatusLabel } from "./utils";
 
 export function matchToRow(match: MatchDto): MatchRow {
   return {
@@ -49,6 +23,8 @@ export function matchToRow(match: MatchDto): MatchRow {
     venue: match.venueName,
     officials: [0, 0],
     buvette: [0, 0],
+    chrono: [0, 0],
+    mar: [0, 0],
     carpool: "—",
     status: matchStatusLabel(match.status),
   };
@@ -142,14 +118,16 @@ export function penaltyToRow(penalty: PenaltyDto): HistoryEntry {
   };
 }
 
-const DIVISION_CATEGORIES = ["U11", "U13", "U15", "U17", "U18", "Senior"];
-
-export function divisionCategory(name: string): string {
-  const normalized = name.trim();
-  const match = DIVISION_CATEGORIES.find((category) =>
-    normalized.toLowerCase().startsWith(category.toLowerCase())
-  );
-  return match ?? normalized.split(" ")[0] ?? "—";
+export function divisionToRow(division: DivisionDto, teamCount = 0) {
+  return {
+    id: division.id,
+    name: division.name,
+    category: division.category,
+    gender: division.gender || divisionGender(division.name),
+    teams: `${teamCount} équipe${teamCount > 1 ? "s" : ""}`,
+    status: division.isActive ? "Active" : "Inactive",
+    sortOrder: division.sortOrder,
+  };
 }
 
 export function divisionGender(name: string): string {
@@ -164,26 +142,6 @@ export function teamCountByDivision(teams: TeamDto[]): Map<string, number> {
   for (const team of teams) counts.set(team.divisionId, (counts.get(team.divisionId) ?? 0) + 1);
   return counts;
 }
-
-export function divisionToRow(division: DivisionDto, teamCount = 0) {
-  return {
-    id: division.id,
-    name: division.name,
-    category: division.category || divisionCategory(division.name),
-    gender: division.gender || divisionGender(division.name),
-    teams: `${teamCount} équipe${teamCount > 1 ? "s" : ""}`,
-    status: division.isActive ? "Active" : "Inactive",
-    sortOrder: division.sortOrder,
-  };
-}
-
-const RULE_CATEGORY_LABELS: Record<string, string> = {
-  presence: "Présence",
-  volunteer: "Bénévolat",
-  staff: "Officiel / staff",
-  carpool: "Covoiturage",
-  penalty: "Pénalité",
-};
 
 export function ruleCategoryLabel(category: string): string {
   return RULE_CATEGORY_LABELS[category] ?? category;

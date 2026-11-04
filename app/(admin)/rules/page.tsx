@@ -2,20 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { Info, Save, ShieldCheck } from "lucide-react";
-import { rules as initialRules, type RuleRow } from "@/lib/data";
 import { ruleCategoryLabel, ruleToRow } from "@/lib/adapters";
-import { api, errorMessage, USE_MOCK, type RankingRuleDto } from "@/lib/api";
+import { api, errorMessage, type RankingRuleDto } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Status } from "@/components/status";
 import { DataTable } from "@/components/data-table";
 import { PageHeader } from "@/components/page-header";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 
 export default function RulesPage() {
-  const [mockRows, setMockRows] = useState<RuleRow[]>(initialRules);
   const [liveRows, setLiveRows] = useState<RankingRuleDto[]>([]);
   const [dirty, setDirty] = useState(false);
   const [dirtyKeys, setDirtyKeys] = useState<Record<string, boolean>>({});
@@ -27,20 +22,10 @@ export default function RulesPage() {
   );
 
   useEffect(() => {
-    if (USE_MOCK) return;
-    setLiveRows(apiRules);
+    setLiveRows(apiRules ?? []);
     setDirtyKeys({});
     setDirty(false);
   }, [apiRules]);
-
-  const updateMock = (index: number, key: "points" | "pointsJ15" | "pointsJ4", value: string) => {
-    if (value === "" || value === "-" || value === "+") return;
-    const parsed = Math.max(-1000, Math.min(1000, Math.round(Number(value) || 0)));
-    setMockRows((current) =>
-      current.map((row, rowIndex) => (rowIndex === index ? { ...row, [key]: parsed } : row)),
-    );
-    setDirty(true);
-  };
 
   const updateLive = (key: string, field: "points" | "pointsJ15" | "pointsJ4", value: string) => {
     if (value === "" || value === "-" || value === "+") return;
@@ -51,12 +36,6 @@ export default function RulesPage() {
   };
 
   const save = async () => {
-    if (USE_MOCK) {
-      setDirty(false);
-      toast.success("Les règles de points ont été enregistrées.");
-      return;
-    }
-
     const changed = liveRows.filter((row) => dirtyKeys[row.key]);
     if (changed.length === 0) {
       setDirty(false);
@@ -136,11 +115,7 @@ export default function RulesPage() {
         id="tour-rules-header"
         eyebrow="Paramètres"
         title="Règles de points"
-        description={
-          USE_MOCK
-            ? "Définissez les récompenses selon le rôle et le délai de confirmation (J-15 / J-4)."
-            : "Définissez les points attribués à chaque action du club. Certaines règles supportent J-15 / J-4."
-        }
+        description="Définissez les points attribués à chaque action du club. Certaines règles supportent J-15 / J-4."
       />
 
       <div className="mb-4 flex items-start gap-3 rounded-xl bg-mint px-4 py-3.5 text-mint-foreground">
@@ -153,79 +128,15 @@ export default function RulesPage() {
         </div>
       </div>
 
-      {!USE_MOCK && error && (
+      {error && (
         <div className="mb-4 rounded-xl bg-danger-soft px-4 py-3 text-[12px] font-medium text-danger">{error}</div>
       )}
 
-      {!USE_MOCK && (
-        <p className="mb-4 rounded-xl bg-muted px-4 py-3 text-[11px] leading-relaxed text-soft">
-          Chaque règle utilise soit le système J-15/J-4 (points distincts selon le délai), soit une valeur de points
-          standard unique.
-        </p>
-      )}
+      <p className="mb-4 rounded-xl bg-muted px-4 py-3 text-[11px] leading-relaxed text-soft">
+        Chaque règle utilise soit le système J-15/J-4 (points distincts selon le délai), soit une valeur de points
+        standard unique.
+      </p>
 
-      {USE_MOCK ? (
-        <DataTable
-          id="tour-rules-table"
-          rows={mockRows}
-          rowKey={(row) => row.key}
-          minWidth={760}
-          pageSize={10}
-          grid="1.5fr 1.2fr 1fr .8fr 36px"
-          columns={[
-            { key: "label", label: "Rôle / Libellé", render: (row) => <strong>{row.label}</strong> },
-            {
-              key: "category",
-              label: "Catégorie",
-              render: (row) => <span className="text-soft">{ruleCategoryLabel(row.category)}</span>,
-            },
-            {
-              key: "points",
-              label: "Points",
-              render: (row, index) =>
-                row.hasJ15J4 ? (
-                  <span className="text-soft text-center w-[82px]">—</span>
-                ) : (
-                  renderPointsInput(row.points, (v) => updateMock(index, "points", v), -1000, 1000)
-                ),
-            },
-            {
-              key: "pointsJ15",
-              label: "Points J-15",
-              render: (row, index) =>
-                row.hasJ15J4 ? (
-                  renderPointsInput(row.pointsJ15, (v) => updateMock(index, "pointsJ15", v))
-                ) : (
-                  <span className="text-soft text-center w-[82px]">—</span>
-                ),
-            },
-            {
-              key: "pointsJ4",
-              label: "Points J-4",
-              render: (row, index) =>
-                row.hasJ15J4 ? (
-                  renderPointsInput(row.pointsJ4, (v) => updateMock(index, "pointsJ4", v))
-                ) : (
-                  <span className="text-soft text-center w-[82px]">—</span>
-                ),
-            },
-            {
-              key: "actions",
-              label: "",
-              render: () => (
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="text-muted-foreground"
-                  aria-label="Détails de la règle"
-                >
-                  <Info size={15} />
-                </Button>
-              ),
-            },
-          ]}
-        />
-      ) : (
         <DataTable
           id="tour-rules-table"
           rows={liveRows.map(ruleToRow)}
@@ -288,15 +199,12 @@ export default function RulesPage() {
             },
           ]}
         />
-      )}
 
       <div className="mt-4 flex flex-wrap items-center justify-end gap-4">
         <span className="text-[11px] text-soft">
           {dirty
             ? "Modifications non enregistrées"
-            : USE_MOCK
-              ? "Dernière modification aujourd'hui à 9:32"
-              : "Règles à jour"}
+            : "Règles à jour"}
         </span>
         <Button onClick={save} disabled={saving || !dirty}>
           <Save className="mr-2 h-4 w-4" />

@@ -5,14 +5,13 @@
  *  - the access token is kept in localStorage and sent as a Bearer header,
  *  - a 401 triggers a single refresh attempt, then the request is replayed,
  *  - every failure is normalized to an ApiError carrying the API's stable code.
- *
- * NEXT_PUBLIC_USE_MOCK=true keeps the whole UI on the fixtures in lib/data.ts.
  */
 
-const RAW_API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000").replace(/\/+$/, "");
-export const API_BASE_URL = RAW_API_URL.endsWith("/api/v1") ? RAW_API_URL : `${RAW_API_URL}/api/v1`;
-
-export const USE_MOCK = (process.env.NEXT_PUBLIC_USE_MOCK ?? "true").toLowerCase() !== "false";
+export const USE_MOCK = false;
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+if (!API_BASE_URL) {
+  throw new Error("NEXT_PUBLIC_API_URL is not configured");
+}
 
 // ---------------------------------------------------------------------------
 // DTOs (mirror the records exposed by Bob1-api)

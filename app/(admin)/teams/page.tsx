@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { MoreHorizontal, Plus, Upload, Shield } from "lucide-react";
-import { teams, people } from "@/lib/data";
-import { api, errorMessage, USE_MOCK, type DivisionDto, type TeamDto, type VenueDto, type PersonDto } from "@/lib/api";
+import { MoreHorizontal, Plus, Upload } from "lucide-react";
+import { api, errorMessage, type DivisionDto, type TeamDto, type VenueDto, type PersonDto } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { OptionSelect } from "@/components/option-select";
 import { Button } from "@/components/ui/button";
 import { Status } from "@/components/status";
@@ -17,15 +16,6 @@ import { PageHeader } from "@/components/page-header";
 import { FormSheet, FormSheetFooter } from "@/components/form-sheet";
 
 type NamedOption = { id: string; name: string };
-
-const mockVenueOptions = [
-  "Coubertin",
-  "Palais des sports",
-  "Gymnase de Lattes",
-  "Halle Mauguio",
-  "Complexe de Lunel",
-  "Halle des Sports de Sète",
-];
 
 type TeamRow = {
   id: string;
@@ -40,19 +30,6 @@ type TeamRow = {
   trainingVenueName: string | null;
 };
 
-const initial: TeamRow[] = teams.map((item) => ({
-  id: item.id,
-  name: item.name,
-  division: item.division,
-  coach: item.coach,
-  coachUserId: null,
-  logo: item.logo ?? null,
-  players: item.players,
-  status: item.status,
-  trainingVenueId: null,
-  trainingVenueName: item.trainingLocation ?? null,
-}));
-const mockDivisionOptions = ["U13 M", "U13 F", "U15 M", "U15 F", "U17 M", "U17 F", "Seniors M", "Seniors F"];
 const mockStatusOptions = ["Active", "Externe", "Archivée"];
 
 function Form({
@@ -111,13 +88,13 @@ function Form({
           </FieldLabel>
           <Input id="teams-field-27" value={name} onChange={(event) => setName(event.target.value)} required />
         </Field>
-        <Field className={!USE_MOCK ? "col-span-full" : undefined}>
+        <Field className="col-span-full">
           <FieldLabel htmlFor="teams-field-28" className="text-[11px] font-bold text-muted-foreground">
             Division
           </FieldLabel>
           <OptionSelect id="teams-field-28" value={division} onValueChange={setDivision} options={divisionOptions} />
         </Field>
-        <Field>
+        <Field className="col-span-full">
           <FieldLabel htmlFor="teams-field-29" className="text-[11px] font-bold text-muted-foreground">
             Coach principal
           </FieldLabel>
@@ -202,7 +179,7 @@ function Form({
 }
 
 export default function TeamsPage() {
-  const [rows, setRows] = useState<TeamRow[]>(USE_MOCK ? initial : []);
+  const [rows, setRows] = useState<TeamRow[]>([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("Tous les statuts");
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -211,20 +188,21 @@ export default function TeamsPage() {
   const { data: apiTeams, loading, error, reload } = useApiData<TeamDto[]>(() => api.teams.list(), []);
   const { data: apiDivisions } = useApiData<DivisionDto[]>(() => api.divisions.list(), []);
   const { data: apiVenues } = useApiData<VenueDto[]>(() => api.venues.list(), []);
-  const { data: apiPeople } = useApiData<{ total: number; items: PersonDto[] }>(() => api.people.list({ take: 200 }), { total: 0, items: [] });
+  const { data: apiPeople } = useApiData<PersonDto[]>(
+    async () => (await api.people.list({ take: 200 })).items,
+    [],
+  );
 
-  const divisionOptions = USE_MOCK ? mockDivisionOptions : apiDivisions.map((division) => division.name);
-  const venueOptions = USE_MOCK ? mockVenueOptions.map((name) => ({ id: name, name })) : apiVenues.map((v) => ({ id: v.id, name: v.name }));
-  const staffOptions = USE_MOCK
-    ? people.filter((p) => p.roles.includes("Staff")).map((p) => ({ id: p.id, name: p.name }))
-    : apiPeople.items.filter((p) => p.roles.includes("Staff")).map((p) => ({ id: p.id, name: `${p.firstName} ${p.lastName}` }));
+  const divisions = apiDivisions ?? [];
+  const divisionOptions = divisions.map((division) => division.name);
+  const venueOptions = (apiVenues ?? []).map((v) => ({ id: v.id, name: v.name }));
+  const staffOptions = (apiPeople ?? []).filter((p) => p.roles.includes("Staff")).map((p) => ({ id: p.id, name: `${p.firstName} ${p.lastName}` }));
 
   useEffect(() => {
-    if (USE_MOCK) return;
-    const names = new Map(apiDivisions.map((division) => [division.id, division.name]));
-    const venueNames = new Map(apiVenues.map((v) => [v.id, v.name]));
+    const names = new Map(divisions.map((division) => [division.id, division.name]));
+    const venueNames = new Map((apiVenues ?? []).map((v) => [v.id, v.name]));
     setRows(
-      apiTeams.map((team) => ({
+      (apiTeams ?? []).map((team) => ({
         id: team.id,
         name: team.name,
         division: names.get(team.divisionId) ?? "—",
@@ -261,20 +239,8 @@ export default function TeamsPage() {
   };
 
   const save = async (row: TeamRow) => {
-    if (USE_MOCK) {
-      if (editing) {
-        setRows((current) => current.map((item) => (item.id === row.id ? row : item)));
-        toast.success("L'équipe a été mise à jour.");
-      } else {
-        setRows((current) => [row, ...current]);
-        toast.success("L'équipe a été créée.");
-      }
-      setDrawerOpen(false);
-      setEditing(null);
-      return;
-    }
 
-    const division = apiDivisions.find((item) => item.name === row.division);
+    const division = (apiDivisions ?? []).find((item) => item.name === row.division);
     if (!division) {
       toast.error("Sélectionnez une division existante.");
       return;
@@ -329,7 +295,7 @@ export default function TeamsPage() {
         }}
       />
 
-      {!USE_MOCK && error && (
+      {error && (
         <div className="mb-4 rounded-xl bg-danger-soft px-4 py-3 text-[12px] font-medium text-danger">{error}</div>
       )}
 

@@ -3,10 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { MoreHorizontal, Plus, TrendingUp, Users, User, ChevronDown } from "lucide-react";
 import {
-  people,
-  families,
-  personRankings,
-  familyRankings,
   type PersonRankingRow,
   type FamilyRankingRow,
 } from "@/lib/data";
@@ -17,7 +13,6 @@ import {
   USE_MOCK,
   type PersonRankingRowDto,
   type FamilyRankingRowDto,
-  type RankingRuleDto,
   type AdminFamilyDto,
 } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
@@ -45,22 +40,6 @@ const CATEGORY_LABELS: Record<Category, string> = {
 
 const CATEGORIES: Category[] = ["presence", "volunteer", "staff", "carpool", "penalty"];
 
-const MOCK_PERSON_RANKINGS: Record<Category, PersonRankingRow[]> = {
-  presence: personRankings.presence,
-  volunteer: personRankings.volunteer,
-  staff: personRankings.staff,
-  carpool: personRankings.carpool,
-  penalty: personRankings.penalty,
-};
-
-const MOCK_FAMILY_RANKINGS: Record<Category, FamilyRankingRow[]> = {
-  presence: familyRankings.presence,
-  volunteer: familyRankings.volunteer,
-  staff: familyRankings.staff,
-  carpool: familyRankings.carpool,
-  penalty: familyRankings.penalty,
-};
-
 type PersonRankingsData = { rows: PersonRankingRow[]; season: string };
 type FamilyRankingsData = { rows: FamilyRankingRow[]; season: string };
 
@@ -74,16 +53,6 @@ export default function RankingsPage() {
 
   const isPersonView = viewMode === "person";
 
-  const mockPersonData = useMemo<PersonRankingsData>(
-    () => ({ rows: MOCK_PERSON_RANKINGS[category] ?? [], season: "2024–2025" }),
-    [category],
-  );
-
-  const mockFamilyData = useMemo<FamilyRankingsData>(
-    () => ({ rows: MOCK_FAMILY_RANKINGS[category] ?? [], season: "2024–2025" }),
-    [category],
-  );
-
   const {
     data: personData,
     loading: personLoading,
@@ -95,7 +64,6 @@ export default function RankingsPage() {
         const r = response as { top: PersonRankingRowDto[]; season: string };
         return { rows: r.top.map(personRankingToRow), season: r.season };
       }),
-    mockPersonData,
     [category, viewMode],
   );
 
@@ -110,21 +78,18 @@ export default function RankingsPage() {
         const r = response as { top: FamilyRankingRowDto[]; season: string };
         return { rows: r.top.map(familyRankingToRow), season: r.season };
       }),
-    mockFamilyData,
     [category, viewMode],
   );
 
   const { data: apiFamilies } = useApiData<{ total: number; items: AdminFamilyDto[] }>(
     () => api.families.list({ take: 300 }),
-    { total: 0, items: [] },
+    [],
   );
 
-  const familyOptions: FamilyOption[] = USE_MOCK
-    ? families.map((family) => ({ id: family.id, name: family.name }))
-    : apiFamilies.items.map((family) => ({ id: family.id, name: family.name }));
+  const familyOptions: FamilyOption[] = (apiFamilies?.items ?? []).map((family) => ({ id: family.id, name: family.name }));
 
-  const personOptions = people.map((person) => person.name);
-  const rows = isPersonView ? personData.rows : familyData.rows;
+  const personOptions = personData?.rows.map((person) => person.person) ?? [];
+  const rows = isPersonView ? personData?.rows ?? [] : familyData?.rows ?? [];
   const loading = isPersonView ? personLoading : familyLoading;
   const error = isPersonView ? personError : familyError;
   const reload = isPersonView ? reloadPerson : reloadFamily;
@@ -133,7 +98,7 @@ export default function RankingsPage() {
     <>
       <PageHeader
         id="tour-rankings-header"
-        eyebrow={`Saison ${isPersonView ? personData.season : familyData.season}`}
+        eyebrow={`Saison ${isPersonView ? personData?.season : familyData?.season}`}
         title="Classements"
         description={isPersonView ? "Suivez les points par personne." : "Suivez les points par famille (agrégés)."}
         action={{ label: "Voir l'historique", icon: Plus, onClick: () => (window.location.href = "/points-history") }}
@@ -169,7 +134,7 @@ export default function RankingsPage() {
         </div>
       </div>
 
-      {!USE_MOCK && error && (
+      {error && (
         <div className="mb-4 rounded-xl bg-danger-soft px-4 py-3 text-[12px] font-medium text-danger">{error}</div>
       )}
 
@@ -277,13 +242,6 @@ export default function RankingsPage() {
             onSave={async (payload) => {
               if (!Number.isFinite(payload.points) || payload.points === 0) {
                 toast.error("Saisissez un nombre de points non nul.");
-                return;
-              }
-              if (USE_MOCK) {
-                toast.success(
-                  `L'ajustement de ${payload.points > 0 ? "+" : ""}${payload.points} points a été appliqué à ${payload.target}.`,
-                );
-                setDrawerOpen(false);
                 return;
               }
               if (!payload.familyId) {

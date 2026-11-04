@@ -1,16 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { MapPin, MoreHorizontal, Plus, Map, Globe } from "lucide-react";
-import { venues } from "@/lib/data";
-import { api, errorMessage, USE_MOCK, type VenueDto } from "@/lib/api";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { MapPin, MoreHorizontal, Plus } from "lucide-react";
+import { api, errorMessage, type VenueDto } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
-import { OptionSelect } from "@/components/option-select";
-import { Status } from "@/components/status";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { DataTable } from "@/components/data-table";
 import { Filters } from "@/components/filters";
 import { PageHeader } from "@/components/page-header";
@@ -24,15 +21,6 @@ type VenueRow = {
   postalCode: string;
   matches: string;
 };
-
-const initial: VenueRow[] = venues.map((item) => ({
-  id: item.id,
-  name: item.name,
-  address: item.address,
-  city: item.city,
-  postalCode: item.postalCode,
-  matches: item.matches,
-}));
 
 function Form({ row, onSave }: { row: VenueRow | null; onSave: (row: VenueRow) => void }) {
   const [name, setName] = useState(row?.name ?? "Nouveau gymnase");
@@ -99,14 +87,16 @@ function Form({ row, onSave }: { row: VenueRow | null; onSave: (row: VenueRow) =
 
 // Map preview component using Leaflet
 function MapPreview({ address, city, postalCode }: { address: string; city: string; postalCode: string }) {
-  const [map, setMap] = useState<any>(null);
-  const mapContainerRef = useState<HTMLDivElement | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<any>(null);
 
   useEffect(() => {
-    if (map) return;
+    let cancelled = false;
 
     // Dynamic import to avoid SSR issues
     import("leaflet").then((L) => {
+      if (cancelled || !mapContainerRef.current) return;
+
       import("leaflet/dist/leaflet.css").catch(() => {});
 
       // Fix default marker icons
@@ -117,10 +107,7 @@ function MapPreview({ address, city, postalCode }: { address: string; city: stri
         shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
       });
 
-      const container = document.getElementById("venue-map-preview");
-      if (!container) return;
-
-      const newMap = L.map(container, {
+      const newMap = L.map(mapContainerRef.current, {
         zoomControl: false,
         attributionControl: false,
         dragging: false,
@@ -150,20 +137,21 @@ function MapPreview({ address, city, postalCode }: { address: string; city: stri
           // Fallback to default location
         });
 
-      setMap(newMap);
+      mapRef.current = newMap;
     });
 
     return () => {
-      if (map) {
-        map.remove();
-        setMap(null);
+      cancelled = true;
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
       }
     };
-  }, [address, city, postalCode, map]);
+  }, [address, city, postalCode]);
 
   return (
     <div
-      id="venue-map-preview"
+      ref={mapContainerRef}
       className="flex h-[200px] flex-col items-center justify-center gap-2 rounded-[13px] bg-[linear-gradient(135deg,var(--muted),color-mix(in_srgb,var(--mint)_60%,var(--muted)))] text-[11px] font-semibold text-mint-foreground"
     >
       <div className="w-full h-full" style={{ minHeight: 200 }} />
@@ -172,7 +160,7 @@ function MapPreview({ address, city, postalCode }: { address: string; city: stri
 }
 
 export default function VenuesPage() {
-  const [rows, setRows] = useState<VenueRow[]>(USE_MOCK ? initial : []);
+  const [rows, setRows] = useState<VenueRow[]>([]);
   const [search, setSearch] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<VenueRow | null>(null);
@@ -180,9 +168,8 @@ export default function VenuesPage() {
   const { data: apiVenues, loading, error, reload } = useApiData<VenueDto[]>(() => api.venues.list(), []);
 
   useEffect(() => {
-    if (USE_MOCK) return;
     setRows(
-      apiVenues.map((venue) => ({
+      (apiVenues ?? []).map((venue) => ({
         id: venue.id,
         name: venue.name,
         address: venue.address ?? "—",
@@ -212,18 +199,6 @@ export default function VenuesPage() {
   };
 
   const save = async (row: VenueRow) => {
-    if (USE_MOCK) {
-      if (editing) {
-        setRows((current) => current.map((item) => (item.id === row.id ? row : item)));
-        toast.success("Le lieu a été mis à jour.");
-      } else {
-        setRows((current) => [row, ...current]);
-        toast.success("Le lieu a été ajouté.");
-      }
-      setDrawerOpen(false);
-      setEditing(null);
-      return;
-    }
 
     const address = row.address.trim() === "" || row.address === "—" ? null : row.address.trim();
     const city = row.city.trim() === "" || row.city === "—" ? null : row.city.trim();
@@ -259,7 +234,7 @@ export default function VenuesPage() {
         }}
       />
 
-      {!USE_MOCK && error && (
+      {error && (
         <div className="mb-4 rounded-xl bg-danger-soft px-4 py-3 text-[12px] font-medium text-danger">{error}</div>
       )}
 

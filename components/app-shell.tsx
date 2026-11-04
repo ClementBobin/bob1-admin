@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
-import { Bell, ChevronDown, Compass, LogOut, Moon, Plus, Search, Settings, Sun, UserRound } from "lucide-react";
+import { Bell, Compass, LogOut, Moon, Plus, Search, Settings, Sun, UserRound } from "lucide-react";
 import { adminNav } from "@/lib/nav";
 import { NavMain } from "@/components/nav-main";
 import { Logo } from "@/components/logo";
@@ -21,16 +21,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Kbd } from "@/components/ui/kbd";
-import { Separator } from "@/components/ui/separator";
 import {
   Sidebar,
   SidebarContent,
@@ -126,7 +117,8 @@ function AppSidebar() {
   const pathname = usePathname();
   const { startTour } = useAppTour();
   const { setOpenMobile } = useSidebar();
-  const { user, logout, isMock } = useAuth();
+  const { user, logout } = useAuth();
+  const isMock = false;
   const router = useRouter();
 
   const signOut = () => {

@@ -1,42 +1,33 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Home, MoreHorizontal, Filter, UsersRound, Eye, EyeOff } from "lucide-react";
-import { families, type Family } from "@/lib/data";
+import { Home } from "lucide-react";
+import { type Family } from "@/lib/data";
 import { familyToRow } from "@/lib/adapters";
-import { api, errorMessage, USE_MOCK, type AdminFamilyDto } from "@/lib/api";
+import { api, type AdminFamilyDto } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
-import { toast } from "sonner";
-import { Input } from "@/components/ui/input";
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
-import { OptionSelect } from "@/components/option-select";
 import { Status } from "@/components/status";
 import { DataTable } from "@/components/data-table";
 import { Filters } from "@/components/filters";
 import { PageHeader } from "@/components/page-header";
-import { FormSheet, FormSheetFooter } from "@/components/form-sheet";
-
-type FamiliesResponse = { total: number; items: AdminFamilyDto[] };
 
 export default function FamiliesPage() {
-  const [rows, setRows] = useState<Family[]>(USE_MOCK ? families : []);
+  const [rows, setRows] = useState<Family[]>([]);
   const [search, setSearch] = useState("");
   const [accountsFilter, setAccountsFilter] = useState("Tous les comptes");
   const [hideInactive, setHideInactive] = useState(true); // Default: hide families with all inactive accounts
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editing, setEditing] = useState<Family | null>(null);
-  const [saving, setSaving] = useState(false);
 
   const {
     data: apiFamilies,
     loading,
     error,
     reload,
-  } = useApiData<FamiliesResponse>(() => api.families.list({ take: 300 }), { total: 0, items: [] });
+  } = useApiData<AdminFamilyDto[]>(
+    () => api.families.list({ take: 300 }).then(({ items }) => items),
+  );
 
   useEffect(() => {
-    if (USE_MOCK) return;
-    setRows(apiFamilies.items.map(familyToRow));
+    setRows(apiFamilies?.map(familyToRow) ?? []);
   }, [apiFamilies]);
 
   const filtered = useMemo(() => {
@@ -86,7 +77,7 @@ export default function FamiliesPage() {
         }}
       />
 
-      {!USE_MOCK && error && (
+      {error && (
         <div className="mb-4 rounded-xl bg-danger-soft px-4 py-3 text-[12px] font-medium text-danger">{error}</div>
       )}
 

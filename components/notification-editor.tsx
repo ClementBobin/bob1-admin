@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Bell, CalendarDays, Save, Send, Users, Smartphone } from "lucide-react";
-import { api, errorMessage, USE_MOCK, type DivisionDto, type NotificationDto } from "@/lib/api";
-import { mockNotifications } from "@/lib/data";
+import { api, errorMessage, type DivisionDto, type TeamDto, type NotificationDto } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -52,12 +51,12 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
   // Drafts are now managed in the notifications list page
 
   const { data: apiDivisions } = useApiData<DivisionDto[]>(() => api.divisions.list(), []);
+  const { data: apiTeams } = useApiData<TeamDto[]>(() => api.teams.list(), []);
   const { data: notifications, loading: loadingNotification } = useApiData<NotificationDto[]>(
     () => (editing ? api.notifications.list(200) : Promise.resolve([])),
-    editing ? mockNotifications : [],
     [editing],
   );
-  const existing = editing ? notifications.find((item) => item.id === notificationId) : undefined;
+  const existing = editing ? notifications?.find((item) => item.id === notificationId) : undefined;
 
   // Prefill the form once, when the notification being edited is available.
   const prefilled = useRef(false);
@@ -72,18 +71,15 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
     setStartup(existing.startup);
   }, [existing]);
 
-  const targetOptions = USE_MOCK
-    ? mockTargets.map((item) => item.label)
-    : ["Tous les membres", ...apiDivisions.map((division) => division.name)];
+  const targetOptions = [
+    "Tous les membres",
+    ...(apiDivisions ?? []).map((division) => `Division: ${division.name}`),
+    ...(apiTeams ?? []).map((team) => `Équipe: ${team.name}`),
+  ];
 
   const save = () => {
     if (!title.trim() || !message.trim()) {
       toast.error("Renseignez un titre et un message.");
-      return;
-    }
-    if (USE_MOCK) {
-      toast.success("La notification a été mise à jour (simulation).");
-      router.push("/notifications");
       return;
     }
     // Bob1-api has no update endpoint yet: keep the user on the form so nothing is lost.
@@ -91,19 +87,24 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
   };
 
   const send = async () => {
-    if (USE_MOCK) {
-      setSent(true);
-      toast.success("La notification a été envoyée aux destinataires sélectionnés.");
-      return;
-    }
-
     if (!title.trim() || !message.trim()) {
       toast.error("Renseignez un titre et un message.");
       return;
     }
 
-    const divisionId =
-      target === "Tous les membres" ? null : (apiDivisions.find((division) => division.name === target)?.id ?? null);
+    let divisionId: string | null = null;
+    if (target === "Tous les membres") {
+      divisionId = null;
+    } else if (target.startsWith("Division:")) {
+      divisionId = (apiDivisions ?? []).find((division) => division.name === target.replace("Division: ", ""))?.id ?? null;
+    } else if (target.startsWith("Équipe:")) {
+      // Team-based: resolve to the team's division
+      const team = (apiTeams ?? []).find((t) => t.name === target.replace("Équipe: ", ""));
+      divisionId = team?.divisionId ?? null;
+    } else {
+      // Legacy: division name directly
+      divisionId = (apiDivisions ?? []).find((division) => division.name === target)?.id ?? null;
+    }
 
     setSending(true);
     try {
@@ -125,9 +126,7 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
     }
   };
 
-  const activeTarget = USE_MOCK
-    ? (mockTargets.find((item) => item.label === target) ?? mockTargets[0])
-    : {
+  const activeTarget = {
         id: target,
         label: target,
         count:
@@ -135,7 +134,9 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
             ? `${recipients} destinataire${recipients > 1 ? "s" : ""}`
             : target === "Tous les membres"
               ? "Tous les membres du club"
-              : `Membres de la division ${target}`,
+              : target.startsWith("Équipe:")
+                ? `Membres de l'équipe ${target.replace("Équipe: ", "")}`
+                : `Membres de la division ${target.replace("Division: ", "")}`,
         icon: Users,
       };
   const TargetIcon = activeTarget.icon;
@@ -261,15 +262,6 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
                 </>
               ) : (
                 <>
-                  {USE_MOCK && (
-                    <Button
-                      variant="outline"
-                      onClick={() => toast.info("Les brouillons sont gérés dans la page Historique des notifications.")}
-                    >
-                      <CalendarDays className="mr-2 h-4 w-4" />
-                      Enregistrer le brouillon
-                    </Button>
-                  )}
                   <Button onClick={() => void send()} disabled={sending}>
                     <Send className="mr-2 h-4 w-4" />
                     {sending ? "Envoi…" : sent ? "Envoyer à nouveau" : "Envoyer la notification"}
@@ -309,11 +301,6 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
                       </span>
                     ))}
                   </div>
-                  {!USE_MOCK && (
-                    <small className="text-[10.5px] leading-relaxed text-soft">
-                      Les notifications sont diffusées dans l'application et par push. L'e-mail n'est pas utilisé.
-                    </small>
-                  )}
                 </div>
               </Card>
             )}
