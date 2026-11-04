@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Info, Save, ShieldCheck, AlertCircle } from "lucide-react";
+import { Info, Save, ShieldCheck } from "lucide-react";
 import { rules as initialRules, type RuleRow } from "@/lib/data";
 import { ruleCategoryLabel, ruleToRow } from "@/lib/adapters";
 import { api, errorMessage, USE_MOCK, type RankingRuleDto } from "@/lib/api";
@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Status } from "@/components/status";
 import { DataTable } from "@/components/data-table";
 import { PageHeader } from "@/components/page-header";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 
 export default function RulesPage() {
   const [mockRows, setMockRows] = useState<RuleRow[]>(initialRules);
@@ -19,7 +21,10 @@ export default function RulesPage() {
   const [dirtyKeys, setDirtyKeys] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
 
-  const { data: apiRules, loading, error, reload } = useApiData<RankingRuleDto[]>(() => api.rankings.rules(), []);
+  const { data: apiRules, loading, error, reload } = useApiData<RankingRuleDto[]>(
+    () => api.rankings.rules(),
+    [],
+  );
 
   useEffect(() => {
     if (USE_MOCK) return;
@@ -29,12 +34,16 @@ export default function RulesPage() {
   }, [apiRules]);
 
   const updateMock = (index: number, key: "points" | "pointsJ15" | "pointsJ4", value: string) => {
+    if (value === "" || value === "-" || value === "+") return;
     const parsed = Math.max(-1000, Math.min(1000, Math.round(Number(value) || 0)));
-    setMockRows((current) => current.map((row, rowIndex) => (rowIndex === index ? { ...row, [key]: parsed } : row)));
+    setMockRows((current) =>
+      current.map((row, rowIndex) => (rowIndex === index ? { ...row, [key]: parsed } : row)),
+    );
     setDirty(true);
   };
 
   const updateLive = (key: string, field: "points" | "pointsJ15" | "pointsJ4", value: string) => {
+    if (value === "" || value === "-" || value === "+") return;
     const parsed = Math.max(-1000, Math.min(1000, Math.round(Number(value) || 0)));
     setLiveRows((current) => current.map((row) => (row.key === key ? { ...row, [field]: parsed } : row)));
     setDirtyKeys((current) => ({ ...current, [key]: true }));
@@ -61,8 +70,8 @@ export default function RulesPage() {
           row.key,
           row.points,
           row.label,
-          row.pointsJ15 ?? undefined,
-          row.pointsJ4 ?? undefined,
+          row.hasJ15J4 ? (row.pointsJ15 ?? undefined) : undefined,
+          row.hasJ15J4 ? (row.pointsJ4 ?? undefined) : undefined,
         );
       }
       await reload();
@@ -76,26 +85,50 @@ export default function RulesPage() {
     }
   };
 
+  function PointsInput({ value, onChange, min = -1000, max = 1000 }: { value: number; onChange: (value: string) => void; min?: number; max?: number }) {
+    const [localValue, setLocalValue] = useState(String(value));
+    const [isFocused, setIsFocused] = useState(false);
+
+    // Sync from parent when not focused
+    useEffect(() => {
+      if (!isFocused) {
+        setLocalValue(String(value));
+      }
+    }, [value, isFocused]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newValue = e.target.value;
+      setLocalValue(newValue);
+      onChange(newValue);
+    };
+
+    const numValue = Number(localValue);
+    const showPlus = !isNaN(numValue) && numValue >= 0 && localValue !== "" && localValue !== "-";
+
+    return (
+      <span className="flex h-8 w-[82px] items-center gap-1 rounded-lg border border-line bg-card pl-2.5 focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/15">
+        {showPlus && <span className="text-[11px] font-bold text-green">+</span>}
+        <input
+          type="text"
+          inputMode="numeric"
+          value={localValue}
+          onChange={handleChange}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          className="w-full bg-transparent text-[11px] font-bold text-ink outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+        />
+        <span className="pr-2 text-[9px] text-soft">pts</span>
+      </span>
+    );
+  }
+
+  // Keep renderPointsInput for backward compat but use PointsInput
   const renderPointsInput = (
     value: number | undefined,
     onChange: (value: string) => void,
     min = -1000,
     max = 1000,
-    showPlus = true,
-  ) => (
-    <span className="flex h-8 w-[82px] items-center gap-1 rounded-lg border border-line bg-card pl-2.5 focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/15">
-      {showPlus && <span className="text-[11px] font-bold text-green">+</span>}
-      <input
-        type="number"
-        min={min}
-        max={max}
-        value={value ?? 0}
-        onChange={(event) => onChange(event.target.value)}
-        className="w-full bg-transparent text-[11px] font-bold text-ink outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
-      />
-      <span className="pr-2 text-[9px] text-soft">pts</span>
-    </span>
-  );
+  ) => <PointsInput value={value ?? 0} onChange={onChange} min={min} max={max} />;
 
   return (
     <>
@@ -126,8 +159,8 @@ export default function RulesPage() {
 
       {!USE_MOCK && (
         <p className="mb-4 rounded-xl bg-muted px-4 py-3 text-[11px] leading-relaxed text-soft">
-          Les règles avec J-15/J-4 activé utilisent des valeurs distinctes pour les confirmations à J-15 et J-4. Les
-          autres règles utilisent une valeur unique de points.
+          Chaque règle utilise soit le système J-15/J-4 (points distincts selon le délai), soit une valeur de points
+          standard unique.
         </p>
       )}
 
@@ -136,15 +169,10 @@ export default function RulesPage() {
           id="tour-rules-table"
           rows={mockRows}
           rowKey={(row) => row.key}
-          minWidth={900}
+          minWidth={760}
           pageSize={10}
-          grid="1fr 1.5fr 1fr 1fr 1fr .7fr 36px"
+          grid="1.5fr 1.2fr 1fr .8fr 36px"
           columns={[
-            {
-              key: "key",
-              label: "Clé",
-              render: (row) => <code className="text-[11px] font-mono text-soft">{row.key}</code>,
-            },
             { key: "label", label: "Rôle / Libellé", render: (row) => <strong>{row.label}</strong> },
             {
               key: "category",
@@ -152,15 +180,14 @@ export default function RulesPage() {
               render: (row) => <span className="text-soft">{ruleCategoryLabel(row.category)}</span>,
             },
             {
-              key: "hasJ15J4",
-              label: "J-15 / J-4",
-              render: (row) =>
-                row.hasJ15J4 ? <Status tone="success">Oui</Status> : <Status tone="neutral">Non</Status>,
-            },
-            {
               key: "points",
-              label: "Points (standard)",
-              render: (row, index) => renderPointsInput(row.points, (v) => updateMock(index, "points", v), -1000, 1000),
+              label: "Points",
+              render: (row, index) =>
+                row.hasJ15J4 ? (
+                  <span className="text-soft text-center w-[82px]">—</span>
+                ) : (
+                  renderPointsInput(row.points, (v) => updateMock(index, "points", v), -1000, 1000)
+                ),
             },
             {
               key: "pointsJ15",
@@ -182,7 +209,6 @@ export default function RulesPage() {
                   <span className="text-soft text-center w-[82px]">—</span>
                 ),
             },
-            { key: "status", label: "Statut", render: () => <Status tone="success">Active</Status> },
             {
               key: "actions",
               label: "",
@@ -204,16 +230,11 @@ export default function RulesPage() {
           id="tour-rules-table"
           rows={liveRows.map(ruleToRow)}
           rowKey={(row) => row.key}
-          minWidth={900}
+          minWidth={760}
           pageSize={10}
-          grid="1fr 1.2fr 1fr 1fr 1fr .7fr 36px"
+          grid="1.5fr 1.2fr 1fr .8fr 36px"
           emptyMessage={loading ? "Chargement des règles…" : undefined}
           columns={[
-            {
-              key: "key",
-              label: "Clé",
-              render: (row) => <code className="text-[11px] font-mono text-soft">{row.key}</code>,
-            },
             { key: "label", label: "Rôle / Libellé", render: (row) => <strong>{row.label}</strong> },
             {
               key: "category",
@@ -221,15 +242,14 @@ export default function RulesPage() {
               render: (row) => <span className="text-soft">{ruleCategoryLabel(row.category)}</span>,
             },
             {
-              key: "hasJ15J4",
-              label: "J-15 / J-4",
-              render: (row) =>
-                row.hasJ15J4 ? <Status tone="success">Oui</Status> : <Status tone="neutral">Non</Status>,
-            },
-            {
               key: "points",
-              label: "Points (standard)",
-              render: (row) => renderPointsInput(row.points, (v) => updateLive(row.key, "points", v), -1000, 1000),
+              label: "Points",
+              render: (row) =>
+                row.hasJ15J4 ? (
+                  <span className="text-soft text-center w-[82px]">—</span>
+                ) : (
+                  renderPointsInput(row.points, (v) => updateLive(row.key, "points", v), -1000, 1000)
+                ),
             },
             {
               key: "pointsJ15",
@@ -251,7 +271,6 @@ export default function RulesPage() {
                   <span className="text-soft text-center w-[82px]">—</span>
                 ),
             },
-            { key: "status", label: "Statut", render: () => <Status tone="success">Active</Status> },
             {
               key: "actions",
               label: "",

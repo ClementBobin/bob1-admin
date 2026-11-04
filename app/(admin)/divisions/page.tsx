@@ -24,10 +24,9 @@ type DivisionRow = {
   gender: string;
   teams: string;
   status: string;
-  sortOrder: number;
 };
 
-const initial: DivisionRow[] = divisions.map((item, index) => ({ ...item, sortOrder: index + 1 }));
+const initial: DivisionRow[] = divisions.map((item) => ({ ...item }));
 
 const statusTone = (status: string) => (status === "Active" ? ("success" as const) : ("neutral" as const));
 const categoryOptions = ["U11", "U13", "U15", "U17", "U18", "Senior"];
@@ -39,7 +38,6 @@ function Form({ row, onSave }: { row: DivisionRow | null; onSave: (row: Division
   const [category, setCategory] = useState(row?.category ?? "U18");
   const [gender, setGender] = useState(row?.gender ?? "Masculin");
   const [status, setStatus] = useState(row?.status ?? "Active");
-  const [sortOrder, setSortOrder] = useState(row?.sortOrder ?? 99);
 
   return (
     <form
@@ -53,7 +51,6 @@ function Form({ row, onSave }: { row: DivisionRow | null; onSave: (row: Division
           gender,
           teams: row?.teams ?? "0 équipe",
           status,
-          sortOrder,
         });
       }}
       className="flex flex-col gap-4"
@@ -67,33 +64,21 @@ function Form({ row, onSave }: { row: DivisionRow | null; onSave: (row: Division
         </Field>
         <Field>
           <FieldLabel htmlFor="divisions-field-2" className="text-[11px] font-bold text-muted-foreground">
-            Ordre d'affichage
+            Catégorie
           </FieldLabel>
-          <Input
-            id="divisions-field-2"
-            type="number"
-            value={String(sortOrder)}
-            onChange={(event) => setSortOrder(Number(event.target.value))}
-            min={0}
-          />
+          <OptionSelect id="divisions-field-2" value={category} onValueChange={setCategory} options={categoryOptions} />
         </Field>
         <Field>
           <FieldLabel htmlFor="divisions-field-3" className="text-[11px] font-bold text-muted-foreground">
-            Catégorie
+            Genre
           </FieldLabel>
-          <OptionSelect id="divisions-field-3" value={category} onValueChange={setCategory} options={categoryOptions} />
+          <OptionSelect id="divisions-field-3" value={gender} onValueChange={setGender} options={genderOptions} />
         </Field>
         <Field>
           <FieldLabel htmlFor="divisions-field-4" className="text-[11px] font-bold text-muted-foreground">
-            Genre
-          </FieldLabel>
-          <OptionSelect id="divisions-field-4" value={gender} onValueChange={setGender} options={genderOptions} />
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="divisions-field-5" className="text-[11px] font-bold text-muted-foreground">
             Statut
           </FieldLabel>
-          <OptionSelect id="divisions-field-5" value={status} onValueChange={setStatus} options={statusOptions} />
+          <OptionSelect id="divisions-field-4" value={status} onValueChange={setStatus} options={statusOptions} />
         </Field>
       </div>
     </form>
@@ -148,7 +133,7 @@ export default function DivisionsPage() {
       if (editing)
         await api.divisions.update(row.id, {
           name: row.name,
-          sortOrder: row.sortOrder,
+          sortOrder: 0,
           category: row.category,
           gender: row.gender,
           isActive: row.status === "Active",
@@ -156,7 +141,7 @@ export default function DivisionsPage() {
       else
         await api.divisions.create({
           name: row.name,
-          sortOrder: row.sortOrder,
+          sortOrder: 0,
           category: row.category,
           gender: row.gender,
           isActive: row.status === "Active",
@@ -196,14 +181,13 @@ export default function DivisionsPage() {
         rows={filtered}
         rowKey={(row) => row.id}
         minWidth={760}
-        grid="1.4fr 1fr 1fr 1fr .8fr .8fr 36px"
+        grid="1.4fr 1fr 1fr 1fr .8fr 36px"
         emptyMessage={loading ? "Chargement des divisions…" : undefined}
         columns={[
           { key: "name", label: "Nom", render: (row) => <strong>{row.name}</strong> },
           { key: "category", label: "Catégorie", render: (row) => row.category },
           { key: "gender", label: "Genre", render: (row) => row.gender },
           { key: "teams", label: "Équipes", render: (row) => row.teams },
-          { key: "sortOrder", label: "Ordre", render: (row) => String(row.sortOrder) },
           {
             key: "status",
             label: "Statut",

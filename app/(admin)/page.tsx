@@ -88,9 +88,23 @@ export default function DashboardPage() {
   const { data: apiPenalties } = useApiData<PenaltyDto[]>(() => api.rankings.penalties(), []);
 
   const now = Date.now();
-  const upcomingMatches = apiMatches.filter(
-    (match) => match.status === "Scheduled" && new Date(match.startsAtUtc).getTime() >= now,
-  );
+  const upcomingMatches = USE_MOCK
+    ? mockAttention.map((item, index) => ({
+        id: `mock-${index}`,
+        title: `BOB1 vs ${item.opponent}`,
+        divisionName: item.division,
+        venueName: "Coubertin",
+        startsAtUtc: new Date(now + (index + 1) * 7 * 24 * 60 * 60 * 1000).toISOString(),
+        status: "Scheduled" as const,
+        opponent: item.opponent,
+        homeScore: null,
+        awayScore: null,
+        isHome: true,
+        divisionId: "",
+      }))
+    : apiMatches.filter(
+        (match) => match.status === "Scheduled" && new Date(match.startsAtUtc).getTime() >= now,
+      );
   const recentPenalties = apiPenalties.filter((penalty) => now - new Date(penalty.createdAtUtc).getTime() <= WEEK_MS);
 
   const byMatch = new Map<string, { startsAt: string; title: string; missing: number }>();
@@ -254,35 +268,31 @@ export default function DashboardPage() {
 
         <div className="flex flex-col gap-4">
           <div id="tour-calendar">
-            {USE_MOCK ? (
-              <MiniCalendar />
-            ) : (
-              <Card className="gap-0 py-0 shadow-soft">
-                <CardHeading title="Prochains matchs" subtitle="Calendrier du club" />
-                <div>
-                  {upcomingMatches.length === 0 && (
-                    <p className="px-5 py-8 text-center text-[11.5px] text-soft">Aucun match à venir.</p>
-                  )}
-                  {upcomingMatches.slice(0, 4).map((match) => (
-                    <Link
-                      key={match.id}
-                      href="/matches"
-                      className="flex items-center gap-3 border-b border-line px-5 py-3 last:border-b-0 transition hover:bg-muted/40"
-                    >
-                      <span className="flex w-[52px] shrink-0 flex-col items-center rounded-lg bg-muted py-1.5">
-                        <b className="text-[12px] font-extrabold leading-none">{formatDate(match.startsAtUtc)}</b>
-                      </span>
-                      <span className="flex min-w-0 flex-col">
-                        <strong className="truncate text-[12px]">{match.title}</strong>
-                        <small className="mt-0.5 truncate text-[10.5px] text-soft">
-                          {match.divisionName} · {match.venueName}
-                        </small>
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-              </Card>
-            )}
+            <Card className="gap-0 py-0 shadow-soft">
+              <CardHeading title="Prochains matchs" subtitle="Calendrier du club" />
+              <div>
+                {upcomingMatches.length === 0 && (
+                  <p className="px-5 py-8 text-center text-[11.5px] text-soft">Aucun match à venir.</p>
+                )}
+                {upcomingMatches.slice(0, 4).map((match) => (
+                  <Link
+                    key={match.id}
+                    href="/matches"
+                    className="flex items-center gap-3 border-b border-line px-5 py-3 last:border-b-0 transition hover:bg-muted/40"
+                  >
+                    <span className="flex w-[52px] shrink-0 flex-col items-center rounded-lg bg-muted py-1.5">
+                      <b className="text-[12px] font-extrabold leading-none">{formatDate(match.startsAtUtc)}</b>
+                    </span>
+                    <span className="flex min-w-0 flex-col">
+                      <strong className="truncate text-[12px]">{match.title}</strong>
+                      <small className="mt-0.5 truncate text-[10.5px] text-soft">
+                        {match.divisionName} · {match.venueName}
+                      </small>
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </Card>
           </div>
           <Card id="tour-activity" className="gap-0 py-0 shadow-soft">
             <CardHeading title="Activité récente" subtitle="Les dernières actions du club" />

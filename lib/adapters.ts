@@ -61,6 +61,7 @@ export function personToRow(person: PersonDto): Person {
     email: person.email,
     roles: person.roles,
     status: person.isActive ? "Actif" : "Suspendu",
+    suspendedFromParticipation: person.suspendedFromParticipation,
     lastLogin: "—",
   };
 }

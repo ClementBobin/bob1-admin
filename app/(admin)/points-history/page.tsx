@@ -123,7 +123,7 @@ export default function PointsHistoryPage() {
 
   const openEdit = (row: HistoryRow) => {
     if (!row.isPenalty && !row.isRevoked) {
-      toast.error("Seules les pénalités peuvent être modifiées.");
+      toast.error("Seules les pénalités et les points donnés par un admin peuvent être modifiés.");
       return;
     }
     setEditing(row);
@@ -155,7 +155,6 @@ export default function PointsHistoryPage() {
     points: number;
     reason: string;
     category: string;
-    matchId?: string | null;
   }) => {
     if (!Number.isFinite(payload.points) || payload.points === 0) {
       toast.error("Saisissez un nombre de points non nul.");
@@ -182,7 +181,6 @@ export default function PointsHistoryPage() {
         personId: payload.personId,
         points: payload.points,
         reason: payload.reason,
-        matchId: payload.matchId ?? null,
       });
       await reload();
       toast.success("L'ajustement de points a été appliqué.");
@@ -228,7 +226,7 @@ export default function PointsHistoryPage() {
         rows={filtered}
         rowKey={(row) => row.id}
         minWidth={1100}
-        grid="1.2fr 1fr 1.5fr .8fr 1.2fr 1fr 1fr 1fr 36px"
+        grid="1.2fr 1fr 1.5fr .8fr 1fr 1fr 36px"
         emptyMessage={loading ? "Chargement de l'historique…" : undefined}
         columns={[
           {
@@ -270,7 +268,6 @@ export default function PointsHistoryPage() {
               </span>
             ),
           },
-          { key: "match", label: "Match", render: (row) => <span className="text-soft truncate">{row.match}</span> },
           { key: "date", label: "Date", render: (row) => <span className="text-soft">{row.date}</span> },
           {
             key: "type",
@@ -299,13 +296,15 @@ export default function PointsHistoryPage() {
                     <Undo2 size={16} />
                   </button>
                 )}
-                <button
-                  onClick={() => openEdit(row)}
-                  aria-label="Modifier"
-                  className="grid size-8 place-items-center rounded-lg text-soft transition hover:bg-muted"
-                >
-                  <Filter size={16} />
-                </button>
+                {(row.isPenalty || row.isRevoked) && (
+                  <button
+                    onClick={() => openEdit(row)}
+                    aria-label="Modifier"
+                    className="grid size-8 place-items-center rounded-lg text-soft transition hover:bg-muted"
+                  >
+                    <Filter size={16} />
+                  </button>
+                )}
               </div>
             ),
           },
@@ -359,8 +358,7 @@ interface HistoryFormProps {
     points: number;
     reason: string;
     category: string;
-    matchId?: string | null;
-  }) => void;
+      }) => void;
 }
 
 function HistoryForm({ row, live, familyOptions, personOptions, categoryOptions, onSave }: HistoryFormProps) {
@@ -368,8 +366,6 @@ function HistoryForm({ row, live, familyOptions, personOptions, categoryOptions,
   const [category, setCategory] = useState(row?.category ?? "penalty");
   const [reason, setReason] = useState(row?.reason ?? "");
   const [points, setPoints] = useState(row ? `${row.points > 0 ? "+" : ""}${row.points}` : "-10");
-  const [matchId, setMatchId] = useState("");
-
   return (
     <form
       id="history-form"
@@ -383,7 +379,6 @@ function HistoryForm({ row, live, familyOptions, personOptions, categoryOptions,
           points: parsedPoints,
           reason: reason,
           category,
-          matchId: matchId || null,
         });
       }}
       className="flex flex-col gap-4"
@@ -436,17 +431,6 @@ function HistoryForm({ row, live, familyOptions, personOptions, categoryOptions,
           <FieldDescription className="text-[10px]">
             {live ? "Un nombre négatif retire des points." : undefined}
           </FieldDescription>
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="pointshistory-field-22" className="text-[11px] font-bold text-muted-foreground">
-            Match (optionnel)
-          </FieldLabel>
-          <Input
-            id="pointshistory-field-22"
-            value={matchId}
-            onChange={(event) => setMatchId(event.target.value)}
-            placeholder="ID du match (laisser vide si aucun)"
-          />
         </Field>
       </div>
 

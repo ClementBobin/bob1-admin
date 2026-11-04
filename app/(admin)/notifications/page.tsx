@@ -34,6 +34,7 @@ export default function NotificationsPage() {
   const [sent, setSent] = useState(false);
   const [sending, setSending] = useState(false);
   const [recipients, setRecipients] = useState<number | null>(null);
+  const [drafts, setDrafts] = useState<Array<{ title: string; message: string; type: string; target: string; expiry: string; recurring: boolean; startup: boolean }>>([]);
 
   const { data: apiDivisions } = useApiData<DivisionDto[]>(() => api.divisions.list(), []);
 
@@ -58,7 +59,14 @@ export default function NotificationsPage() {
 
     setSending(true);
     try {
-      const response = await api.notifications.broadcast(title.trim(), message.trim(), divisionId);
+      const response = await api.notifications.broadcast(
+      title.trim(),
+      message.trim(),
+      divisionId,
+      expiry ? new Date(expiry).toISOString() : null,
+      recurring,
+      startup,
+    );
       setSent(true);
       setRecipients(response.recipients);
       toast.success(`Notification envoyée à ${response.recipients} destinataire${response.recipients > 1 ? "s" : ""}.`);
@@ -140,56 +148,44 @@ export default function NotificationsPage() {
               />
               <div className="flex justify-end text-[10px] text-soft">{message.length} / 240 caractères</div>
             </Field>
-            {USE_MOCK && (
-              <Field className="col-span-full">
-                <FieldLabel htmlFor="notifications-field-13" className="text-[11px] font-bold text-muted-foreground">
-                  Date d'expiration
-                </FieldLabel>
-                <Input
-                  id="notifications-field-13"
-                  type="date"
-                  value={expiry}
-                  onChange={(event) => setExpiry(event.target.value)}
-                />
-              </Field>
-            )}
-          </div>
-
-          {USE_MOCK ? (
-            <div className="border-t border-line">
-              {[
-                {
-                  label: "Notification récurrente",
-                  desc: "Renvoyer selon une fréquence définie",
-                  checked: recurring,
-                  onChange: setRecurring,
-                },
-                {
-                  label: "Afficher au démarrage",
-                  desc: "Présenter comme message prioritaire",
-                  checked: startup,
-                  onChange: setStartup,
-                },
-              ].map((item) => (
-                <div key={item.label} className="flex min-h-[64px] items-center justify-between gap-4 px-5 py-3">
-                  <span className="flex flex-col">
-                    <strong className="text-[12.5px]">{item.label}</strong>
-                    <small className="mt-0.5 text-[11px] text-soft">{item.desc}</small>
-                  </span>
-                  <Switch checked={item.checked} onCheckedChange={item.onChange} />
-                </div>
-              ))}
+            <Field className="col-span-full">
+            <FieldLabel htmlFor="notifications-field-13" className="text-[11px] font-bold text-muted-foreground">
+              Date d'expiration (optionnel)
+            </FieldLabel>
+            <Input
+              id="notifications-field-13"
+              type="date"
+              value={expiry}
+              onChange={(event) => setExpiry(event.target.value)}
+            />
+          </Field>
+          <div className="col-span-full flex flex-col gap-2 border-t border-line pt-3">
+            <div className="flex min-h-[64px] items-center justify-between gap-4 px-5 py-3">
+              <span className="flex flex-col">
+                <strong className="text-[12.5px]">Notification récurrente</strong>
+                <small className="mt-0.5 text-[11px] text-soft">Renvoyer selon une fréquence définie</small>
+              </span>
+              <Switch checked={recurring} onCheckedChange={setRecurring} />
             </div>
-          ) : (
-            <p className="border-t border-line px-5 py-3.5 text-[11px] leading-relaxed text-soft">
-              L'envoi est immédiat via push et in-app. Les options d'expiration, de récurrence et d'affichage au
-              démarrage ne sont pas encore exposées par l'API.
-            </p>
-          )}
+            <div className="flex min-h-[64px] items-center justify-between gap-4 px-5 py-3">
+              <span className="flex flex-col">
+                <strong className="text-[12.5px]">Afficher au démarrage</strong>
+                <small className="mt-0.5 text-[11px] text-soft">Présenter comme message prioritaire</small>
+              </span>
+              <Switch checked={startup} onCheckedChange={setStartup} />
+            </div>
+          </div>
+          </div>
 
           <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line px-5 py-4">
             {USE_MOCK && (
-              <Button variant="outline" onClick={() => toast.info("Le brouillon de notification a été enregistré.")}>
+              <Button variant="outline" onClick={() => {
+                setDrafts((prev) => [
+                  ...prev,
+                  { title, message, type, target, expiry, recurring, startup },
+                ]);
+                toast.success("Le brouillon de notification a été enregistré.");
+              }}>
                 <CalendarDays className="mr-2 h-4 w-4" />
                 Enregistrer le brouillon
               </Button>
@@ -279,6 +275,54 @@ export default function NotificationsPage() {
           </Card>
         </div>
       </div>
+
+      {drafts.length > 0 && (
+        <Card className="mt-4 gap-0 py-0 shadow-soft">
+          <CardHeading title="Brouillons" subtitle="Notifications enregistrées comme brouillon" />
+          <div>
+            {drafts.map((draft, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between gap-3 border-b border-line px-5 py-3 last:border-b-0 transition hover:bg-muted/40"
+              >
+                <div className="flex min-w-0 flex-col">
+                  <strong className="truncate text-[12.5px]">{draft.title}</strong>
+                  <small className="mt-0.5 truncate text-[10.5px] text-soft">
+                    {draft.type} · {draft.target} · {draft.recurring ? "Récurrente" : "Unique"}
+                    {draft.startup ? " · Au démarrage" : ""}
+                  </small>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setTitle(draft.title);
+                      setMessage(draft.message);
+                      setType(draft.type);
+                      setTarget(draft.target);
+                      setExpiry(draft.expiry);
+                      setRecurring(draft.recurring);
+                      setStartup(draft.startup);
+                      setDrafts((prev) => prev.filter((_, i) => i !== index));
+                      toast.info("Brouillon chargé dans le formulaire.");
+                    }}
+                  >
+                    Charger
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDrafts((prev) => prev.filter((_, i) => i !== index))}
+                  >
+                    Supprimer
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
     </>
   );
 }

@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { Bell, ChevronDown, Compass, LogOut, Moon, Search, Settings, Sun, UserRound } from "lucide-react";
-import { adminNav } from "@/lib/nav";
+import { adminNavGroups, adminNav } from "@/lib/nav";
 import { Logo } from "@/components/logo";
 import { InitialsAvatar } from "@/components/initials-avatar";
 import { useAppTour } from "@/components/app-tour";
@@ -113,6 +113,17 @@ function AppSidebar() {
   const pathname = usePathname();
   const { startTour } = useAppTour();
   const { setOpenMobile } = useSidebar();
+  const { user, logout, isMock } = useAuth();
+  const router = useRouter();
+
+  const signOut = () => {
+    if (isMock) {
+      toast.info("Mode démonstration : la déconnexion est simulée.");
+      return;
+    }
+    logout();
+    router.replace("/login");
+  };
 
   return (
     <Sidebar>
@@ -120,42 +131,44 @@ function AppSidebar() {
         <Logo />
       </SidebarHeader>
       <SidebarContent className="px-2">
-        <SidebarGroup id="tour-nav">
-          <SidebarGroupLabel className="text-[10px] font-extrabold uppercase tracking-[0.1em]">
-            Administration du club
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu aria-label="Navigation principale">
-              {adminNav.map((item) => {
-                const active = pathname === item.href;
-                const ItemIcon = item.icon;
-                return (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={active}
-                      className="h-10 gap-3 rounded-[11px] px-3 text-[12.5px] font-bold text-muted-foreground data-[active=true]:bg-mint data-[active=true]:text-mint-foreground"
-                    >
-                      <Link
-                        href={item.href}
-                        onClick={() => setOpenMobile(false)}
-                        aria-current={active ? "page" : undefined}
+        {adminNavGroups.map((group) => (
+          <SidebarGroup key={group.label}>
+            <SidebarGroupLabel className="text-[10px] font-extrabold uppercase tracking-[0.1em]">
+              {group.label}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu aria-label={group.label}>
+                {group.items.map((item) => {
+                  const active = pathname === item.href;
+                  const ItemIcon = item.icon;
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={active}
+                        className="h-10 gap-3 rounded-[11px] px-3 text-[12.5px] font-bold text-muted-foreground data-[active=true]:bg-mint data-[active=true]:text-mint-foreground"
                       >
-                        <ItemIcon className={active ? "text-green" : undefined} />
-                        <span className="truncate">{item.label}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                    {item.badge && (
-                      <SidebarMenuBadge className="rounded-full bg-danger px-1.5 text-[9px] font-bold text-white">
-                        {item.badge}
-                      </SidebarMenuBadge>
-                    )}
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                        <Link
+                          href={item.href}
+                          onClick={() => setOpenMobile(false)}
+                          aria-current={active ? "page" : undefined}
+                        >
+                          <ItemIcon className={active ? "text-green" : undefined} />
+                          <span className="truncate">{item.label}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                      {item.badge && (
+                        <SidebarMenuBadge className="rounded-full bg-danger px-1.5 text-[9px] font-bold text-white">
+                          {item.badge}
+                        </SidebarMenuBadge>
+                      )}
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -176,14 +189,18 @@ function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="p-4">
-        <div className="flex items-center gap-2.5 rounded-[14px] border p-2.5">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-green text-[11px] font-extrabold text-brand-foreground">
-            B1
-          </span>
-          <span className="flex min-w-0 flex-col">
-            <strong className="truncate text-[11.5px] font-bold">BOB1 Montpellier</strong>
-            <small className="mt-0.5 text-[10px] text-muted-foreground">Saison 2024–2025</small>
-          </span>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2.5 rounded-[14px] border p-2.5">
+            <InitialsAvatar name={displayName(user) || "Utilisateur"} tone="orange" size="sm" />
+            <span className="flex min-w-0 flex-col">
+              <strong className="truncate text-[11.5px] font-bold">{displayName(user) || "Utilisateur"}</strong>
+              <small className="mt-0.5 text-[10px] text-muted-foreground">{primaryRole(user) || "Admin"} · Saison 2024–2025</small>
+            </span>
+          </div>
+          <Button variant="ghost" size="sm" onClick={signOut} className="w-full justify-start gap-2.5 text-[12px] font-bold text-muted-foreground">
+            <LogOut className="size-4" />
+            Déconnexion
+          </Button>
         </div>
       </SidebarFooter>
     </Sidebar>
@@ -236,7 +253,7 @@ function ProfileMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button id="tour-profile" variant="ghost" className="h-10 gap-2.5 rounded-xl px-1.5 sm:pr-1">
+        <Button variant="ghost" className="h-10 gap-2.5 rounded-xl px-1.5 sm:pr-1">
           <InitialsAvatar name={name} tone="orange" size="sm" />
           <span className="hidden flex-col text-left sm:flex">
             <strong className="text-[11px] font-bold leading-tight">{name}</strong>

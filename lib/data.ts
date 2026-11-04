@@ -194,20 +194,21 @@ export type Person = {
   email: string;
   roles: string[];
   status: string; // Actif / Suspendu / En attente
+  suspendedFromParticipation: boolean;
   lastLogin: string;
 };
 
 export const people: Person[] = [
-  { id: "p1", name: "Camille Martin", email: "camille@email.fr", roles: ["Parent", "Staff", "Admin"], status: "Actif", lastLogin: "Aujourd'hui, 9:41" },
-  { id: "p2", name: "Julien Martin", email: "julien@email.fr", roles: ["Parent"], status: "Actif", lastLogin: "Il y a 2 jours" },
-  { id: "p3", name: "Nora Petit", email: "nora@email.fr", roles: ["Staff", "Parent"], status: "Actif", lastLogin: "Hier, 18:12" },
-  { id: "p4", name: "Marc Durand", email: "marc@email.fr", roles: ["Staff"], status: "Suspendu", lastLogin: "Il y a 5 jours" },
-  { id: "p5", name: "Léa Bernard", email: "lea@email.fr", roles: ["Staff"], status: "Actif", lastLogin: "Aujourd'hui, 8:05" },
-  { id: "p6", name: "Sophie Bernard", email: "sophie@email.fr", roles: ["Parent"], status: "Actif", lastLogin: "Il y a 3 jours" },
-  { id: "p7", name: "Julien Robert", email: "jrobert@email.fr", roles: ["Staff"], status: "Actif", lastLogin: "Il y a 4 jours" },
-  { id: "p8", name: "Élodie Rousseau", email: "elodie@email.fr", roles: ["Parent"], status: "En attente", lastLogin: "Invitation envoyée" },
-  { id: "p9", name: "Thomas Petit", email: "thomas@email.fr", roles: ["Parent"], status: "Actif", lastLogin: "Il y a 1 semaine" },
-  { id: "p10", name: "Inès Fabre", email: "ines@email.fr", roles: ["Staff"], status: "Actif", lastLogin: "Hier, 20:30" },
+  { id: "p1", name: "Camille Martin", email: "camille@email.fr", roles: ["Parent", "Staff", "Admin"], status: "Actif", suspendedFromParticipation: false, lastLogin: "Aujourd'hui, 9:41" },
+  { id: "p2", name: "Julien Martin", email: "julien@email.fr", roles: ["Parent"], status: "Actif", suspendedFromParticipation: false, lastLogin: "Il y a 2 jours" },
+  { id: "p3", name: "Nora Petit", email: "nora@email.fr", roles: ["Staff", "Parent"], status: "Actif", suspendedFromParticipation: false, lastLogin: "Hier, 18:12" },
+  { id: "p4", name: "Marc Durand", email: "marc@email.fr", roles: ["Staff"], status: "Suspendu", suspendedFromParticipation: false, lastLogin: "Il y a 5 jours" },
+  { id: "p5", name: "Léa Bernard", email: "lea@email.fr", roles: ["Staff"], status: "Actif", suspendedFromParticipation: false, lastLogin: "Aujourd'hui, 8:05" },
+  { id: "p6", name: "Sophie Bernard", email: "sophie@email.fr", roles: ["Parent"], status: "Actif", suspendedFromParticipation: false, lastLogin: "Il y a 3 jours" },
+  { id: "p7", name: "Julien Robert", email: "jrobert@email.fr", roles: ["Staff"], status: "Actif", suspendedFromParticipation: false, lastLogin: "Il y a 4 jours" },
+  { id: "p8", name: "Élodie Rousseau", email: "elodie@email.fr", roles: ["Parent"], status: "En attente", suspendedFromParticipation: false, lastLogin: "Invitation envoyée" },
+  { id: "p9", name: "Thomas Petit", email: "thomas@email.fr", roles: ["Parent"], status: "Actif", suspendedFromParticipation: false, lastLogin: "Il y a 1 semaine" },
+  { id: "p10", name: "Inès Fabre", email: "ines@email.fr", roles: ["Staff"], status: "Actif", suspendedFromParticipation: false, lastLogin: "Hier, 20:30" },
 ];
 
 export type Family = {

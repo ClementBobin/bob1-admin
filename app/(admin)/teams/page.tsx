@@ -274,7 +274,7 @@ export default function TeamsPage() {
         rows={filtered}
         rowKey={(row) => row.id}
         minWidth={1000}
-        grid="1.5fr 1fr 1.2fr 1fr .9fr .9fr 36px"
+        grid="1.5fr 1fr 1.2fr 1fr .9fr 36px"
         emptyMessage={loading ? "Chargement des équipes…" : undefined}
         columns={[
           {
@@ -282,13 +282,17 @@ export default function TeamsPage() {
             label: "Équipe",
             render: (row) => (
               <span className="flex items-center gap-2.5">
-                <span className="grid size-8 shrink-0 place-items-center rounded-[9px] bg-green text-[9px] font-extrabold text-brand-foreground">
-                  {row.name
-                    .split(" ")
-                    .slice(0, 2)
-                    .map((part) => part[0])
-                    .join("")}
-                </span>
+                {row.logo ? (
+                  <img src={row.logo} alt={row.name} className="size-8 shrink-0 rounded-[9px] object-contain" />
+                ) : (
+                  <span className="grid size-8 shrink-0 place-items-center rounded-[9px] bg-green text-[9px] font-extrabold text-brand-foreground">
+                    {row.name
+                      .split(" ")
+                      .slice(0, 2)
+                      .map((part) => part[0])
+                      .join("")}
+                  </span>
+                )}
                 <strong className="truncate">{row.name}</strong>
               </span>
             ),
@@ -303,12 +307,6 @@ export default function TeamsPage() {
             ),
           },
           { key: "coach", label: "Coach", render: (row) => row.coach },
-          {
-            key: "logo",
-            label: "Logo",
-            render: (row) =>
-              row.logo ? <span className="text-green">✓ Logo</span> : <span className="text-soft">—</span>,
-          },
           {
             key: "trainingLocation",
             label: "Lieu d'entraînement",

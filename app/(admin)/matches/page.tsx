@@ -544,22 +544,16 @@ export default function MatchesPage() {
           {
             key: "officials",
             label: "Officiels",
-            render: (row) =>
-              USE_MOCK ? (
-                <FillMeter value={row.officials[0]} total={row.officials[1]} />
-              ) : (
-                <span className="text-soft">—</span>
-              ),
+            render: (row) => (
+              <FillMeter value={row.officials[0]} total={row.officials[1]} />
+            ),
           },
           {
             key: "buvette",
             label: "Buvette",
-            render: (row) =>
-              USE_MOCK ? (
-                <FillMeter value={row.buvette[0]} total={row.buvette[1]} />
-              ) : (
-                <span className="text-soft">—</span>
-              ),
+            render: (row) => (
+              <FillMeter value={row.buvette[0]} total={row.buvette[1]} />
+            ),
           },
           {
             key: "carpool",

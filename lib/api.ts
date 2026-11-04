@@ -77,6 +77,7 @@ export type PersonDto = {
   lastName: string;
   roles: string[];
   isActive: boolean;
+  suspendedFromParticipation: boolean;
   familyId: string | null;
 };
 
@@ -189,6 +190,9 @@ export type NotificationDto = {
   dataJson: string | null;
   createdAtUtc: string;
   isRead: boolean;
+  expiresAtUtc: string | null;
+  recurring: boolean;
+  startup: boolean;
 };
 
 export type BroadcastResponse = { recipients: number };
@@ -484,6 +488,8 @@ export const api = {
       apiFetch<PersonDto>(`/admin/people/${id}/roles`, { method: "PUT", body: { roles } }),
     setActive: (id: string, isActive: boolean) =>
       apiFetch<void>(`/admin/people/${id}/active`, { method: "PUT", body: { isActive } }),
+    setSuspendedFromParticipation: (id: string, suspended: boolean) =>
+      apiFetch<void>(`/admin/people/${id}/suspended-from-participation`, { method: "PUT", body: { isActive: suspended } }),
   },
 
   // ---- Families (admin) ----
@@ -533,10 +539,10 @@ export const api = {
     markRead: (id: string) =>
       apiFetch<void>(`/notifications/${id}/read`, { method: "POST" }),
     readAll: () => apiFetch<void>("/notifications/read-all", { method: "POST" }),
-    broadcast: (title: string, body: string, divisionId?: string | null) =>
+    broadcast: (title: string, body: string, divisionId?: string | null, expiresAtUtc?: string | null, recurring?: boolean, startup?: boolean) =>
       apiFetch<BroadcastResponse>("/admin/notifications", {
         method: "POST",
-        body: { title, body, divisionId },
+        body: { title, body, divisionId, expiresAtUtc, recurring, startup },
       }),
   },
 };

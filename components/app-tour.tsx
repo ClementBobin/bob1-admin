@@ -69,11 +69,11 @@ const allSteps: TourStepConfig[] = [
     page: "/",
   },
   {
-    target: "#tour-profile",
-    side: "bottom",
-    align: "end",
-    title: "Votre espace",
-    description: "Accédez à votre profil, aux paramètres du club et relancez la visite guidée depuis ce menu.",
+    target: "#tour-nav",
+    side: "right",
+    align: "start",
+    title: "Navigation",
+    description: "Naviguez entre les différentes sections de l'administration.",
     page: "/",
   },
   {

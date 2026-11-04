@@ -46,6 +46,7 @@ function PersonForm({
     email: string;
     roles: string[];
     isActive: boolean;
+    suspendedFromParticipation: boolean;
   }) => void;
 }) {
   const [firstName, setFirstName] = useState(person?.name.split(" ")[0] ?? "");
@@ -53,6 +54,7 @@ function PersonForm({
   const [email, setEmail] = useState(person?.email ?? "");
   const [roles, setRoles] = useState<string[]>(person?.roles ?? ["Parent"]);
   const [status, setStatus] = useState(person?.status ?? (live ? "Actif" : "En attente"));
+  const [suspendedFromParticipation, setSuspendedFromParticipation] = useState(person?.suspendedFromParticipation ?? false);
 
   const toggleRole = (role: string) => {
     setRoles((current) => (current.includes(role) ? current.filter((item) => item !== role) : [...current, role]));
@@ -71,6 +73,7 @@ function PersonForm({
           email: email.trim(),
           roles: finalRoles,
           isActive: status === "Actif",
+          suspendedFromParticipation,
         });
       }}
       className="flex flex-col gap-4"
@@ -150,6 +153,16 @@ function PersonForm({
         <Switch checked={status === "Actif"} onCheckedChange={(checked) => setStatus(checked ? "Actif" : "Suspendu")} />
       </div>
 
+      <div className="flex items-center justify-between gap-3 rounded-xl bg-muted px-3.5 py-3">
+        <span className="flex flex-col">
+          <strong className="text-[12px]">Suspendre la participation</strong>
+          <small className="mt-0.5 text-[10.5px] text-soft">
+            La personne pourra voir les informations mais ne pourra pas participer aux matchs en tant que joueur ou staff.
+          </small>
+        </span>
+        <Switch checked={suspendedFromParticipation} onCheckedChange={setSuspendedFromParticipation} />
+      </div>
+
       <div className="rounded-xl bg-brand-soft px-3.5 py-3 text-[11px] leading-relaxed text-[#8e4200] dark:text-[#ffc48f]">
         La modification prend effet immédiatement. Une personne suspendue ne peut plus se connecter.
       </div>
@@ -212,6 +225,7 @@ export default function PeoplePage() {
     email: string;
     roles: string[];
     isActive: boolean;
+    suspendedFromParticipation: boolean;
   }) => {
     if (USE_MOCK) {
       if (editing) {
@@ -224,6 +238,7 @@ export default function PeoplePage() {
                   email: payload.email,
                   roles: payload.roles,
                   status: payload.isActive ? "Actif" : "Suspendu",
+                  suspendedFromParticipation: payload.suspendedFromParticipation,
                 }
               : item,
           ),
@@ -237,6 +252,7 @@ export default function PeoplePage() {
             email: payload.email,
             roles: payload.roles,
             status: payload.isActive ? "Actif" : "Suspendu",
+            suspendedFromParticipation: payload.suspendedFromParticipation,
             lastLogin: "Invitation envoyée",
           },
           ...current,
@@ -264,6 +280,10 @@ export default function PeoplePage() {
 
         if ((editing.status === "Actif") !== payload.isActive) {
           await api.people.setActive(editing.id, payload.isActive);
+        }
+
+        if (editing.suspendedFromParticipation !== payload.suspendedFromParticipation) {
+          await api.people.setSuspendedFromParticipation(editing.id, payload.suspendedFromParticipation);
         }
 
         toast.success("Le compte a été mis à jour.");
