@@ -36,15 +36,6 @@ type TourStepConfig = {
 
 const allSteps: TourStepConfig[] = [
   {
-    target: "#tour-nav",
-    side: "right",
-    align: "start",
-    title: "Votre menu de gestion",
-    description: "Naviguez entre les matchs, les équipes, les personnes, les classements et les paramètres du club.",
-    page: "/",
-    desktopOnly: true,
-  },
-  {
     target: "#tour-search",
     side: "bottom",
     align: "start",

@@ -159,7 +159,7 @@ function AppSidebar() {
               <small className="mt-0.5 text-[10px] text-muted-foreground">{primaryRole(user) || "Admin"} · Saison 2024–2025</small>
             </span>
           </div>
-          <Button variant="ghost" size="sm" onClick={signOut} className="w-full justify-start gap-2.5 text-[12px] font-bold text-muted-foreground">
+          <Button variant="destructive" size="sm" onClick={signOut} className="w-full justify-start gap-2.5 text-[12px] font-bold">
             <LogOut className="size-4" />
             Déconnexion
           </Button>
@@ -194,64 +194,6 @@ function ThemeToggle() {
   );
 }
 
-function ProfileMenu() {
-  const router = useRouter();
-  const { startTour } = useAppTour();
-  const { user, logout, isMock } = useAuth();
-
-  const name = displayName(user) || "Utilisateur";
-  const roleLabel = primaryRole(user);
-  const email = user?.email ?? "";
-
-  const signOut = () => {
-    if (isMock) {
-      toast.info("Mode démonstration : la déconnexion est simulée.");
-      return;
-    }
-    logout();
-    router.replace("/login");
-  };
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-10 gap-2.5 rounded-xl px-1.5 sm:pr-1">
-          <InitialsAvatar name={name} tone="orange" size="sm" />
-          <span className="hidden flex-col text-left sm:flex">
-            <strong className="text-[11px] font-bold leading-tight">{name}</strong>
-            <small className="mt-0.5 text-[9.5px] font-normal text-muted-foreground">{roleLabel}</small>
-          </span>
-          <ChevronDown className="hidden text-muted-foreground sm:block" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-60">
-        <DropdownMenuLabel className="flex flex-col gap-0.5 font-normal">
-          <strong className="text-[12.5px]">{name}</strong>
-          <span className="text-[11px] text-muted-foreground">{email}</span>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href="/people">
-            <UserRound /> Mon profil
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/rules">
-            <Settings /> Paramètres du club
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={startTour}>
-          <Compass /> Visite guidée
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onSelect={signOut}>
-          <LogOut /> Déconnexion
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
 export default function AppShell({ children }: { children: ReactNode }) {
   return (
     <SidebarProvider style={{ "--sidebar-width": "264px" } as CSSProperties} className="bg-canvas">
@@ -259,7 +201,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         href="#contenu"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[70] focus:rounded-lg focus:bg-brand focus:px-4 focus:py-2 focus:text-brand-foreground"
       >
-        Aller au contenu
+        Aller au contenuile
       </a>
       <AppSidebar />
       <SidebarInset id="contenu" className="min-w-0 bg-canvas">
@@ -274,8 +216,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 <i className="absolute right-2 top-1.5 size-2 rounded-full border-2 border-card bg-brand" />
               </Link>
             </Button>
-            <Separator orientation="vertical" className="hidden h-6 sm:block" />
-            <ProfileMenu />
           </div>
         </header>
         <div className="mx-auto w-full max-w-[1480px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>

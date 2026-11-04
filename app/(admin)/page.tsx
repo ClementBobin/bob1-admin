@@ -12,7 +12,6 @@ import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Status } from "@/components/status";
 import { PageHeader, CardHeading } from "@/components/page-header";
-import MiniCalendar from "@/components/mini-calendar";
 
 const kpiIcons = {
   calendar: CalendarDays,
@@ -188,7 +187,6 @@ export default function DashboardPage() {
         eyebrow="Vue d'ensemble"
         title={`Bonjour ${firstName}`}
         description="Voici ce qui se passe au club aujourd'hui."
-        action={{ label: "Créer un match", icon: Plus, onClick: () => router.push("/matches") }}
       />
 
       <div id="tour-kpis" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
