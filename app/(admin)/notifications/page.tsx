@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { Bell, CalendarDays, Send, Users, Smartphone } from "lucide-react";
-import { api, errorMessage, USE_MOCK, type DivisionDto } from "@/lib/api";
+import { useEffect, useMemo, useState } from "react";
+import { Bell, CalendarDays, Send, Users, Smartphone, Trash2, Pencil } from "lucide-react";
+import { api, errorMessage, USE_MOCK, type NotificationDto } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -13,316 +13,262 @@ import { Switch } from "@/components/ui/switch";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { OptionSelect } from "@/components/option-select";
 import { PageHeader, CardHeading } from "@/components/page-header";
+import { DataTable } from "@/components/data-table";
+import { Filters } from "@/components/filters";
+import { Status } from "@/components/status";
+import { Badge } from "@/components/ui/badge";
+import { FormSheet, FormSheetFooter } from "@/components/form-sheet";
 import { cn } from "@/lib/utils";
+import { formatDate, formatDateTime } from "@/lib/adapters";
 
-const mockTargets = [
-  { id: "all", label: "Tous les membres", count: "184 destinataires", icon: Users },
-  { id: "division", label: "U13 Masculins", count: "26 destinataires", icon: Users },
-  { id: "match", label: "BOB1 vs Castelnau", count: "12 officiels concernés", icon: CalendarDays },
-];
+export default function NotificationsListPage() {
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("Tous les types");
+  const [statusFilter, setStatusFilter] = useState("Tous les statuts");
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editing, setEditing] = useState<NotificationDto | null>(null);
+  const [saving, setSaving] = useState(false);
 
-export default function NotificationsPage() {
-  const [type, setType] = useState("Général");
-  const [target, setTarget] = useState("Tous les membres");
-  const [title, setTitle] = useState("Réunion des bénévoles");
-  const [message, setMessage] = useState(
-    "Rendez-vous mercredi 28 mai à 19:00 au club-house pour préparer le tournoi de fin de saison.",
+  const { data: apiNotifications, loading, error, reload } = useApiData<NotificationDto[]>(
+    () => api.notifications.list(200),
+    [],
   );
-  const [expiry, setExpiry] = useState("2025-05-28");
-  const [recurring, setRecurring] = useState(false);
-  const [startup, setStartup] = useState(true);
-  const [sent, setSent] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [recipients, setRecipients] = useState<number | null>(null);
-  const [drafts, setDrafts] = useState<Array<{ title: string; message: string; type: string; target: string; expiry: string; recurring: boolean; startup: boolean }>>([]);
 
-  const { data: apiDivisions } = useApiData<DivisionDto[]>(() => api.divisions.list(), []);
+  const rows = USE_MOCK
+    ? [
+        {
+          id: "n1",
+          title: "Réunion des bénévoles",
+          body: "Rendez-vous mercredi 28 mai à 19:00 au club-house.",
+          dataJson: null,
+          createdAtUtc: new Date().toISOString(),
+          isRead: false,
+          expiresAtUtc: null,
+          recurring: false,
+          startup: true,
+        },
+        {
+          id: "n2",
+          title: "Match annulé",
+          body: "Le match U13 vs Castelnau a été annulé.",
+          dataJson: null,
+          createdAtUtc: new Date(Date.now() - 86400000).toISOString(),
+          isRead: true,
+          expiresAtUtc: new Date(Date.now() + 86400000 * 7).toISOString(),
+          recurring: false,
+          startup: false,
+        },
+      ]
+    : apiNotifications;
 
-  const targetOptions = USE_MOCK
-    ? mockTargets.map((item) => item.label)
-    : ["Tous les membres", ...apiDivisions.map((division) => division.name)];
+  const filtered = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    return rows.filter((row) => {
+      const matchSearch = `${row.title} ${row.body}`.toLowerCase().includes(needle);
+      const matchType = typeFilter === "Tous les types" || (row.dataJson && row.dataJson.includes(typeFilter));
+      const matchStatus = statusFilter === "Tous les statuts" || (statusFilter === "Lue" ? row.isRead : !row.isRead);
+      return matchSearch && matchType && matchStatus;
+    });
+  }, [rows, search, typeFilter, statusFilter]);
 
-  const send = async () => {
-    if (USE_MOCK) {
-      setSent(true);
-      toast.success("La notification a été envoyée aux destinataires sélectionnés.");
-      return;
-    }
-
-    if (!title.trim() || !message.trim()) {
-      toast.error("Renseignez un titre et un message.");
-      return;
-    }
-
-    const divisionId =
-      target === "Tous les membres" ? null : (apiDivisions.find((division) => division.name === target)?.id ?? null);
-
-    setSending(true);
+  const remove = async (id: string) => {
+    if (!window.confirm("Supprimer cette notification ?")) return;
     try {
-      const response = await api.notifications.broadcast(
-      title.trim(),
-      message.trim(),
-      divisionId,
-      expiry ? new Date(expiry).toISOString() : null,
-      recurring,
-      startup,
-    );
-      setSent(true);
-      setRecipients(response.recipients);
-      toast.success(`Notification envoyée à ${response.recipients} destinataire${response.recipients > 1 ? "s" : ""}.`);
+      // In mock mode, just remove from local state
+      if (USE_MOCK) {
+        toast.success("Notification supprimée (simulation).");
+      } else {
+        // API doesn't have delete endpoint, but we can try
+        toast.info("La suppression n'est pas encore disponible via l'API.");
+      }
     } catch (cause) {
       toast.error(errorMessage(cause));
-    } finally {
-      setSending(false);
     }
   };
 
-  const activeTarget = USE_MOCK
-    ? (mockTargets.find((item) => item.label === target) ?? mockTargets[0])
-    : {
-        id: target,
-        label: target,
-        count:
-          recipients !== null
-            ? `${recipients} destinataire${recipients > 1 ? "s" : ""}`
-            : target === "Tous les membres"
-              ? "Tous les membres du club"
-              : `Membres de la division ${target}`,
-        icon: Users,
-      };
-  const TargetIcon = activeTarget.icon;
+  const openEdit = (row: NotificationDto) => {
+    setEditing(row);
+    setDrawerOpen(true);
+  };
 
   return (
     <>
       <PageHeader
         id="tour-notifications-header"
         eyebrow="Communication"
-        title="Notifications"
-        description="Composez et envoyez des notifications push et in-app aux membres."
+        title="Historique des notifications"
+        description="Consultez, modifiez et supprimez les notifications envoyées."
+        action={{ label: "Nouvelle notification", icon: CalendarDays, onClick: () => (window.location.href = "/notifications/create") }}
       />
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.6fr_0.9fr]">
-        <Card id="tour-notifications-form" className="gap-0 py-0 shadow-soft">
-          <CardHeading
-            title="Nouvelle notification"
-            subtitle="Le message sera envoyé aux destinataires sélectionnés via push et in-app."
-          />
-          <div className="grid grid-cols-1 gap-3.5 p-5 sm:grid-cols-2">
-            <Field>
-              <FieldLabel htmlFor="notifications-field-9" className="text-[11px] font-bold text-muted-foreground">
-                Type
-              </FieldLabel>
-              <OptionSelect
-                id="notifications-field-9"
-                value={type}
-                onValueChange={setType}
-                options={["Général", "Match", "Urgent", "Pénalité"]}
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="notifications-field-10" className="text-[11px] font-bold text-muted-foreground">
-                Destinataires
-              </FieldLabel>
-              <OptionSelect
-                id="notifications-field-10"
-                value={target}
-                onValueChange={setTarget}
-                options={targetOptions}
-              />
-            </Field>
-            <Field className="col-span-full">
-              <FieldLabel htmlFor="notifications-field-11" className="text-[11px] font-bold text-muted-foreground">
-                Titre
-              </FieldLabel>
-              <Input id="notifications-field-11" value={title} onChange={(event) => setTitle(event.target.value)} />
-            </Field>
-            <Field className="col-span-full">
-              <FieldLabel htmlFor="notifications-field-12" className="text-[11px] font-bold text-muted-foreground">
-                Corps du message
-              </FieldLabel>
-              <Textarea
-                id="notifications-field-12"
-                value={message}
-                onChange={(event) => setMessage(event.target.value)}
-                maxLength={240}
-              />
-              <div className="flex justify-end text-[10px] text-soft">{message.length} / 240 caractères</div>
-            </Field>
-            <Field className="col-span-full">
-            <FieldLabel htmlFor="notifications-field-13" className="text-[11px] font-bold text-muted-foreground">
-              Date d'expiration (optionnel)
-            </FieldLabel>
-            <Input
-              id="notifications-field-13"
-              type="date"
-              value={expiry}
-              onChange={(event) => setExpiry(event.target.value)}
-            />
-          </Field>
-          <div className="col-span-full flex flex-col gap-2 border-t border-line pt-3">
-            <div className="flex min-h-[64px] items-center justify-between gap-4 px-5 py-3">
-              <span className="flex flex-col">
-                <strong className="text-[12.5px]">Notification récurrente</strong>
-                <small className="mt-0.5 text-[11px] text-soft">Renvoyer selon une fréquence définie</small>
-              </span>
-              <Switch checked={recurring} onCheckedChange={setRecurring} />
-            </div>
-            <div className="flex min-h-[64px] items-center justify-between gap-4 px-5 py-3">
-              <span className="flex flex-col">
-                <strong className="text-[12.5px]">Afficher au démarrage</strong>
-                <small className="mt-0.5 text-[11px] text-soft">Présenter comme message prioritaire</small>
-              </span>
-              <Switch checked={startup} onCheckedChange={setStartup} />
-            </div>
-          </div>
-          </div>
+      <Filters
+        search={search}
+        onSearch={setSearch}
+        searchPlaceholder="Rechercher une notification…"
+        selects={[
+          {
+            label: "Type",
+            value: typeFilter,
+            options: ["Tous les types", "Général", "Match", "Urgent", "Pénalité"],
+            onChange: setTypeFilter,
+          },
+          {
+            label: "Statut",
+            value: statusFilter,
+            options: ["Tous les statuts", "Lue", "Non lue"],
+            onChange: setStatusFilter,
+          },
+        ]}
+        onReset={() => {
+          setSearch("");
+          setTypeFilter("Tous les types");
+          setStatusFilter("Tous les statuts");
+        }}
+      />
 
-          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line px-5 py-4">
-            {USE_MOCK && (
-              <Button variant="outline" onClick={() => {
-                setDrafts((prev) => [
-                  ...prev,
-                  { title, message, type, target, expiry, recurring, startup },
-                ]);
-                toast.success("Le brouillon de notification a été enregistré.");
-              }}>
-                <CalendarDays className="mr-2 h-4 w-4" />
-                Enregistrer le brouillon
-              </Button>
-            )}
-            <Button onClick={() => void send()} disabled={sending}>
-              <Send className="mr-2 h-4 w-4" />
-              {sending ? "Envoi…" : sent ? "Envoyer à nouveau" : "Envoyer la notification"}
-            </Button>
-          </div>
-        </Card>
-
-        <div className="flex flex-col gap-4">
-          <Card className="gap-0 py-0 shadow-soft">
-            <CardHeading title="Destinataires ciblés" subtitle="Vérifiez le périmètre avant l'envoi" />
-            <div className="flex items-center gap-3 px-5 py-4">
-              <span className="grid size-10 place-items-center rounded-xl bg-mint text-mint-foreground">
-                <TargetIcon size={18} />
-              </span>
-              <span className="flex flex-1 flex-col">
-                <strong className="text-[12.5px]">{activeTarget.label}</strong>
-                <small className="mt-0.5 text-[11px] text-soft">{activeTarget.count}</small>
-              </span>
-            </div>
-            <div className="flex flex-col gap-2 border-t border-line px-5 py-4">
-              <span className="flex items-center gap-2 text-[11px] font-bold text-soft">
-                <Smartphone size={14} /> Canaux d'envoi
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {["Push", "In-app"].map((item) => (
-                  <span
-                    key={item}
-                    className={cn(
-                      "rounded-full px-2.5 py-1 text-[10.5px] font-bold",
-                      item === "Push" ? "bg-brand-soft text-brand" : "bg-muted text-soft",
-                    )}
-                  >
-                    {item}
-                  </span>
-                ))}
-              </div>
-              {!USE_MOCK && (
-                <small className="text-[10.5px] leading-relaxed text-soft">
-                  Les notifications sont diffusées dans l'application et par push. L'e-mail n'est pas utilisé.
-                </small>
-              )}
-            </div>
-          </Card>
-
-          <Card id="tour-notifications-preview" className="gap-0 py-0 shadow-soft">
-            <CardHeading title="Aperçu mobile" subtitle="Rendu dans l'application BOB1" />
-            <div className="mx-auto my-4 w-[272px]">
-              <div className="overflow-hidden rounded-[32px] border-[7px] border-[#1c1815] bg-canvas shadow-float">
-                <div className="flex h-10 items-center justify-between px-4">
-                  <span className="text-[10px] font-semibold">9:41</span>
-                  <span className="flex items-center gap-1">
-                    <span className="h-1.5 w-3.5 rounded-sm bg-ink" />
-                    <span className="h-1.5 w-2.5 rounded-sm bg-ink/40" />
-                    <span className="h-1.5 w-1.5 rounded-sm bg-ink/25" />
-                  </span>
-                </div>
-                <div className="px-3 pb-4">
-                  <div className="mt-2 flex items-center gap-2">
-                    <span className="grid size-8 place-items-center rounded-xl bg-green text-[9px] font-extrabold text-brand-foreground">
-                      B1
-                    </span>
-                    <span className="flex flex-col">
-                      <strong className="text-[10px] font-extrabold tracking-[0.08em]">BOB1</strong>
-                      <small className="text-[8px] text-soft">Le club, ensemble</small>
-                    </span>
-                  </div>
-                  <div className="mt-5 flex flex-col items-center text-center">
-                    <span className="grid size-11 place-items-center rounded-2xl bg-brand-soft text-brand">
-                      <Bell size={20} />
-                    </span>
-                    <span className="mt-2.5 text-[9px] font-extrabold uppercase tracking-[0.1em] text-brand">
-                      {type}
-                    </span>
-                    <strong className="mt-1.5 font-display text-[15px] font-extrabold">{title}</strong>
-                    <p className="mt-2 max-w-[210px] text-[10px] leading-relaxed text-soft">{message}</p>
-                    <button className="mt-4 h-9 w-full rounded-full bg-brand text-[11px] font-bold text-brand-foreground">
-                      J'ai compris
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Card>
-        </div>
-      </div>
-
-      {drafts.length > 0 && (
-        <Card className="mt-4 gap-0 py-0 shadow-soft">
-          <CardHeading title="Brouillons" subtitle="Notifications enregistrées comme brouillon" />
-          <div>
-            {drafts.map((draft, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between gap-3 border-b border-line px-5 py-3 last:border-b-0 transition hover:bg-muted/40"
-              >
-                <div className="flex min-w-0 flex-col">
-                  <strong className="truncate text-[12.5px]">{draft.title}</strong>
-                  <small className="mt-0.5 truncate text-[10.5px] text-soft">
-                    {draft.type} · {draft.target} · {draft.recurring ? "Récurrente" : "Unique"}
-                    {draft.startup ? " · Au démarrage" : ""}
-                  </small>
-                </div>
-                <div className="flex shrink-0 gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setTitle(draft.title);
-                      setMessage(draft.message);
-                      setType(draft.type);
-                      setTarget(draft.target);
-                      setExpiry(draft.expiry);
-                      setRecurring(draft.recurring);
-                      setStartup(draft.startup);
-                      setDrafts((prev) => prev.filter((_, i) => i !== index));
-                      toast.info("Brouillon chargé dans le formulaire.");
-                    }}
-                  >
-                    Charger
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setDrafts((prev) => prev.filter((_, i) => i !== index))}
-                  >
-                    Supprimer
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
+      {!USE_MOCK && error && (
+        <div className="mb-4 rounded-xl bg-danger-soft px-4 py-3 text-[12px] font-medium text-danger">{error}</div>
       )}
+
+      <DataTable
+        id="tour-notifications-table"
+        rows={filtered}
+        rowKey={(row) => row.id}
+        minWidth={900}
+        grid="1.5fr 2fr 1fr 1fr 1fr 36px"
+        emptyMessage={loading ? "Chargement des notifications…" : undefined}
+        columns={[
+          {
+            key: "title",
+            label: "Titre",
+            render: (row) => <strong className="truncate">{row.title}</strong>,
+          },
+          {
+            key: "body",
+            label: "Message",
+            render: (row) => <span className="truncate text-soft">{row.body}</span>,
+          },
+          {
+            key: "type",
+            label: "Type",
+            render: (row) => {
+              const type = row.dataJson ? JSON.parse(row.dataJson).type : "broadcast";
+              return <Badge variant="outline">{type}</Badge>;
+            },
+          },
+          {
+            key: "createdAt",
+            label: "Date",
+            render: (row) => <span className="text-soft">{formatDateTime(row.createdAtUtc)}</span>,
+          },
+          {
+            key: "status",
+            label: "Statut",
+            render: (row) => (
+              <Status tone={row.isRead ? "success" : "warning"}>
+                {row.isRead ? "Lue" : "Non lue"}
+              </Status>
+            ),
+          },
+          {
+            key: "actions",
+            label: "",
+            render: (row) => (
+              <div className="flex items-center gap-1.5 justify-center">
+                <button
+                  onClick={() => openEdit(row)}
+                  aria-label="Modifier"
+                  className="grid size-8 place-items-center rounded-lg text-soft transition hover:bg-muted"
+                >
+                  <Pencil size={16} />
+                </button>
+                <button
+                  onClick={() => remove(row.id)}
+                  aria-label="Supprimer"
+                  className="grid size-8 place-items-center rounded-lg text-soft transition hover:bg-danger-soft hover:text-danger"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ),
+          },
+        ]}
+      />
+
+      <FormSheet
+        open={drawerOpen}
+        onClose={() => {
+          setDrawerOpen(false);
+          setEditing(null);
+        }}
+        title="Modifier la notification"
+        subtitle={editing ? editing.title : "Notification"}
+        footer={
+          <FormSheetFooter
+            onCancel={() => {
+              setDrawerOpen(false);
+              setEditing(null);
+            }}
+            submitLabel={saving ? "Enregistrement…" : "Enregistrer"}
+            form="notification-form"
+          />
+        }
+      >
+        {drawerOpen && editing && (
+          <NotificationForm
+            key={editing.id}
+            notification={editing}
+            onSave={async (payload) => {
+              if (USE_MOCK) {
+                toast.success("La notification a été mise à jour (simulation).");
+                setDrawerOpen(false);
+                setEditing(null);
+                return;
+              }
+              // API doesn't have update endpoint yet
+              toast.info("La modification n'est pas encore disponible via l'API.");
+              setDrawerOpen(false);
+              setEditing(null);
+            }}
+          />
+        )}
+      </FormSheet>
     </>
+  );
+}
+
+interface NotificationFormProps {
+  notification: NotificationDto;
+  onSave: (payload: { title: string; body: string }) => void;
+}
+
+function NotificationForm({ notification, onSave }: NotificationFormProps) {
+  const [title, setTitle] = useState(notification.title);
+  const [body, setBody] = useState(notification.body);
+
+  return (
+    <form
+      id="notification-form"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSave({ title: title.trim(), body: body.trim() });
+      }}
+      className="flex flex-col gap-4"
+    >
+      <div className="grid grid-cols-1 gap-3.5">
+        <Field className="col-span-full">
+          <FieldLabel htmlFor="notification-form-title" className="text-[11px] font-bold text-muted-foreground">
+            Titre
+          </FieldLabel>
+          <Input id="notification-form-title" value={title} onChange={(event) => setTitle(event.target.value)} required />
+        </Field>
+        <Field className="col-span-full">
+          <FieldLabel htmlFor="notification-form-body" className="text-[11px] font-bold text-muted-foreground">
+            Corps du message
+          </FieldLabel>
+          <Textarea id="notification-form-body" value={body} onChange={(event) => setBody(event.target.value)} required />
+        </Field>
+      </div>
+    </form>
   );
 }

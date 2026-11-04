@@ -62,7 +62,10 @@ export const adminNavGroups: NavGroup[] = [
   {
     label: "Communication",
     icon: Bell,
-    items: [{ href: "/notifications", label: "Notifications", icon: Bell }],
+    items: [
+      { href: "/notifications", label: "Historique des notifications", icon: Bell },
+      { href: "/notifications/create", label: "Nouvelle notification", icon: Bell },
+    ],
   },
 ];
 
