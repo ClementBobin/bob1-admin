@@ -22,8 +22,17 @@ import {
 
 const activeColors = "data-[active=true]:bg-mint data-[active=true]:text-mint-foreground";
 
+const allHrefs = adminNavGroups.flatMap((group) => group.items.map((item) => item.href));
+
+/** The most specific nav href matching the path wins, so "/notifications/create" doesn't also light up "/notifications". */
+function activeHref(pathname: string) {
+  return allHrefs
+    .filter((href) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`)))
+    .sort((a, b) => b.length - a.length)[0];
+}
+
 function isActive(pathname: string, href: string) {
-  return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+  return activeHref(pathname) === href;
 }
 
 /** A group with a single page is rendered as a plain link, without a chevron. */
@@ -71,7 +80,7 @@ function NavCollapsible({ group, pathname }: { group: NavGroup; pathname: string
           <SidebarMenuButton
             className={cn(
               "h-10 gap-3 rounded-[11px] px-3 text-[12.5px] font-bold text-muted-foreground",
-              hasActive && "text-foreground"
+              hasActive && "text-foreground",
             )}
           >
             <Icon className={hasActive ? "text-green" : undefined} />
@@ -90,7 +99,11 @@ function NavCollapsible({ group, pathname }: { group: NavGroup; pathname: string
                     isActive={active}
                     className={cn("h-8 text-[12.5px] font-semibold text-muted-foreground", activeColors)}
                   >
-                    <Link href={item.href} onClick={() => setOpenMobile(false)} aria-current={active ? "page" : undefined}>
+                    <Link
+                      href={item.href}
+                      onClick={() => setOpenMobile(false)}
+                      aria-current={active ? "page" : undefined}
+                    >
                       <span>{item.label}</span>
                     </Link>
                   </SidebarMenuSubButton>
@@ -115,7 +128,7 @@ export function NavMain() {
               <NavLink key={group.label} item={group.items[0]} pathname={pathname} />
             ) : (
               <NavCollapsible key={group.label} group={group} pathname={pathname} />
-            )
+            ),
           )}
         </SidebarMenu>
       </SidebarGroupContent>

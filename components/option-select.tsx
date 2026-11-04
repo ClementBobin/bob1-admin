@@ -11,6 +11,7 @@ export function OptionSelect({
   placeholder,
   className,
   id,
+  disabled,
   "aria-label": ariaLabel,
 }: {
   value: string;
@@ -19,10 +20,11 @@ export function OptionSelect({
   placeholder?: string;
   className?: string;
   id?: string;
+  disabled?: boolean;
   "aria-label"?: string;
 }) {
   return (
-    <Select value={value} onValueChange={onValueChange}>
+    <Select value={value} onValueChange={onValueChange} disabled={disabled}>
       <SelectTrigger id={id} aria-label={ariaLabel} className={cn("h-10 w-full cursor-pointer", className)}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>

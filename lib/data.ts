@@ -421,3 +421,41 @@ export const activity = [
   { id: 3, text: "2 postes d'arbitre sont toujours libres samedi", time: "Il y a 2 h", tone: "warning" as Tone },
   { id: 4, text: "Des points ont été ajoutés pour Marc Durand", time: "Hier, 16:20", tone: "danger" as Tone },
 ];
+export type MockNotification = {
+  id: string;
+  title: string;
+  body: string;
+  dataJson: string | null;
+  createdAtUtc: string;
+  isRead: boolean;
+  expiresAtUtc: string | null;
+  recurring: boolean;
+  startup: boolean;
+};
+
+const DAY = 86_400_000;
+
+export const mockNotifications: MockNotification[] = [
+  {
+    id: "n1",
+    title: "Réunion des bénévoles",
+    body: "Rendez-vous mercredi 28 mai à 19:00 au club-house pour préparer le tournoi de fin de saison.",
+    dataJson: JSON.stringify({ type: "Général" }),
+    createdAtUtc: new Date().toISOString(),
+    isRead: false,
+    expiresAtUtc: new Date(Date.now() + DAY * 3).toISOString(),
+    recurring: false,
+    startup: true,
+  },
+  {
+    id: "n2",
+    title: "Match annulé",
+    body: "Le match U13 vs Castelnau a été annulé.",
+    dataJson: JSON.stringify({ type: "Match" }),
+    createdAtUtc: new Date(Date.now() - DAY).toISOString(),
+    isRead: true,
+    expiresAtUtc: new Date(Date.now() + DAY * 7).toISOString(),
+    recurring: false,
+    startup: false,
+  },
+];
