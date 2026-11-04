@@ -27,5 +27,19 @@ export function AuthGuard({ children }: { children: ReactNode }) {
     );
   }
 
+  // Only Admin role can access the admin app
+  const isAdmin = user.roles.includes("Admin");
+  if (!isAdmin) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-canvas">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <Logo />
+          <h2 className="text-[18px] font-bold">Accès refusé</h2>
+          <p className="text-soft max-w-xs">Cette interface est réservée aux administrateurs.</p>
+        </div>
+      </div>
+    );
+  }
+
   return <>{children}</>;
 }

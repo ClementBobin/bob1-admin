@@ -2,32 +2,40 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Minus, MoreHorizontal, Plus } from "lucide-react";
-import { divisions, matches, type MatchRow } from "@/lib/data";
+import { type MatchRow } from "@/lib/data";
 import { matchToRow } from "@/lib/adapters";
-import {
-  api,
-  errorMessage,
-  USE_MOCK,
-  type DivisionDto,
-  type MatchDto,
-  type VenueDto,
-} from "@/lib/api";
+import { api, errorMessage, type DivisionDto, type MatchDto, type VenueDto } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/components/toast";
-import {
-  Button,
-  DataTable,
-  Drawer,
-  DrawerFooter,
-  FillMeter,
-  Filters,
-  FormField,
-  PageHeader,
-  SelectInput,
-  Status,
-  TextInput,
-} from "@/components/ui";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { OptionSelect } from "@/components/option-select";
+import { Status } from "@/components/status";
+import { DataTable } from "@/components/data-table";
+import { Filters } from "@/components/filters";
+import { PageHeader } from "@/components/page-header";
+import { FormSheet, FormSheetFooter } from "@/components/form-sheet";
+import { Progress } from "@/components/ui/progress";
+
+function FillMeter({ value, total }: { value: number; total: number }) {
+  const ratio = total === 0 ? 0 : Math.min(100, Math.round((value / total) * 100));
+  const color =
+    value === 0
+      ? "[&>[data-slot=progress-indicator]]:bg-danger"
+      : value === total
+        ? "[&>[data-slot=progress-indicator]]:bg-green"
+        : "[&>[data-slot=progress-indicator]]:bg-brand";
+  return (
+    <span className="flex items-center gap-2">
+      <Progress value={ratio} className={cn("h-1.5 w-11 bg-muted", color)} />
+      <b className="text-[11px] font-semibold text-muted-foreground">
+        {value}/{total}
+      </b>
+    </span>
+  );
+}
 
 type MatchRowEx = MatchRow & {
   opponent?: string;
@@ -47,31 +55,11 @@ const teamOptions = [
   "Sète Basket",
 ];
 
-const mockVenueOptions = [
-  "Coubertin",
-  "Palais des sports",
-  "Gymnase de Lattes",
-  "Halle Mauguio",
-  "Complexe de Lunel",
-  "Halle des Sports de Sète",
-  "Mauguio",
-  "Lunel",
-  "Castelnau",
-];
-
-const mockDivisionOptions: NamedOption[] = divisions
-  .filter((item) => item.status === "Active")
-  .map((item) => ({
-    id: item.id,
-    name: item.name.replace("Masculins", "M").replace("Féminines", "F"),
-  }));
-
 const slotLabels: Array<{ key: string; label: string; kind: "Staff" | "Volunteer" }> = [
   { key: "arbitres", label: "Arbitres", kind: "Staff" },
   { key: "chrono", label: "Chrono", kind: "Staff" },
   { key: "mar", label: "MAR", kind: "Staff" },
   { key: "buvette", label: "Buvette", kind: "Volunteer" },
-  { key: "covoiturage", label: "Covoiturage", kind: "Volunteer" },
 ];
 
 const statusTone = (status: string) => {
@@ -120,35 +108,37 @@ type MatchPayload = {
 
 function MatchForm({
   match,
-  live,
   divisionOptions,
   venueOptions,
   onSave,
 }: {
   match: MatchRowEx | null;
-  live: boolean;
   divisionOptions: string[];
   venueOptions: string[];
   onSave: (payload: MatchPayload) => void;
 }) {
   const initial = localDateParts(match?.startsAtUtc);
   const [division, setDivision] = useState(match?.division ?? divisionOptions[0] ?? "U13 M");
-  const [home, setHome] = useState(match?.home ?? "BOB1");
-  const [away, setAway] = useState(match?.away ?? "Castelnau Basket");
-  const [opponent, setOpponent] = useState(
-    match?.opponent ?? (match ? (match.home === "BOB1" ? match.away : match.home) : "Castelnau Basket")
-  );
-  const [isHome, setIsHome] = useState(match?.isHome ?? true);
+  const [homeTeam, setHomeTeam] = useState(match?.home ?? "BOB1");
+  const [awayTeam, setAwayTeam] = useState(match?.away ?? "Castelnau Basket");
   const [date, setDate] = useState(initial.date);
   const [time, setTime] = useState(initial.time);
   const [venue, setVenue] = useState(match?.venue ?? venueOptions[0] ?? "Coubertin");
   const [slots, setSlots] = useState<Record<string, number>>({
     arbitres: match?.officials[1] || 4,
-    chrono: 1,
-    mar: 1,
+    chrono: match?.chrono[1] || 1,
+    mar: match?.mar[1] || 1,
     buvette: match?.buvette[1] || 2,
-    covoiturage: 4,
   });
+
+  // Divisions/venues load asynchronously; keep the selects on a valid option.
+  useEffect(() => {
+    if (divisionOptions.length > 0 && !divisionOptions.includes(division)) setDivision(divisionOptions[0]);
+  }, [divisionOptions, division]);
+
+  useEffect(() => {
+    if (venueOptions.length > 0 && !venueOptions.includes(venue)) setVenue(venueOptions[0]);
+  }, [venueOptions, venue]);
 
   const updateSlot = (key: string, amount: number) => {
     setSlots((current) => ({ ...current, [key]: Math.max(0, Math.min(12, current[key] + amount)) }));
@@ -159,12 +149,12 @@ function MatchForm({
       id="match-form"
       onSubmit={(event) => {
         event.preventDefault();
-        const homeTeam = live ? (isHome ? "BOB1" : opponent.trim()) : home;
-        const awayTeam = live ? (isHome ? opponent.trim() : "BOB1") : away;
+        const isHome = homeTeam === "BOB1" || homeTeam === "BOB1 U13 M" || homeTeam.startsWith("BOB1");
+        const opponentName = isHome ? awayTeam : homeTeam;
         onSave({
           divisionName: division,
-          opponent: live ? opponent.trim() : homeTeam === "BOB1" ? awayTeam : homeTeam,
-          isHome: live ? isHome : homeTeam === "BOB1",
+          opponent: opponentName,
+          isHome,
           venueName: venue,
           date,
           time,
@@ -178,10 +168,12 @@ function MatchForm({
             venue,
             officials: [match?.officials[0] ?? 0, slots.arbitres],
             buvette: [match?.buvette[0] ?? 0, slots.buvette],
+            chrono: [0, slots.chrono],
+            mar: [0, slots.mar],
             carpool: `${slots.covoiturage} places`,
             status: match?.status ?? "Brouillon",
-            opponent: live ? opponent.trim() : homeTeam === "BOB1" ? awayTeam : homeTeam,
-            isHome: live ? isHome : homeTeam === "BOB1",
+            opponent: opponentName,
+            isHome,
             startsAtUtc: new Date(`${date}T${time}:00`).toISOString(),
           },
         });
@@ -189,53 +181,71 @@ function MatchForm({
       className="flex flex-col gap-4"
     >
       <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
-        <FormField label="Division" wide>
-          <SelectInput
-            value={division}
-            onChange={(event) => setDivision(event.target.value)}
-            options={divisionOptions}
+        <Field className="col-span-full">
+          <FieldLabel htmlFor="matches-field-1" className="text-[11px] font-bold text-muted-foreground">
+            Division
+          </FieldLabel>
+          <OptionSelect id="matches-field-1" value={division} onValueChange={setDivision} options={divisionOptions} />
+        </Field>
+
+        <>
+          <Field>
+            <FieldLabel htmlFor="matches-field-2" className="text-[11px] font-bold text-muted-foreground">
+              Équipe à domicile
+            </FieldLabel>
+            <OptionSelect
+              id="matches-field-2"
+              value={homeTeam}
+              onValueChange={setHomeTeam}
+              options={teamOptions}
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="matches-field-3" className="text-[11px] font-bold text-muted-foreground">
+              Équipe à l'extérieur
+            </FieldLabel>
+            <OptionSelect
+              id="matches-field-3"
+              value={awayTeam}
+              onValueChange={setAwayTeam}
+              options={teamOptions}
+            />
+          </Field>
+        </>
+
+        <Field>
+          <FieldLabel htmlFor="matches-field-6" className="text-[11px] font-bold text-muted-foreground">
+            Date
+          </FieldLabel>
+          <Input
+            id="matches-field-6"
+            type="date"
+            value={date}
+            onChange={(event) => setDate(event.target.value)}
+            required
           />
-        </FormField>
-
-        {live ? (
-          <>
-            <FormField label="Adversaire">
-              <TextInput
-                value={opponent}
-                onChange={(event) => setOpponent(event.target.value)}
-                placeholder="Castelnau Basket"
-                required
-              />
-            </FormField>
-            <FormField label="Lieu de la rencontre">
-              <SelectInput value={isHome ? "Domicile" : "Extérieur"} onChange={(event) => setIsHome(event.target.value === "Domicile")} options={["Domicile", "Extérieur"]} />
-            </FormField>
-          </>
-        ) : (
-          <>
-            <FormField label="Équipe à domicile">
-              <SelectInput value={home} onChange={(event) => setHome(event.target.value)} options={teamOptions} />
-            </FormField>
-            <FormField label="Équipe à l'extérieur">
-              <SelectInput value={away} onChange={(event) => setAway(event.target.value)} options={teamOptions} />
-            </FormField>
-          </>
-        )}
-
-        <FormField label="Date">
-          <TextInput type="date" value={date} onChange={(event) => setDate(event.target.value)} required />
-        </FormField>
-        <FormField label="Heure">
-          <TextInput type="time" value={time} onChange={(event) => setTime(event.target.value)} required />
-        </FormField>
-        <FormField label="Lieu" wide>
-          <SelectInput value={venue} onChange={(event) => setVenue(event.target.value)} options={venueOptions} />
-        </FormField>
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="matches-field-7" className="text-[11px] font-bold text-muted-foreground">
+            Heure
+          </FieldLabel>
+          <Input
+            id="matches-field-7"
+            type="time"
+            value={time}
+            onChange={(event) => setTime(event.target.value)}
+            required
+          />
+        </Field>
+        <Field className="col-span-full">
+          <FieldLabel htmlFor="matches-field-8" className="text-[11px] font-bold text-muted-foreground">
+            Lieu
+          </FieldLabel>
+          <OptionSelect id="matches-field-8" value={venue} onValueChange={setVenue} options={venueOptions} />
+        </Field>
       </div>
 
-      <span className="mt-2 text-[10px] font-extrabold uppercase tracking-[0.08em] text-soft">
-        Postes nécessaires
-      </span>
+      <span className="mt-2 text-[10px] font-extrabold uppercase tracking-[0.08em] text-soft">Postes nécessaires</span>
       <div className="overflow-hidden rounded-[13px] border border-line">
         {slotLabels.map(({ key, label }) => (
           <div
@@ -268,58 +278,39 @@ function MatchForm({
       </div>
 
       <p className="rounded-xl bg-muted px-3.5 py-3 text-[11px] leading-relaxed text-soft">
-        {live
-          ? "Les postes saisis sont créés en même temps que le match. Vous pourrez les ajuster depuis la fiche du match."
-          : "Les bénévoles recevront une notification dès la publication du match. Vous pourrez ajuster les postes depuis la fiche du match."}
+        Les postes saisis sont créés en même temps que le match. Vous pourrez les ajuster depuis la fiche du match.
       </p>
     </form>
   );
 }
 
 export default function MatchesPage() {
-  const [rows, setRows] = useState<MatchRowEx[]>(
-    USE_MOCK
-      ? matches.map((item) => ({
-          ...item,
-          opponent: item.home === "BOB1" ? item.away : item.home,
-          isHome: item.home === "BOB1",
-        }))
-      : []
-  );
+  const [rows, setRows] = useState<MatchRowEx[]>([]);
   const [search, setSearch] = useState("");
   const [division, setDivision] = useState("Toutes les divisions");
   const [status, setStatus] = useState("Tous les statuts");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<MatchRowEx | null>(null);
   const [saving, setSaving] = useState(false);
-  const { toast } = useToast();
 
-  const { data: apiMatches, loading, error, reload } = useApiData<MatchDto[]>(
-    () => api.matches.list(),
-    []
-  );
+  const { data: apiMatches, loading, error, reload } = useApiData<MatchDto[]>(() => api.matches.list(), []);
   const { data: apiDivisions } = useApiData<DivisionDto[]>(() => api.divisions.list(), []);
   const { data: apiVenues } = useApiData<VenueDto[]>(() => api.venues.list(), []);
 
   useEffect(() => {
-    if (USE_MOCK) return;
     setRows(
-      apiMatches.map((match) => ({
+      (apiMatches ?? []).map((match) => ({
         ...matchToRow(match),
         opponent: match.opponent,
         isHome: match.isHome,
         startsAtUtc: match.startsAtUtc,
-      }))
+      })),
     );
   }, [apiMatches]);
 
-  const divisionOptions: NamedOption[] = USE_MOCK
-    ? mockDivisionOptions
-    : apiDivisions.map((item) => ({ id: item.id, name: item.name }));
+  const divisionOptions: NamedOption[] = (apiDivisions ?? []).map((item) => ({ id: item.id, name: item.name }));
 
-  const venueOptions: NamedOption[] = USE_MOCK
-    ? mockVenueOptions.map((name) => ({ id: name, name }))
-    : apiVenues.map((item) => ({ id: item.id, name: item.name }));
+  const venueOptions: NamedOption[] = (apiVenues ?? []).map((item) => ({ id: item.id, name: item.name }));
 
   const divisionNames = useMemo(() => {
     const names = divisionOptions.map((item) => item.name);
@@ -333,9 +324,7 @@ export default function MatchesPage() {
     return names;
   }, [venueOptions, editing]);
 
-  const statusOptions = USE_MOCK
-    ? ["Tous les statuts", "J-15", "J-4", "Confirmé", "Brouillon"]
-    : ["Tous les statuts", "J-15", "Confirmé", "Annulé"];
+  const statusOptions = ["Tous les statuts", "J-15", "Confirmé", "Annulé"];
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -360,23 +349,10 @@ export default function MatchesPage() {
   };
 
   const save = async (payload: MatchPayload) => {
-    if (USE_MOCK) {
-      if (editing) {
-        setRows((current) => current.map((item) => (item.id === payload.row.id ? payload.row : item)));
-        toast("Le match a été mis à jour.");
-      } else {
-        setRows((current) => [payload.row, ...current]);
-        toast("Le match a été créé et publié au calendrier.");
-      }
-      setDrawerOpen(false);
-      setEditing(null);
-      return;
-    }
-
     const divisionId = divisionOptions.find((item) => item.name === payload.divisionName)?.id;
     const venueId = venueOptions.find((item) => item.name === payload.venueName)?.id;
     if (!divisionId || !venueId) {
-      toast("Sélectionnez une division et un lieu existants.", "danger");
+      toast.error("Sélectionnez une division et un lieu existants.");
       return;
     }
 
@@ -392,7 +368,7 @@ export default function MatchesPage() {
     try {
       if (editing) {
         await api.matches.update(editing.id, input);
-        toast("Le match a été mis à jour.");
+        toast.success("Le match a été mis à jour.");
       } else {
         const created = await api.matches.create(input);
         const failures: string[] = [];
@@ -405,18 +381,17 @@ export default function MatchesPage() {
             failures.push(spec.label);
           }
         }
-        toast(
+        (failures.length ? toast.error : toast.success)(
           failures.length
             ? `Le match a été créé, mais les postes suivants n'ont pas pu être ajoutés : ${failures.join(", ")}.`
             : "Le match a été créé et publié au calendrier.",
-          failures.length ? "danger" : "success"
         );
       }
       await reload();
       setDrawerOpen(false);
       setEditing(null);
     } catch (cause) {
-      toast(errorMessage(cause), "danger");
+      toast.error(errorMessage(cause));
     } finally {
       setSaving(false);
     }
@@ -453,7 +428,7 @@ export default function MatchesPage() {
         }}
       />
 
-      {!USE_MOCK && error && (
+      {error && (
         <div className="mb-4 rounded-xl bg-danger-soft px-4 py-3 text-[12px] font-medium text-danger">{error}</div>
       )}
 
@@ -496,14 +471,16 @@ export default function MatchesPage() {
           {
             key: "officials",
             label: "Officiels",
-            render: (row) =>
-              USE_MOCK ? <FillMeter value={row.officials[0]} total={row.officials[1]} /> : <span className="text-soft">—</span>,
+            render: (row) => (
+              <FillMeter value={row.officials[0]} total={row.officials[1]} />
+            ),
           },
           {
             key: "buvette",
             label: "Buvette",
-            render: (row) =>
-              USE_MOCK ? <FillMeter value={row.buvette[0]} total={row.buvette[1]} /> : <span className="text-soft">—</span>,
+            render: (row) => (
+              <FillMeter value={row.buvette[0]} total={row.buvette[1]} />
+            ),
           },
           {
             key: "carpool",
@@ -523,25 +500,27 @@ export default function MatchesPage() {
             key: "actions",
             label: "",
             render: (row) => (
-              <button
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="text-muted-foreground"
                 onClick={() => openEdit(row)}
                 aria-label={`Modifier le match ${row.home} — ${row.away}`}
-                className="grid size-8 place-items-center rounded-lg text-soft transition hover:bg-muted hover:text-ink"
               >
                 <MoreHorizontal size={16} />
-              </button>
+              </Button>
             ),
           },
         ]}
       />
 
-      <Drawer
+      <FormSheet
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         title={editing ? "Modifier le match" : "Créer un match"}
         subtitle={editing ? `${editing.home} — ${editing.away}` : "Nouvelle rencontre"}
         footer={
-          <DrawerFooter
+          <FormSheetFooter
             onCancel={() => setDrawerOpen(false)}
             submitLabel={saving ? "Enregistrement…" : editing ? "Enregistrer les modifications" : "Créer le match"}
             form="match-form"
@@ -552,13 +531,12 @@ export default function MatchesPage() {
           <MatchForm
             key={editing?.id ?? "new"}
             match={editing}
-            live={!USE_MOCK}
             divisionOptions={divisionNames}
             venueOptions={venueNames}
             onSave={save}
           />
         )}
-      </Drawer>
+      </FormSheet>
     </>
   );
 }

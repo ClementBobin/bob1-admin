@@ -14,24 +14,12 @@ import {
   clearSession,
   getStoredUser,
   saveSession,
-  USE_MOCK,
   type AuthUser,
 } from "@/lib/api";
-
-/** The account shown when NEXT_PUBLIC_USE_MOCK=true. */
-export const MOCK_USER: AuthUser = {
-  id: "mock-admin",
-  email: "admin@bob1.local",
-  firstName: "Camille",
-  lastName: "Martin",
-  roles: ["Parent", "Staff", "Admin"],
-  familyId: null,
-};
 
 type AuthContextValue = {
   user: AuthUser | null;
   loading: boolean;
-  isMock: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
 };
@@ -39,16 +27,10 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(USE_MOCK ? MOCK_USER : null);
-  const [loading, setLoading] = useState(!USE_MOCK);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (USE_MOCK) {
-      setUser(MOCK_USER);
-      setLoading(false);
-      return;
-    }
-
     const stored = getStoredUser();
     if (!stored) {
       setLoading(false);
@@ -86,11 +68,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     clearSession();
-    setUser(USE_MOCK ? MOCK_USER : null);
+    setUser(null);
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, loading, isMock: USE_MOCK, login, logout }),
+    () => ({ user, loading, login, logout }),
     [user, loading, login, logout]
   );
 

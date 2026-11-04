@@ -5,14 +5,12 @@
  *  - the access token is kept in localStorage and sent as a Bearer header,
  *  - a 401 triggers a single refresh attempt, then the request is replayed,
  *  - every failure is normalized to an ApiError carrying the API's stable code.
- *
- * NEXT_PUBLIC_USE_MOCK=true keeps the whole UI on the fixtures in lib/data.ts.
  */
 
-const RAW_API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000").replace(/\/+$/, "");
-export const API_BASE_URL = RAW_API_URL.endsWith("/api/v1") ? RAW_API_URL : `${RAW_API_URL}/api/v1`;
-
-export const USE_MOCK = (process.env.NEXT_PUBLIC_USE_MOCK ?? "true").toLowerCase() !== "false";
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+if (!API_BASE_URL) {
+  throw new Error("NEXT_PUBLIC_API_URL is not configured");
+}
 
 // ---------------------------------------------------------------------------
 // DTOs (mirror the records exposed by Bob1-api)
@@ -34,9 +32,9 @@ export type AuthResponse = {
   user: AuthUser;
 };
 
-export type DivisionDto = { id: string; name: string; sortOrder: number };
-export type TeamDto = { id: string; name: string; divisionId: string };
-export type VenueDto = { id: string; name: string; address: string | null };
+export type DivisionDto = { id: string; name: string; sortOrder: number; category: string; gender: string; isActive: boolean };
+export type TeamDto = { id: string; name: string; divisionId: string; coachName: string | null; coachUserId: string | null; logoUrl: string | null; isActive: boolean; trainingVenueId: string | null; trainingVenueName: string | null };
+export type VenueDto = { id: string; name: string; address: string | null; city: string | null; postalCode: string | null };
 
 export type MatchStatus = "Scheduled" | "Cancelled" | "Played";
 
@@ -77,6 +75,7 @@ export type PersonDto = {
   lastName: string;
   roles: string[];
   isActive: boolean;
+  suspendedFromParticipation: boolean;
   familyId: string | null;
 };
 
@@ -119,7 +118,24 @@ export type AdminFamilyDto = {
   createdAtUtc: string;
 };
 
-export type RankingRowDto = {
+// Person-level ranking
+export type PersonRankingRowDto = {
+  rank: number;
+  personId: string;
+  personName: string;
+  familyName: string | null;
+  points: number;
+  isMine: boolean;
+};
+
+export type RankingResponse = {
+  season: string;
+  top: PersonRankingRowDto[];
+  mine: PersonRankingRowDto | null;
+};
+
+// Family-level ranking
+export type FamilyRankingRowDto = {
   rank: number;
   familyId: string;
   familyName: string;
@@ -127,10 +143,10 @@ export type RankingRowDto = {
   isMine: boolean;
 };
 
-export type RankingResponse = {
+export type FamilyRankingResponse = {
   season: string;
-  top: RankingRowDto[];
-  mine: RankingRowDto | null;
+  top: FamilyRankingRowDto[];
+  mine: FamilyRankingRowDto | null;
 };
 
 export type RankingRuleDto = {
@@ -138,17 +154,31 @@ export type RankingRuleDto = {
   category: string;
   label: string;
   points: number;
+  pointsJ15: number | null;
+  pointsJ4: number | null;
+  hasJ15J4: boolean;
 };
 
 export type PenaltyDto = {
   id: string;
-  familyId: string;
-  familyName: string;
+  personId: string;
+  personName: string;
   points: number;
   reason: string;
   matchId: string | null;
   season: string;
   createdAtUtc: string;
+};
+
+export type EntryDto = {
+  id: string;
+  category: string;
+  points: number;
+  reason: string;
+  matchId: string | null;
+  createdAtUtc: string;
+  personId: string;
+  personName: string;
 };
 
 export type NotificationDto = {
@@ -158,6 +188,9 @@ export type NotificationDto = {
   dataJson: string | null;
   createdAtUtc: string;
   isRead: boolean;
+  expiresAtUtc: string | null;
+  recurring: boolean;
+  startup: boolean;
 };
 
 export type BroadcastResponse = { recipients: number };
@@ -396,9 +429,9 @@ export const api = {
   // ---- Club ----
   divisions: {
     list: () => apiFetch<DivisionDto[]>("/divisions"),
-    create: (input: { name: string; sortOrder: number }) =>
+    create: (input: { name: string; sortOrder: number; category: string; gender: string; isActive: boolean }) =>
       apiFetch<DivisionDto>("/admin/divisions", { method: "POST", body: input }),
-    update: (id: string, input: { name: string; sortOrder: number }) =>
+    update: (id: string, input: { name: string; sortOrder: number; category: string; gender: string; isActive: boolean }) =>
       apiFetch<DivisionDto>(`/admin/divisions/${id}`, { method: "PUT", body: input }),
     remove: (id: string) => apiFetch<void>(`/admin/divisions/${id}`, { method: "DELETE" }),
   },
@@ -406,18 +439,18 @@ export const api = {
   teams: {
     list: (divisionId?: string) =>
       apiFetch<TeamDto[]>(`/teams${query({ divisionId })}`),
-    create: (input: { name: string; divisionId: string }) =>
+    create: (input: { name: string; divisionId: string; coachName?: string | null; coachUserId?: string | null; logoUrl?: string | null; isActive?: boolean; trainingVenueId?: string | null }) =>
       apiFetch<TeamDto>("/admin/teams", { method: "POST", body: input }),
-    update: (id: string, input: { name: string; divisionId: string }) =>
+    update: (id: string, input: { name: string; divisionId: string; coachName?: string | null; coachUserId?: string | null; logoUrl?: string | null; isActive?: boolean; trainingVenueId?: string | null }) =>
       apiFetch<TeamDto>(`/admin/teams/${id}`, { method: "PUT", body: input }),
     remove: (id: string) => apiFetch<void>(`/admin/teams/${id}`, { method: "DELETE" }),
   },
 
   venues: {
     list: () => apiFetch<VenueDto[]>("/venues"),
-    create: (input: { name: string; address: string | null }) =>
+    create: (input: { name: string; address: string | null; city: string | null; postalCode: string | null }) =>
       apiFetch<VenueDto>("/admin/venues", { method: "POST", body: input }),
-    update: (id: string, input: { name: string; address: string | null }) =>
+    update: (id: string, input: { name: string; address: string | null; city: string | null; postalCode: string | null }) =>
       apiFetch<VenueDto>(`/admin/venues/${id}`, { method: "PUT", body: input }),
     remove: (id: string) => apiFetch<void>(`/admin/venues/${id}`, { method: "DELETE" }),
   },
@@ -453,6 +486,8 @@ export const api = {
       apiFetch<PersonDto>(`/admin/people/${id}/roles`, { method: "PUT", body: { roles } }),
     setActive: (id: string, isActive: boolean) =>
       apiFetch<void>(`/admin/people/${id}/active`, { method: "PUT", body: { isActive } }),
+    setSuspendedFromParticipation: (id: string, suspended: boolean) =>
+      apiFetch<void>(`/admin/people/${id}/suspended-from-participation`, { method: "PUT", body: { isActive: suspended } }),
   },
 
   // ---- Families (admin) ----
@@ -468,17 +503,21 @@ export const api = {
 
   // ---- Ranking ----
   rankings: {
-    get: (category?: string) =>
-      apiFetch<RankingResponse>(`/admin/rankings${query({ category })}`),
+    // Person rankings
+    get: (category?: string, view?: "person" | "family") =>
+      apiFetch<RankingResponse | FamilyRankingResponse>(`/admin/rankings${query({ category, view })}`),
+    // My entries
+    myEntries: (season?: string, take?: number) =>
+      apiFetch<EntryDto[]>(`/rankings/me/entries${query({ season, take })}`),
     rules: () => apiFetch<RankingRuleDto[]>("/ranking-rules"),
-    updateRule: (key: string, points: number, label?: string) =>
+    updateRule: (key: string, points: number, label?: string, pointsJ15?: number, pointsJ4?: number) =>
       apiFetch<RankingRuleDto>(`/admin/ranking-rules/${encodeURIComponent(key)}`, {
         method: "PUT",
-        body: { points, label },
+        body: { points, label, pointsJ15, pointsJ4 },
       }),
-    penalties: () => apiFetch<PenaltyDto[]>("/admin/penalties"),
+    penalties: (personId?: string) => apiFetch<PenaltyDto[]>(`/admin/penalties${query({ personId })}`),
     createPenalty: (input: {
-      familyId: string;
+      personId: string;
       ruleKey?: string;
       points?: number;
       reason?: string;
@@ -486,6 +525,9 @@ export const api = {
     }) => apiFetch<{ id: string }>("/admin/penalties", { method: "POST", body: input }),
     revokePenalty: (id: string) =>
       apiFetch<void>(`/admin/penalties/${id}/revoke`, { method: "POST" }),
+    // Points history
+    history: (params: { personId?: string; category?: string; season?: string; skip?: number; take?: number } = {}) =>
+      apiFetch<{ total: number; items: EntryDto[] }>(`/admin/points-history${query(params)}`),
   },
 
   // ---- Notifications ----
@@ -495,10 +537,15 @@ export const api = {
     markRead: (id: string) =>
       apiFetch<void>(`/notifications/${id}/read`, { method: "POST" }),
     readAll: () => apiFetch<void>("/notifications/read-all", { method: "POST" }),
-    broadcast: (title: string, body: string, divisionId?: string | null) =>
+    broadcast: (title: string, body: string, divisionId?: string | null, expiresAtUtc?: string | null, recurring?: boolean, startup?: boolean) =>
       apiFetch<BroadcastResponse>("/admin/notifications", {
         method: "POST",
-        body: { title, body, divisionId },
+        body: { title, body, divisionId, expiresAtUtc, recurring, startup },
       }),
+    adminList: (params: { search?: string; skip?: number; take?: number } = {}) =>
+      apiFetch<{ total: number; items: NotificationDto[] }>(`/admin/notifications${query(params)}`),
+    update: (id: string, input: { title: string; body: string; expiresAtUtc?: string | null; recurring?: boolean; startup?: boolean }) =>
+      apiFetch<NotificationDto>(`/admin/notifications/${id}`, { method: "PUT", body: input }),
+    remove: (id: string) => apiFetch<void>(`/admin/notifications/${id}`, { method: "DELETE" }),
   },
 };

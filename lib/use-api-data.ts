@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type DependencyList } from "react";
-import { USE_MOCK, errorMessage } from "@/lib/api";
+import { errorMessage } from "@/lib/api";
 
 /**
  * Loads data from the API when mock mode is disabled.
@@ -10,24 +10,17 @@ import { USE_MOCK, errorMessage } from "@/lib/api";
  * lib/data.ts) so the existing pages keep working without a backend. Pages can
  * still call setData to apply local edits.
  */
-export function useApiData<T>(loader: () => Promise<T>, fallback: T, deps: DependencyList = []) {
+export function useApiData<T>(loader: () => Promise<T>, depsOrInitialData: DependencyList | T = []) {
   const loaderRef = useRef(loader);
   loaderRef.current = loader;
-  const fallbackRef = useRef(fallback);
-  fallbackRef.current = fallback;
 
-  const [data, setData] = useState<T>(fallback);
-  const [loading, setLoading] = useState(!USE_MOCK);
+  const deps = Array.isArray(depsOrInitialData) ? depsOrInitialData : [];
+  const initialData = (Array.isArray(depsOrInitialData) ? [] : depsOrInitialData) as T;
+  const [data, setData] = useState<T>(initialData);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
-    if (USE_MOCK) {
-      setData(fallbackRef.current);
-      setLoading(false);
-      setError(null);
-      return fallbackRef.current;
-    }
-
     setLoading(true);
     try {
       const value = await loaderRef.current();
@@ -36,7 +29,8 @@ export function useApiData<T>(loader: () => Promise<T>, fallback: T, deps: Depen
       return value;
     } catch (cause) {
       setError(errorMessage(cause));
-      return fallbackRef.current;
+      // return type null or []
+      return null as unknown as T;
     } finally {
       setLoading(false);
     }

@@ -1,15 +1,6 @@
 "use client";
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import {
@@ -28,7 +19,7 @@ import {
   TourStep,
   TourTitle,
 } from "@/components/ui/tour";
-import { useToast } from "@/components/toast";
+import { toast } from "sonner";
 
 const SEEN_KEY = "bob1-tour-seen";
 const COMPLETE_KEY = "bob1-tour-complete";
@@ -45,22 +36,11 @@ type TourStepConfig = {
 
 const allSteps: TourStepConfig[] = [
   {
-    target: "#tour-nav",
-    side: "right",
-    align: "start",
-    title: "Votre menu de gestion",
-    description:
-      "Naviguez entre les matchs, les équipes, les personnes, les classements et les paramètres du club.",
-    page: "/",
-    desktopOnly: true,
-  },
-  {
     target: "#tour-search",
     side: "bottom",
     align: "start",
     title: "Recherche globale",
-    description:
-      "Retrouvez n'importe quelle page en un instant. Astuce : appuyez sur Ctrl + K depuis n'importe où.",
+    description: "Retrouvez n'importe quelle page en un instant. Astuce : appuyez sur Ctrl + K depuis n'importe où.",
     page: "/",
   },
   {
@@ -68,8 +48,7 @@ const allSteps: TourStepConfig[] = [
     side: "bottom",
     align: "end",
     title: "Notifications",
-    description:
-      "Les alertes du club arrivent ici : convocations, feuilles de match, paiements et rappels.",
+    description: "Les alertes du club arrivent ici : convocations, feuilles de match, paiements et rappels.",
     page: "/",
   },
   {
@@ -81,12 +60,11 @@ const allSteps: TourStepConfig[] = [
     page: "/",
   },
   {
-    target: "#tour-profile",
-    side: "bottom",
-    align: "end",
-    title: "Votre espace",
-    description:
-      "Accédez à votre profil, aux paramètres du club et relancez la visite guidée depuis ce menu.",
+    target: "#tour-nav",
+    side: "right",
+    align: "start",
+    title: "Navigation",
+    description: "Naviguez entre les différentes sections de l'administration.",
     page: "/",
   },
   {
@@ -94,8 +72,7 @@ const allSteps: TourStepConfig[] = [
     side: "bottom",
     align: "start",
     title: "L'essentiel en un coup d'œil",
-    description:
-      "Les indicateurs clés : matchs à venir, postes non pourvus, confirmations en attente et pénalités.",
+    description: "Les indicateurs clés : matchs à venir, postes non pourvus, confirmations en attente et pénalités.",
     page: "/",
   },
   {
@@ -120,8 +97,7 @@ const allSteps: TourStepConfig[] = [
     side: "left",
     align: "start",
     title: "Activité récente",
-    description:
-      "Suivez les dernières actions des bénévoles et administrateurs pour ne rien manquer.",
+    description: "Suivez les dernières actions des bénévoles et administrateurs pour ne rien manquer.",
     page: "/",
   },
   {
@@ -129,8 +105,7 @@ const allSteps: TourStepConfig[] = [
     side: "bottom",
     align: "start",
     title: "Gérer les matchs",
-    description:
-      "Créez, modifiez et suivez l'état de chaque rencontre. Les statuts indiquent ce qu'il reste à faire.",
+    description: "Créez, modifiez et suivez l'état de chaque rencontre. Les statuts indiquent ce qu'il reste à faire.",
     page: "/matches",
   },
   {
@@ -287,28 +262,28 @@ const allSteps: TourStepConfig[] = [
     page: "/rules",
   },
   {
-    target: "#tour-penalties-header",
+    target: "#tour-history-header",
     side: "bottom",
     align: "start",
-    title: "Sanctions",
-    description: "Enregistrez les absences non signalées, désistements tardifs et autres manquements.",
-    page: "/penalties",
+    title: "Historique des points",
+    description: "Consultez tous les ajustements de points, pénalités et révocations.",
+    page: "/points-history",
   },
   {
-    target: "#tour-penalties-filters",
+    target: "#tour-history-filters",
     side: "bottom",
     align: "start",
-    title: "Filtrer les sanctions",
-    description: "Filtrez par motif ou par statut (Non lue / Reconnue).",
-    page: "/penalties",
+    title: "Filtrer l'historique",
+    description: "Filtrez par catégorie pour trouver les entrées pertinentes.",
+    page: "/points-history",
   },
   {
-    target: "#tour-penalties-table",
+    target: "#tour-history-table",
     side: "top",
     align: "start",
-    title: "Historique",
-    description: "Chaque sanction est tracée avec son motif, ses points et son éventuelle exclusion.",
-    page: "/penalties",
+    title: "Historique détaillé",
+    description: "Chaque entrée est tracée avec son motif, ses points et son type (pénalité, bonus, révocation).",
+    page: "/points-history",
   },
   {
     target: "#tour-notifications-header",
@@ -333,6 +308,22 @@ const allSteps: TourStepConfig[] = [
     title: "Aperçu mobile",
     description: "Vérifiez le rendu dans l'application avant d'envoyer.",
     page: "/notifications",
+  },
+  {
+    target: "#tour-notifications-header",
+    side: "bottom",
+    align: "start",
+    title: "Nouvelle notification",
+    description: "Composez et envoyez des notifications à l'ensemble du club ou à un groupe ciblé.",
+    page: "/notifications/create",
+  },
+  {
+    target: "#tour-notifications-form",
+    side: "right",
+    align: "start",
+    title: "Cibler & rédiger",
+    description: "Choisissez les destinataires, le type de message et personnalisez le contenu.",
+    page: "/notifications/create",
   },
 ];
 
@@ -360,7 +351,6 @@ function getElement(selector: string) {
 export function AppTourProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [index, setIndex] = useState(0);
   const [isDesktop, setIsDesktop] = useState(true);
@@ -376,10 +366,7 @@ export function AppTourProvider({ children }: { children: ReactNode }) {
     return () => query.removeEventListener("change", update);
   }, []);
 
-  const steps = useMemo(
-    () => allSteps.filter((item) => !item.desktopOnly || isDesktop),
-    [isDesktop]
-  );
+  const steps = useMemo(() => allSteps.filter((item) => !item.desktopOnly || isDesktop), [isDesktop]);
 
   const current = steps[index];
 
@@ -394,8 +381,9 @@ export function AppTourProvider({ children }: { children: ReactNode }) {
       "/families": "Familles",
       "/rankings": "Classements",
       "/rules": "Règles",
-      "/penalties": "Pénalités",
+      "/points-history": "Historique des points",
       "/notifications": "Notifications",
+      "/notifications/create": "Nouvelle notification",
     };
     return map[current?.page ?? "/"] ?? current?.page ?? "/";
   }, [current]);
@@ -424,7 +412,7 @@ export function AppTourProvider({ children }: { children: ReactNode }) {
       }
       return false;
     },
-    [pathname, router, steps]
+    [pathname, router, steps],
   );
 
   const startTour = useCallback(() => {
@@ -470,7 +458,7 @@ export function AppTourProvider({ children }: { children: ReactNode }) {
     if (index >= steps.length - 1) {
       setOpen(false);
       window.localStorage.setItem(COMPLETE_KEY, "1");
-      toast("Visite complète terminée. Vous connaissez tout le back-office BOB1.");
+      toast.success("Visite complète terminée. Vous connaissez tout le back-office BOB1.");
       return;
     }
     const nextIndex = index + 1;
@@ -478,7 +466,7 @@ export function AppTourProvider({ children }: { children: ReactNode }) {
     setIndex(nextIndex);
     setOpen(true);
     if (steps[nextIndex]) reveal(steps[nextIndex].target);
-  }, [ensureOnPage, index, reveal, steps, toast]);
+  }, [ensureOnPage, index, reveal, steps]);
 
   const goPrev = useCallback(() => {
     if (index <= 0) return;
@@ -492,8 +480,8 @@ export function AppTourProvider({ children }: { children: ReactNode }) {
   const skip = useCallback(() => {
     setOpen(false);
     window.localStorage.setItem(COMPLETE_KEY, "1");
-    toast("Visite ignorée. Relancez-la depuis le menu profil ou la barre latérale.", "info");
-  }, [toast]);
+    toast.info("Visite ignorée. Relancez-la depuis le menu profil ou la barre latérale.");
+  }, []);
 
   const contextValue = useMemo(() => ({ startTour }), [startTour]);
 
@@ -516,11 +504,7 @@ export function AppTourProvider({ children }: { children: ReactNode }) {
               {pageName} • Étape {index + 1} / {steps.length}
             </span>
             <div className="flex flex-wrap items-center justify-end gap-1.5">
-              <TourSkip
-                variant="ghost"
-                className="h-8 px-2.5 text-[11.5px] font-bold text-soft"
-                onClick={skip}
-              >
+              <TourSkip variant="ghost" className="h-8 px-2.5 text-[11.5px] font-bold text-soft" onClick={skip}>
                 Passer
               </TourSkip>
               <TourPrev
@@ -559,12 +543,8 @@ export function AppTourProvider({ children }: { children: ReactNode }) {
               <TourArrow />
               <TourClose aria-label="Fermer la visite guidée" className="text-soft hover:text-ink" />
               <TourHeader className="text-left">
-                <TourTitle className="font-display text-[15px] font-extrabold">
-                  {step.title}
-                </TourTitle>
-                <TourDescription className="text-[12px] leading-relaxed">
-                  {step.description}
-                </TourDescription>
+                <TourTitle className="font-display text-[15px] font-extrabold">{step.title}</TourTitle>
+                <TourDescription className="text-[12px] leading-relaxed">{step.description}</TourDescription>
               </TourHeader>
             </TourStep>
           ))}
