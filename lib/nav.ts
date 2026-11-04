@@ -22,16 +22,19 @@ export type NavItem = {
 
 export type NavGroup = {
   label: string;
+  icon: LucideIcon;
   items: NavItem[];
 };
 
 export const adminNavGroups: NavGroup[] = [
   {
     label: "Général",
+    icon: LayoutDashboard,
     items: [{ href: "/", label: "Tableau de bord", icon: LayoutDashboard }],
   },
   {
     label: "Organisation",
+    icon: CalendarDays,
     items: [
       { href: "/matches", label: "Matchs", icon: CalendarDays },
       { href: "/divisions", label: "Divisions", icon: ShieldCheck },
@@ -41,6 +44,7 @@ export const adminNavGroups: NavGroup[] = [
   },
   {
     label: "Membres",
+    icon: Users,
     items: [
       { href: "/people", label: "Personnes", icon: UserRound },
       { href: "/families", label: "Familles", icon: UsersRound },
@@ -48,6 +52,7 @@ export const adminNavGroups: NavGroup[] = [
   },
   {
     label: "Classement & Points",
+    icon: Trophy,
     items: [
       { href: "/rankings", label: "Classements", icon: Trophy },
       { href: "/points-history", label: "Historique des points", icon: History },
@@ -56,6 +61,7 @@ export const adminNavGroups: NavGroup[] = [
   },
   {
     label: "Communication",
+    icon: Bell,
     items: [{ href: "/notifications", label: "Notifications", icon: Bell }],
   },
 ];

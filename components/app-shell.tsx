@@ -6,7 +6,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { Bell, ChevronDown, Compass, LogOut, Moon, Search, Settings, Sun, UserRound } from "lucide-react";
-import { adminNavGroups, adminNav } from "@/lib/nav";
+import { adminNav } from "@/lib/nav";
+import { NavMain } from "@/components/nav-main";
 import { Logo } from "@/components/logo";
 import { InitialsAvatar } from "@/components/initials-avatar";
 import { useAppTour } from "@/components/app-tour";
@@ -36,11 +37,9 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
-  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
@@ -131,44 +130,7 @@ function AppSidebar() {
         <Logo />
       </SidebarHeader>
       <SidebarContent className="px-2">
-        {adminNavGroups.map((group) => (
-          <SidebarGroup key={group.label}>
-            <SidebarGroupLabel className="text-[10px] font-extrabold uppercase tracking-[0.1em]">
-              {group.label}
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu aria-label={group.label}>
-                {group.items.map((item) => {
-                  const active = pathname === item.href;
-                  const ItemIcon = item.icon;
-                  return (
-                    <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={active}
-                        className="h-10 gap-3 rounded-[11px] px-3 text-[12.5px] font-bold text-muted-foreground data-[active=true]:bg-mint data-[active=true]:text-mint-foreground"
-                      >
-                        <Link
-                          href={item.href}
-                          onClick={() => setOpenMobile(false)}
-                          aria-current={active ? "page" : undefined}
-                        >
-                          <ItemIcon className={active ? "text-green" : undefined} />
-                          <span className="truncate">{item.label}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                      {item.badge && (
-                        <SidebarMenuBadge className="rounded-full bg-danger px-1.5 text-[9px] font-bold text-white">
-                          {item.badge}
-                        </SidebarMenuBadge>
-                      )}
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
+        <NavMain />
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
