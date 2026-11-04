@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { MoreHorizontal, Plus, TrendingUp, Users, User, ChevronDown } from "lucide-react";
 import {
   type PersonRankingRow,
@@ -10,10 +10,9 @@ import { personRankingToRow, familyRankingToRow } from "@/lib/adapters";
 import {
   api,
   errorMessage,
-  USE_MOCK,
   type PersonRankingRowDto,
   type FamilyRankingRowDto,
-  type AdminFamilyDto,
+  type PersonDto,
 } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
 import { cn } from "@/lib/utils";
@@ -42,8 +41,6 @@ const CATEGORIES: Category[] = ["presence", "volunteer", "staff", "carpool", "pe
 
 type PersonRankingsData = { rows: PersonRankingRow[]; season: string };
 type FamilyRankingsData = { rows: FamilyRankingRow[]; season: string };
-
-type FamilyOption = { id: string; name: string };
 
 export default function RankingsPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("person");
@@ -81,14 +78,11 @@ export default function RankingsPage() {
     [category, viewMode],
   );
 
-  const { data: apiFamilies } = useApiData<{ total: number; items: AdminFamilyDto[] }>(
-    () => api.families.list({ take: 300 }),
+  const { data: apiPerson } = useApiData<{ total: number; items: PersonDto[] }>(
+    () => api.people.list({ take: 300 }),
     [],
-  );
+  )
 
-  const familyOptions: FamilyOption[] = (apiFamilies?.items ?? []).map((family) => ({ id: family.id, name: family.name }));
-
-  const personOptions = personData?.rows.map((person) => person.person) ?? [];
   const rows = isPersonView ? personData?.rows ?? [] : familyData?.rows ?? [];
   const loading = isPersonView ? personLoading : familyLoading;
   const error = isPersonView ? personError : familyError;
@@ -234,24 +228,21 @@ export default function RankingsPage() {
         {drawerOpen && (
           <PointsForm
             key={category}
-            viewMode={viewMode}
             category={category}
-            live={!USE_MOCK}
-            familyOptions={familyOptions}
-            personOptions={personOptions}
+            persons={apiPerson?.items ?? []}
             onSave={async (payload) => {
               if (!Number.isFinite(payload.points) || payload.points === 0) {
                 toast.error("Saisissez un nombre de points non nul.");
                 return;
               }
-              if (!payload.familyId) {
+              if (!payload.personId) {
                 toast.error("Sélectionnez une personne/famille.");
                 return;
               }
               setSaving(true);
               try {
                 await api.rankings.createPenalty({
-                  personId: payload.familyId, // familyId field is actually personId in new API
+                  personId: payload.personId,
                   points: payload.points,
                   reason: payload.reason,
                 });
@@ -272,24 +263,16 @@ export default function RankingsPage() {
 }
 
 interface PointsFormProps {
-  viewMode: ViewMode;
   category: Category;
-  live: boolean;
-  familyOptions: FamilyOption[];
-  personOptions: string[];
-  onSave: (payload: { familyId: string | null; target: string; points: number; reason: string }) => void;
+  persons: PersonDto[];
+  onSave: (payload: { personId: string | null; target: string; points: number; reason: string }) => void;
 }
 
-function PointsForm({ viewMode, category, live, familyOptions, personOptions, onSave }: PointsFormProps) {
-  const [target, setTarget] = useState(live ? (familyOptions[0]?.name ?? "") : (personOptions[0] ?? ""));
+function PointsForm({ category, persons, onSave }: PointsFormProps) {
+  const [target, setTarget] = useState(persons[0]?.id ?? "");
   const [points, setPoints] = useState("5");
   const [motif, setMotif] = useState("Participation exceptionnelle");
-
-  useEffect(() => {
-    if (live && familyOptions.length > 0 && !familyOptions.some((item) => item.name === target)) {
-      setTarget(familyOptions[0].name);
-    }
-  }, [live, familyOptions, target]);
+  const personOptions = persons.map((person) => person.id);
 
   return (
     <form
@@ -297,26 +280,18 @@ function PointsForm({ viewMode, category, live, familyOptions, personOptions, on
       onSubmit={(event) => {
         event.preventDefault();
         const parsed = Number(points.replace(",", ".").replace(/[^\d.+-]/g, ""));
-        const familyId = live ? (familyOptions.find((item) => item.name === target)?.id ?? null) : null;
-        onSave({ familyId, target, points: parsed, reason: motif });
+        const personOptions = persons.map((person) => person.id);
+        const personId = personOptions.find((item) => item === target) ?? null;
+        onSave({ personId, target, points: parsed, reason: motif });
       }}
       className="flex flex-col gap-4"
     >
       <div className="grid grid-cols-1 gap-3.5">
         <Field>
           <FieldLabel htmlFor="rankings-field-23" className="text-[11px] font-bold text-muted-foreground">
-            {live ? "Famille" : "Personne"}
+            Personne
           </FieldLabel>
-          {live ? (
-            <OptionSelect
-              id="rankings-field-23"
-              value={target}
-              onValueChange={setTarget}
-              options={familyOptions.map((item) => item.name)}
-            />
-          ) : (
             <OptionSelect value={target} onValueChange={setTarget} options={personOptions} />
-          )}
         </Field>
         <Field>
           <FieldLabel htmlFor="rankings-field-24" className="text-[11px] font-bold text-muted-foreground">
@@ -332,11 +307,11 @@ function PointsForm({ viewMode, category, live, familyOptions, personOptions, on
             id="rankings-field-25"
             value={points}
             onChange={(event) => setPoints(event.target.value)}
-            inputMode={live ? "numeric" : "text"}
-            type={live ? "number" : "text"}
+            inputMode="numeric"
+            type="number"
           />
           <FieldDescription className="text-[10px]">
-            {live ? "Un nombre négatif retire des points." : undefined}
+            Un nombre négatif retire des points.
           </FieldDescription>
         </Field>
         <Field>
@@ -348,9 +323,7 @@ function PointsForm({ viewMode, category, live, familyOptions, personOptions, on
       </div>
 
       <div className="rounded-xl bg-brand-soft px-3.5 py-3 text-[11px] leading-relaxed text-[#8e4200] dark:text-[#ffc48f]">
-        {live
-          ? "L'ajustement crée une entrée dans l'historique des points et envoie une notification."
-          : "L'ajustement manuel est tracé dans l'historique et s'applique immédiatement au classement."}
+        L'ajustement crée une entrée dans l'historique des points et envoie une notification.
       </div>
     </form>
   );

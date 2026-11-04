@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { MoreHorizontal, Plus, ShieldCheck, X } from "lucide-react";
 import { type Person } from "@/lib/data";
 import { personToRow } from "@/lib/adapters";
-import { api, errorMessage, USE_MOCK, type PersonDto } from "@/lib/api";
+import { api, errorMessage, type PersonDto } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -32,11 +32,9 @@ const roleTone: Record<string, string> = {
 
 function PersonForm({
   person,
-  live,
   onSave,
 }: {
   person: PersonRowEx | null;
-  live: boolean;
   onSave: (payload: {
     personId: string;
     firstName: string;
@@ -51,7 +49,7 @@ function PersonForm({
   const [lastName, setLastName] = useState(person?.name.split(" ").slice(1).join(" ") ?? "");
   const [email, setEmail] = useState(person?.email ?? "");
   const [roles, setRoles] = useState<string[]>(person?.roles ?? ["Parent"]);
-  const [status, setStatus] = useState(person?.status ?? (live ? "Actif" : "En attente"));
+  const [status, setStatus] = useState(person?.status ?? "Actif");
   const [suspendedFromParticipation, setSuspendedFromParticipation] = useState(person?.suspendedFromParticipation ?? false);
 
   const toggleRole = (role: string) => {
@@ -114,7 +112,7 @@ function PersonForm({
             id="people-field-17"
             value={status}
             onValueChange={setStatus}
-            options={live ? ["Actif", "Suspendu"] : ["Actif", "En attente", "Suspendu"]}
+            options={["Actif", "Suspendu"]}
           />
         </Field>
       </div>
@@ -416,7 +414,7 @@ export default function PeoplePage() {
           />
         }
       >
-        {drawerOpen && <PersonForm key={editing?.id ?? "new"} person={editing} live={!USE_MOCK} onSave={save} />}
+        {drawerOpen && <PersonForm key={editing?.id ?? "new"} person={editing} onSave={save} />}
       </FormSheet>
     </>
   );

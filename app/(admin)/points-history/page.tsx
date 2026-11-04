@@ -7,10 +7,7 @@ import { ruleCategoryLabel } from "@/lib/adapters";
 import {
   api,
   errorMessage,
-  USE_MOCK,
   type EntryDto,
-  type AdminFamilyDto,
-  type PenaltyDto,
   type RankingRuleDto,
 } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
@@ -28,7 +25,7 @@ import { FormSheet, FormSheetFooter } from "@/components/form-sheet";
 
 const CATEGORIES = ["presence", "volunteer", "staff", "carpool", "penalty"];
 
-type HistoryRow = HistoryEntry & { familyName?: string; categoryLabel?: string };
+type HistoryRow = HistoryEntry & { categoryLabel?: string };
 
 export default function PointsHistoryPage() {
   const [search, setSearch] = useState("");
@@ -44,11 +41,6 @@ export default function PointsHistoryPage() {
     reload,
   } = useApiData<EntryDto[]>(
     async () => (await api.rankings.history({ take: 500 })).items,
-    [],
-  );
-
-  const { data: apiFamilies } = useApiData<AdminFamilyDto[]>(
-    async () => (await api.families.list({ take: 300 })).items,
     [],
   );
 
@@ -76,7 +68,6 @@ export default function PointsHistoryPage() {
         };
       });
 
-  const familyOptions = (apiFamilies ?? []).map((family) => family.name);
   const personOptions = Array.from(new Set((apiHistory ?? []).map((entry) => entry.personName)));
 
   const filtered = useMemo(() => {
@@ -292,8 +283,6 @@ export default function PointsHistoryPage() {
           <HistoryForm
             key={editing?.id ?? "new"}
             row={editing}
-            live={!USE_MOCK}
-            familyOptions={familyOptions}
             personOptions={personOptions}
             categoryOptions={CATEGORIES}
             onSave={save}
@@ -306,8 +295,6 @@ export default function PointsHistoryPage() {
 
 interface HistoryFormProps {
   row: HistoryRow | null;
-  live: boolean;
-  familyOptions: string[];
   personOptions: string[];
   categoryOptions: string[];
   onSave: (payload: {
@@ -319,8 +306,8 @@ interface HistoryFormProps {
       }) => void;
 }
 
-function HistoryForm({ row, live, familyOptions, personOptions, categoryOptions, onSave }: HistoryFormProps) {
-  const [person, setPerson] = useState(row?.person ?? (live ? (personOptions[0] ?? "") : personOptions[0]));
+function HistoryForm({ row, personOptions, categoryOptions, onSave }: HistoryFormProps) {
+  const [person, setPerson] = useState(row?.person ?? (personOptions[0] ?? ""));
   const [category, setCategory] = useState(row?.category ?? "penalty");
   const [reason, setReason] = useState(row?.reason ?? "");
   const [points, setPoints] = useState(row ? `${row.points > 0 ? "+" : ""}${row.points}` : "-10");
@@ -330,7 +317,7 @@ function HistoryForm({ row, live, familyOptions, personOptions, categoryOptions,
       onSubmit={(event) => {
         event.preventDefault();
         const parsedPoints = Number(points.replace(",", ".").replace(/[^\d.+-]/g, ""));
-        const personId = live ? (personOptions.find((p) => p === person) ? person : null) : null;
+        const personId = personOptions.find((p) => p === person) ? person : null;
         onSave({
           personId: personId ?? null,
           target: person,
@@ -344,13 +331,13 @@ function HistoryForm({ row, live, familyOptions, personOptions, categoryOptions,
       <div className="grid grid-cols-1 gap-3.5">
         <Field>
           <FieldLabel htmlFor="pointshistory-field-18" className="text-[11px] font-bold text-muted-foreground">
-            {live ? "Personne" : "Personne"}
+            Personne
           </FieldLabel>
           <OptionSelect
             id="pointshistory-field-18"
             value={person}
             onValueChange={setPerson}
-            options={live ? familyOptions : personOptions}
+            options={personOptions}
           />
         </Field>
         <Field>
@@ -383,19 +370,17 @@ function HistoryForm({ row, live, familyOptions, personOptions, categoryOptions,
             id="pointshistory-field-21"
             value={points}
             onChange={(event) => setPoints(event.target.value)}
-            inputMode={live ? "numeric" : "text"}
-            type={live ? "number" : "text"}
+            inputMode="numeric"
+            type="number"
           />
           <FieldDescription className="text-[10px]">
-            {live ? "Un nombre négatif retire des points." : undefined}
+            Un nombre négatif retire des points.
           </FieldDescription>
         </Field>
       </div>
 
       <div className="rounded-xl bg-brand-soft px-3.5 py-3 text-[11px] leading-relaxed text-[#8e4200] dark:text-[#ffc48f]">
-        {live
-          ? "L'ajustement crée une entrée dans l'historique des points et envoie une notification à la personne concernée. Les points positifs = bonus, points négatifs = pénalité."
-          : "L'ajustement manuel est tracé dans l'historique et s'applique immédiatement au classement."}
+        L'ajustement crée une entrée dans l'historique des points et envoie une notification à la personne concernée. Les points positifs = bonus, points négatifs = pénalité.
       </div>
     </form>
   );

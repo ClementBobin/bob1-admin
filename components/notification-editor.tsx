@@ -11,16 +11,10 @@ import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { OptionSelect } from "@/components/option-select";
 import { PageHeader, CardHeading } from "@/components/page-header";
 import { cn } from "@/lib/utils";
-
-const mockTargets = [
-  { id: "all", label: "Tous les membres", count: "184 destinataires", icon: Users },
-  { id: "division", label: "U13 Masculins", count: "26 destinataires", icon: Users },
-  { id: "match", label: "BOB1 vs Castelnau", count: "12 officiels concernés", icon: CalendarDays },
-];
 
 function parseType(dataJson: string | null) {
   if (!dataJson) return null;
@@ -37,12 +31,10 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
   const router = useRouter();
   const editing = Boolean(notificationId);
   const [type, setType] = useState("Général");
-  const [target, setTarget] = useState("Tous les membres");
-  const [title, setTitle] = useState("Réunion des bénévoles");
-  const [message, setMessage] = useState(
-    "Rendez-vous mercredi 28 mai à 19:00 au club-house pour préparer le tournoi de fin de saison.",
-  );
-  const [expiry, setExpiry] = useState("2025-05-28");
+  const [target, setTarget] = useState("");
+  const [title, setTitle] = useState("");
+  const [message, setMessage] = useState("");
+  const [expiry, setExpiry] = useState("");
   const [recurring, setRecurring] = useState(false);
   const [startup, setStartup] = useState(true);
   const [sent, setSent] = useState(false);
