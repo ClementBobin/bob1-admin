@@ -41,10 +41,23 @@ export function PointsForm({
         }
       >
         <FormField label="Personne">
-          {(id) => <OptionSelect id={id} value={target} onValueChange={setTarget} options={personOptions} />}
+          {(id) => (
+            <OptionSelect
+              id={id}
+              value={target}
+              onValueChange={setTarget}
+              options={personOptions}
+            />
+          )}
         </FormField>
         <FormField label="Catégorie">
-          {(id) => <Input id={id} value={POINT_CATEGORY_LABELS[category] ?? category} readOnly />}
+          {(id) => (
+            <Input
+              id={id}
+              value={POINT_CATEGORY_LABELS[category] ?? category}
+              readOnly
+            />
+          )}
         </FormField>
         <FormField label="Points">
           {(id) => (
@@ -56,16 +69,25 @@ export function PointsForm({
                 inputMode="numeric"
                 type="number"
               />
-              <FieldDescription className="text-[10px]">Un nombre négatif retire des points.</FieldDescription>
+              <FieldDescription className="text-[10px]">
+                Un nombre négatif retire des points.
+              </FieldDescription>
             </>
           )}
         </FormField>
         <FormField label="Motif">
-          {(id) => <Input id={id} value={motif} onChange={(e) => setMotif(e.target.value)} />}
+          {(id) => (
+            <Input
+              id={id}
+              value={motif}
+              onChange={(e) => setMotif(e.target.value)}
+            />
+          )}
         </FormField>
       </EntityForm>
       <div className="mt-4 rounded-xl bg-brand-soft px-3.5 py-3 text-[11px] leading-relaxed text-[#8e4200] dark:text-[#ffc48f]">
-        L'ajustement crée une entrée dans l'historique des points et envoie une notification.
+        L'ajustement crée une entrée dans l'historique des points et envoie une
+        notification.
       </div>
     </>
   );

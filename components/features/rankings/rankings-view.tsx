@@ -16,8 +16,16 @@ import { PageHeader } from "@/components/layout/page-header";
 import { FormSheet, FormSheetFooter } from "@/components/shared/form-sheet";
 import { POINT_CATEGORIES, POINT_CATEGORY_LABELS } from "@/lib/constants";
 import { ErrorBanner } from "@/components/shared/error-banner";
-import type { FamilyRankingRow, FamilyRankingRowDto, PersonDto, PersonRankingRow, PersonRankingRowDto, PointCategory, RankingViewMode, RankingsData } from "@/types";
-
+import type {
+  FamilyRankingRow,
+  FamilyRankingRowDto,
+  PersonDto,
+  PersonRankingRow,
+  PersonRankingRowDto,
+  PointCategory,
+  RankingViewMode,
+  RankingsData,
+} from "@/types";
 
 export function RankingsView() {
   const [viewMode, setRankingViewMode] = useState<RankingViewMode>("person");
@@ -58,9 +66,11 @@ export function RankingsView() {
   const { data: apiPerson } = useApiData<{ total: number; items: PersonDto[] }>(
     () => api.people.list({ take: 300 }),
     [],
-  )
+  );
 
-  const rows = isPersonView ? personData?.rows ?? [] : familyData?.rows ?? [];
+  const rows = isPersonView
+    ? (personData?.rows ?? [])
+    : (familyData?.rows ?? []);
   const loading = isPersonView ? personLoading : familyLoading;
   const error = isPersonView ? personError : familyError;
   const reload = isPersonView ? reloadPerson : reloadFamily;
@@ -71,8 +81,16 @@ export function RankingsView() {
         id="tour-rankings-header"
         eyebrow={`Saison ${isPersonView ? personData?.season : familyData?.season}`}
         title="Classements"
-        description={isPersonView ? "Suivez les points par personne." : "Suivez les points par famille (agrégés)."}
-        action={{ label: "Voir l'historique", icon: Plus, onClick: () => (window.location.href = "/points-history") }}
+        description={
+          isPersonView
+            ? "Suivez les points par personne."
+            : "Suivez les points par famille (agrégés)."
+        }
+        action={{
+          label: "Voir l'historique",
+          icon: Plus,
+          onClick: () => (window.location.href = "/points-history"),
+        }}
       />
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -80,7 +98,9 @@ export function RankingsView() {
           <User className="size-4 text-soft" />
           <select
             value={viewMode}
-            onChange={(e) => setRankingViewMode(e.target.value as RankingViewMode)}
+            onChange={(e) =>
+              setRankingViewMode(e.target.value as RankingViewMode)
+            }
             className="bg-transparent text-[12.5px] font-medium text-ink outline-none cursor-pointer"
           >
             <option value="person">Par personne</option>
@@ -111,12 +131,16 @@ export function RankingsView() {
         id="tour-rankings-table"
         rows={rows}
         rowKey={(row) => {
-          const r = row as (PersonRankingRow & { family?: string }) | (FamilyRankingRow & { person?: string });
+          const r = row as
+            | (PersonRankingRow & { family?: string })
+            | (FamilyRankingRow & { person?: string });
           return `${r.rank}-${isPersonView ? r.person! : r.family!}`;
         }}
         minWidth={880}
         grid=".6fr 1.6fr 1fr 1fr 1fr 1fr 36px"
-        rowClassName={(row) => (row.highlight ? "bg-mint/40 dark:bg-mint/10" : undefined)}
+        rowClassName={(row) =>
+          row.highlight ? "bg-mint/40 dark:bg-mint/10" : undefined
+        }
         emptyMessage={loading ? "Chargement du classement…" : undefined}
         columns={[
           {
@@ -129,9 +153,13 @@ export function RankingsView() {
                     {row.rank}
                   </b>
                 ) : (
-                  <b className="w-7 text-center text-[12px] font-semibold text-soft">{row.rank}</b>
+                  <b className="w-7 text-center text-[12px] font-semibold text-soft">
+                    {row.rank}
+                  </b>
                 )}
-                {row.rank === 1 && <TrendingUp size={15} className="text-brand" />}
+                {row.rank === 1 && (
+                  <TrendingUp size={15} className="text-brand" />
+                )}
               </span>
             ),
           },
@@ -139,7 +167,9 @@ export function RankingsView() {
             key: isPersonView ? "person" : "family",
             label: isPersonView ? "Personne" : "Famille",
             render: (row) => {
-              const r = row as (PersonRankingRow & { family?: string }) | (FamilyRankingRow & { person?: string });
+              const r = row as
+                | (PersonRankingRow & { family?: string })
+                | (FamilyRankingRow & { person?: string });
               return (
                 <span className="flex items-center gap-2.5">
                   <InitialsAvatar
@@ -147,8 +177,12 @@ export function RankingsView() {
                     tone={r.highlight ? "orange" : "green"}
                     size="sm"
                   />
-                  <strong className="truncate">{isPersonView ? r.person! : r.family!}</strong>
-                  {isPersonView && r.family && <span className="text-[10px] text-soft">({r.family})</span>}
+                  <strong className="truncate">
+                    {isPersonView ? r.person! : r.family!}
+                  </strong>
+                  {isPersonView && r.family && (
+                    <span className="text-[10px] text-soft">({r.family})</span>
+                  )}
                 </span>
               );
             },
@@ -157,7 +191,12 @@ export function RankingsView() {
             key: "points",
             label: "Points",
             render: (row) => (
-              <span className={cn("font-bold", row.points < 0 ? "text-danger" : "text-green")}>
+              <span
+                className={cn(
+                  "font-bold",
+                  row.points < 0 ? "text-danger" : "text-green",
+                )}
+              >
                 {row.points > 0 ? "+" : ""}
                 {row.points}
               </span>
@@ -168,11 +207,22 @@ export function RankingsView() {
             label: "Détails",
             render: () => <span className="text-soft">—</span>,
           },
-          { key: "total", label: "Total", render: (row) => <span className="font-extrabold">{row.points} pts</span> },
+          {
+            key: "total",
+            label: "Total",
+            render: (row) => (
+              <span className="font-extrabold">{row.points} pts</span>
+            ),
+          },
           {
             key: "actions",
             label: "",
-            render: () => <RowActionButton onClick={sheet.openCreate} label="Ajuster les points" />,
+            render: () => (
+              <RowActionButton
+                onClick={sheet.openCreate}
+                label="Ajuster les points"
+              />
+            ),
           },
         ]}
       />
@@ -196,7 +246,10 @@ export function RankingsView() {
             category={category}
             persons={apiPerson?.items ?? []}
             onSave={async (payload) => {
-              const invalid = pointsAdjustmentError(payload, "une personne/famille");
+              const invalid = pointsAdjustmentError(
+                payload,
+                "une personne/famille",
+              );
               if (invalid) {
                 toast.error(invalid);
                 return;

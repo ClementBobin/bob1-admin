@@ -17,7 +17,12 @@ import { PageHeader } from "@/components/layout/page-header";
 import { FormSheet, FormSheetFooter } from "@/components/shared/form-sheet";
 import { FILTER_ALL, POINT_CATEGORIES } from "@/lib/constants";
 import { ErrorBanner } from "@/components/shared/error-banner";
-import type { EntryDto, HistoryRow, PointsPayload, RankingRuleDto } from "@/types";
+import type {
+  EntryDto,
+  HistoryRow,
+  PointsPayload,
+  RankingRuleDto,
+} from "@/types";
 
 export function HistoryView() {
   const [search, setSearch] = useState("");
@@ -35,43 +40,59 @@ export function HistoryView() {
     [],
   );
 
-  const { data: apiRules } = useApiData<RankingRuleDto[]>(() => api.rankings.rules(), []);
+  const { data: apiRules } = useApiData<RankingRuleDto[]>(
+    () => api.rankings.rules(),
+    [],
+  );
 
   const penaltyCategoryOptions = [
     FILTER_ALL.categories,
-    ...Array.from(new Set((apiRules ?? []).map((r) => ruleCategoryLabel(r.category)))),
+    ...Array.from(
+      new Set((apiRules ?? []).map((r) => ruleCategoryLabel(r.category))),
+    ),
   ];
 
   const rows = (apiHistory ?? []).map((entry) => {
-        const isPenalty = entry.category === "penalty" && entry.points < 0;
-        const isRevoked = entry.points > 0 && entry.reason.startsWith("Annulation");
-        return {
-          id: entry.id,
-          person: entry.personName,
-          category: entry.category,
-          points: entry.points,
-          reason: entry.reason,
-          match: entry.matchId ? `Match ${entry.matchId.slice(0, 8)}` : "—",
-          date: entry.createdAtUtc,
-          isPenalty,
-          isRevoked,
-          categoryLabel: ruleCategoryLabel(entry.category),
-        };
-      });
+    const isPenalty = entry.category === "penalty" && entry.points < 0;
+    const isRevoked = entry.points > 0 && entry.reason.startsWith("Annulation");
+    return {
+      id: entry.id,
+      person: entry.personName,
+      category: entry.category,
+      points: entry.points,
+      reason: entry.reason,
+      match: entry.matchId ? `Match ${entry.matchId.slice(0, 8)}` : "—",
+      date: entry.createdAtUtc,
+      isPenalty,
+      isRevoked,
+      categoryLabel: ruleCategoryLabel(entry.category),
+    };
+  });
 
-  const personOptions = Array.from(new Set((apiHistory ?? []).map((entry) => entry.personName)));
+  const personOptions = Array.from(
+    new Set((apiHistory ?? []).map((entry) => entry.personName)),
+  );
 
   const filtered = useMemo(() => {
     return rows.filter((row) => {
-      const matchSearch = matchesSearch(search, row.person, row.reason, row.match);
-      const matchCategory = categoryFilter === FILTER_ALL.categories || row.categoryLabel === categoryFilter;
+      const matchSearch = matchesSearch(
+        search,
+        row.person,
+        row.reason,
+        row.match,
+      );
+      const matchCategory =
+        categoryFilter === FILTER_ALL.categories ||
+        row.categoryLabel === categoryFilter;
       return matchSearch && matchCategory;
     });
   }, [rows, search, categoryFilter]);
 
   const openEdit = (row: HistoryRow) => {
     if (!row.isPenalty && !row.isRevoked) {
-      toast.error("Seules les pénalités et les points donnés par un admin peuvent être modifiés.");
+      toast.error(
+        "Seules les pénalités et les points donnés par un admin peuvent être modifiés.",
+      );
       return;
     }
     sheet.openEdit(row);
@@ -79,7 +100,9 @@ export function HistoryView() {
 
   const revoke = async (row: HistoryRow) => {
     if (
-      !window.confirm(`Révoquer cet ajustement de ${row.points > 0 ? "+" : ""}${row.points} pts pour ${row.person} ?`)
+      !window.confirm(
+        `Révoquer cet ajustement de ${row.points > 0 ? "+" : ""}${row.points} pts pour ${row.person} ?`,
+      )
     )
       return;
     try {
@@ -122,7 +145,11 @@ export function HistoryView() {
         eyebrow="Modération"
         title="Historique des points"
         description="Consultez tous les ajustements de points, pénalités et révocations."
-        action={{ label: "Ajouter des points", icon: Plus, onClick: sheet.openCreate }}
+        action={{
+          label: "Ajouter des points",
+          icon: Plus,
+          onClick: sheet.openCreate,
+        }}
       />
 
       <Filters
@@ -131,7 +158,12 @@ export function HistoryView() {
         onSearch={setSearch}
         searchPlaceholder="Rechercher une personne, un motif, un match…"
         selects={[
-          { label: "Catégorie", value: categoryFilter, options: penaltyCategoryOptions, onChange: setCategoryFilter },
+          {
+            label: "Catégorie",
+            value: categoryFilter,
+            options: penaltyCategoryOptions,
+            onChange: setCategoryFilter,
+          },
         ]}
         onReset={() => {
           setSearch("");
@@ -156,7 +188,13 @@ export function HistoryView() {
               <span className="flex items-center gap-2.5">
                 <InitialsAvatar
                   name={row.person}
-                  tone={row.isPenalty ? "orange" : row.isRevoked ? "purple" : "green"}
+                  tone={
+                    row.isPenalty
+                      ? "orange"
+                      : row.isRevoked
+                        ? "purple"
+                        : "green"
+                  }
                   size="sm"
                 />
                 <strong className="truncate">{row.person}</strong>
@@ -167,12 +205,24 @@ export function HistoryView() {
             key: "categoryLabel",
             label: "Catégorie",
             render: (row) => (
-              <Status tone={row.isPenalty ? "danger" : row.isRevoked ? "warning" : "success"}>
+              <Status
+                tone={
+                  row.isPenalty
+                    ? "danger"
+                    : row.isRevoked
+                      ? "warning"
+                      : "success"
+                }
+              >
                 {row.categoryLabel}
               </Status>
             ),
           },
-          { key: "reason", label: "Motif / Raison", render: (row) => <span className="truncate">{row.reason}</span> },
+          {
+            key: "reason",
+            label: "Motif / Raison",
+            render: (row) => <span className="truncate">{row.reason}</span>,
+          },
           {
             key: "points",
             label: "Points",
@@ -180,7 +230,11 @@ export function HistoryView() {
               <span
                 className={cn(
                   "font-bold",
-                  row.points < 0 ? "text-danger" : row.isRevoked ? "text-warning" : "text-green",
+                  row.points < 0
+                    ? "text-danger"
+                    : row.isRevoked
+                      ? "text-warning"
+                      : "text-green",
                 )}
               >
                 {row.points > 0 && !row.isRevoked ? "+" : ""}
@@ -188,7 +242,11 @@ export function HistoryView() {
               </span>
             ),
           },
-          { key: "date", label: "Date", render: (row) => <span className="text-soft">{row.date}</span> },
+          {
+            key: "date",
+            label: "Date",
+            render: (row) => <span className="text-soft">{row.date}</span>,
+          },
           {
             key: "type",
             label: "Type",
@@ -235,11 +293,19 @@ export function HistoryView() {
         open={sheet.open}
         onClose={sheet.close}
         title={sheet.editing ? "Modifier l'ajustement" : "Ajouter des points"}
-        subtitle={sheet.editing ? sheet.editing.person : "Nouvel ajustement manuel"}
+        subtitle={
+          sheet.editing ? sheet.editing.person : "Nouvel ajustement manuel"
+        }
         footer={
           <FormSheetFooter
             onCancel={sheet.close}
-            submitLabel={saving ? "Enregistrement…" : sheet.editing ? "Enregistrer" : "Créer l'ajustement"}
+            submitLabel={
+              saving
+                ? "Enregistrement…"
+                : sheet.editing
+                  ? "Enregistrer"
+                  : "Créer l'ajustement"
+            }
             form={HISTORY_FORM_ID}
           />
         }

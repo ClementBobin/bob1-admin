@@ -58,24 +58,6 @@ export function statusTone(status: string, fallback: Tone = "warning"): Tone {
 export const GENDER_OPTIONS = ["Masculin", "Féminin", "Mixte"];
 export const ACTIVE_STATUS_OPTIONS = ["Active", "Inactive"];
 
-/* ── Matches ────────────────────────────────────────────── */
-export const TEAM_OPTIONS = [
-  "BOB1",
-  "Castelnau Basket",
-  "Lattes Basket",
-  "Mauguio BC",
-  "Nîmes Gard BC",
-  "Lunel Basket",
-  "Sète Basket",
-];
-
-export const SLOT_SPECS: SlotSpec[] = [
-  { key: "arbitres", label: "Arbitres", kind: "Staff" },
-  { key: "chrono", label: "Chrono", kind: "Staff" },
-  { key: "mar", label: "MAR", kind: "Staff" },
-  { key: "buvette", label: "Buvette", kind: "Volunteer" },
-];
-
 /* ── Dashboard ──────────────────────────────────────────── */
 export const KPI_ICONS: KpiIconMap = {
   calendar: CalendarDays,
@@ -109,3 +91,21 @@ export const KPI_LINKS: Record<string, string> = {
 };
 
 export const NOTIFICATION_STATUS_FILTER = ["Lue", "Non lue"] as const;
+
+/* ── Matches ────────────────────────────────────────────── */
+export const TEAM_OPTIONS = [
+  "BOB1",
+  "Castelnau Basket",
+  "Lattes Basket",
+  "Mauguio BC",
+  "Nîmes Gard BC",
+  "Lunel Basket",
+  "Sète Basket",
+];
+
+export const SLOT_SPECS: SlotSpec[] = [
+  { key: "arbitres", label: "Arbitres", kind: "Staff" },
+  { key: "chrono", label: "Chrono", kind: "Staff" },
+  { key: "mar", label: "MAR", kind: "Staff" },
+  { key: "buvette", label: "Buvette", kind: "Volunteer" },
+];
