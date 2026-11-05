@@ -4,9 +4,11 @@ import type { FormEvent, ReactNode } from "react";
 export function EntityForm({
   id,
   onSubmit,
+  single,
   children,
 }: {
   id: string;
+  single?: boolean;
   onSubmit: () => void;
   children: ReactNode;
 }) {
@@ -19,7 +21,7 @@ export function EntityForm({
       }}
       className="flex flex-col gap-4"
     >
-      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">{children}</div>
+      <div className={single ? "grid grid-cols-1 gap-3.5" : "grid grid-cols-1 gap-3.5 sm:grid-cols-2"}>{children}</div>
     </form>
   );
 }

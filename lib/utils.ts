@@ -87,3 +87,18 @@ export function formatDateLabel(value: string, time: string) {
   const label = date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" }).replace(".", "");
   return `${label} · ${time}`;
 }
+
+/** Parses a user-typed points value ("+5", "-10", "2,5"). */
+export function parsePoints(value: string): number {
+  return Number(value.replace(",", ".").replace(/[^\d.+-]/g, ""));
+}
+
+/** Returns an error message when a points adjustment can't be submitted, else null. */
+export function pointsAdjustmentError(
+  payload: { personId: string | null; points: number },
+  subject = "une personne",
+): string | null {
+  if (!Number.isFinite(payload.points) || payload.points === 0) return "Saisissez un nombre de points non nul.";
+  if (!payload.personId) return `Sélectionnez ${subject}.`;
+  return null;
+}
