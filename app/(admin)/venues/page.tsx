@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MapPin, MoreHorizontal, Plus } from "lucide-react";
-import { api, errorMessage, type VenueDto } from "@/lib/api";
+import { api, errorMessage } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { DataTable } from "@/components/data-table";
 import { Filters } from "@/components/filters";
 import { PageHeader } from "@/components/page-header";
 import { FormSheet, FormSheetFooter } from "@/components/form-sheet";
+import type { VenueDto } from "@/types";
 
 type VenueRow = {
   id: string;

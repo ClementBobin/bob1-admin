@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import type { MatchStatus } from "./api";
+import type { MatchStatus } from "@/types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -46,4 +46,44 @@ export function matchStatusLabel(status: MatchStatus): string {
     default:
       return "J-15";
   }
+}
+export function matchesSearch(needle: string, ...haystacks: Array<string | null | undefined>): boolean {
+  const n = needle.trim().toLowerCase();
+  if (!n) return true;
+  return haystacks.some((h) => (h ?? "").toLowerCase().includes(n));
+}
+
+export function plural(count: number, singular: string, pluralForm = `${singular}s`): string {
+  return `${count} ${count > 1 ? pluralForm : singular}`;
+}
+
+export function fullName(...parts: Array<string | null | undefined>): string {
+  return parts.filter(Boolean).join(" ").trim();
+}
+
+export function pad(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+export function localDateParts(iso?: string): { date: string; time: string } {
+  const date = iso ? new Date(iso) : null;
+  if (!date || Number.isNaN(date.getTime())) {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return {
+      date: `${tomorrow.getFullYear()}-${pad(tomorrow.getMonth() + 1)}-${pad(tomorrow.getDate())}`,
+      time: "14:30",
+    };
+  }
+  return {
+    date: `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
+    time: `${pad(date.getHours())}:${pad(date.getMinutes())}`,
+  };
+}
+
+export function formatDateLabel(value: string, time: string) {
+  const date = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return `${value} · ${time}`;
+  const label = date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" }).replace(".", "");
+  return `${label} · ${time}`;
 }

@@ -2,18 +2,8 @@
 
 import { useState } from "react";
 import { MoreHorizontal, Plus, TrendingUp, Users, User, ChevronDown } from "lucide-react";
-import {
-  type PersonRankingRow,
-  type FamilyRankingRow,
-} from "@/lib/data";
 import { personRankingToRow, familyRankingToRow } from "@/lib/adapters";
-import {
-  api,
-  errorMessage,
-  type PersonRankingRowDto,
-  type FamilyRankingRowDto,
-  type PersonDto,
-} from "@/lib/api";
+import { api, errorMessage } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -25,26 +15,17 @@ import { InitialsAvatar } from "@/components/initials-avatar";
 import { DataTable } from "@/components/data-table";
 import { PageHeader } from "@/components/page-header";
 import { FormSheet, FormSheetFooter } from "@/components/form-sheet";
+import { POINT_CATEGORIES, POINT_CATEGORY_LABELS } from "@/lib/constants";
+import type { FamilyRankingRow, FamilyRankingRowDto, PersonDto, PersonRankingRow, PersonRankingRowDto, PointCategory } from "@/types";
 
 type ViewMode = "person" | "family";
-type Category = "presence" | "volunteer" | "staff" | "carpool" | "penalty";
-
-const CATEGORY_LABELS: Record<Category, string> = {
-  presence: "Présence",
-  volunteer: "Bénévolat",
-  staff: "Officiel / staff",
-  carpool: "Covoiturage",
-  penalty: "Pénalité",
-};
-
-const CATEGORIES: Category[] = ["presence", "volunteer", "staff", "carpool", "penalty"];
 
 type PersonRankingsData = { rows: PersonRankingRow[]; season: string };
 type FamilyRankingsData = { rows: FamilyRankingRow[]; season: string };
 
 export default function RankingsPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("person");
-  const [category, setCategory] = useState<Category>("staff");
+  const [category, setCategory] = useState<PointCategory>("staff");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -115,12 +96,12 @@ export default function RankingsPage() {
           <Users className="size-4 text-soft" />
           <select
             value={category}
-            onChange={(e) => setCategory(e.target.value as Category)}
+            onChange={(e) => setCategory(e.target.value as PointCategory)}
             className="bg-transparent text-[12.5px] font-medium text-ink outline-none cursor-pointer"
           >
-            {CATEGORIES.map((cat) => (
+            {POINT_CATEGORIES.map((cat) => (
               <option key={cat} value={cat}>
-                {CATEGORY_LABELS[cat]}
+                {POINT_CATEGORY_LABELS[cat]}
               </option>
             ))}
           </select>
@@ -263,7 +244,7 @@ export default function RankingsPage() {
 }
 
 interface PointsFormProps {
-  category: Category;
+  category: PointCategory;
   persons: PersonDto[];
   onSave: (payload: { personId: string | null; target: string; points: number; reason: string }) => void;
 }
@@ -297,7 +278,7 @@ function PointsForm({ category, persons, onSave }: PointsFormProps) {
           <FieldLabel htmlFor="rankings-field-24" className="text-[11px] font-bold text-muted-foreground">
             Catégorie
           </FieldLabel>
-          <Input id="rankings-field-24" value={CATEGORY_LABELS[category as Category] ?? category} readOnly />
+          <Input id="rankings-field-24" value={POINT_CATEGORY_LABELS[category] ?? category} readOnly />
         </Field>
         <Field>
           <FieldLabel htmlFor="rankings-field-25" className="text-[11px] font-bold text-muted-foreground">

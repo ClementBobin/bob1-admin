@@ -3,12 +3,13 @@
 import { useEffect, useState } from "react";
 import { Info, Save, ShieldCheck } from "lucide-react";
 import { ruleCategoryLabel, ruleToRow } from "@/lib/adapters";
-import { api, errorMessage, type RankingRuleDto } from "@/lib/api";
+import { api, errorMessage } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
 import { PageHeader } from "@/components/page-header";
+import type { RankingRuleDto } from "@/types";
 
 export default function RulesPage() {
   const [liveRows, setLiveRows] = useState<RankingRuleDto[]>([]);

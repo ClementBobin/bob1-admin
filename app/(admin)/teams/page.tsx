@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { MoreHorizontal, Plus, Upload } from "lucide-react";
-import { api, errorMessage, type DivisionDto, type TeamDto, type VenueDto, type PersonDto } from "@/lib/api";
+import { api, errorMessage } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import { DataTable } from "@/components/data-table";
 import { Filters } from "@/components/filters";
 import { PageHeader } from "@/components/page-header";
 import { FormSheet, FormSheetFooter } from "@/components/form-sheet";
+import type { DivisionDto, PersonDto, TeamDto, VenueDto } from "@/types";
 
 type NamedOption = { id: string; name: string };
 

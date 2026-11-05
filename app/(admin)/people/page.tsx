@@ -2,9 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { MoreHorizontal, Plus, ShieldCheck, X } from "lucide-react";
-import { type Person } from "@/lib/data";
 import { personToRow } from "@/lib/adapters";
-import { api, errorMessage, type PersonDto } from "@/lib/api";
+import { api, errorMessage } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -19,16 +18,10 @@ import { DataTable } from "@/components/data-table";
 import { Filters } from "@/components/filters";
 import { PageHeader } from "@/components/page-header";
 import { FormSheet, FormSheetFooter } from "@/components/form-sheet";
+import { FILTER_ALL, PERSON_STATUS_OPTIONS, ROLE_OPTIONS, ROLE_TONE_CLASSES } from "@/lib/constants";
+import type { Person, PersonDto } from "@/types";
 
 type PersonRowEx = Person & { familyId?: string | null; personId?: string };
-
-const roleOptions = ["Parent", "Staff", "Admin"];
-
-const roleTone: Record<string, string> = {
-  Parent: "bg-info-soft text-info",
-  Staff: "bg-mint text-mint-foreground",
-  Admin: "bg-brand-soft text-brand",
-};
 
 function PersonForm({
   person,
@@ -119,7 +112,7 @@ function PersonForm({
 
       <span className="mt-1 text-[10px] font-extrabold uppercase tracking-[0.08em] text-soft">Rôles</span>
       <div className="flex flex-wrap gap-2">
-        {roleOptions.map((role) => {
+        {ROLE_OPTIONS.map((role) => {
           const active = roles.includes(role);
           return (
             <button
@@ -169,8 +162,8 @@ function PersonForm({
 export default function PeoplePage() {
   const [rows, setRows] = useState<PersonRowEx[]>([]);
   const [search, setSearch] = useState("");
-  const [role, setRole] = useState("Tous les rôles");
-  const [status, setStatus] = useState("Tous les statuts");
+  const [role, setRole] = useState(FILTER_ALL.roles);
+  const [status, setStatus] = useState(FILTER_ALL.statuses);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<PersonRowEx | null>(null);
   const [tempPassword, setTempPassword] = useState<string | null>(null);
@@ -197,8 +190,8 @@ export default function PeoplePage() {
     const needle = search.trim().toLowerCase();
     return rows.filter((row) => {
       const matchSearch = `${row.name} ${row.email} ${row.roles.join(" ")}`.toLowerCase().includes(needle);
-      const matchRole = role === "Tous les rôles" || row.roles.includes(role);
-      const matchStatus = status === "Tous les statuts" || row.status === status;
+      const matchRole = role === FILTER_ALL.roles || row.roles.includes(role);
+      const matchStatus = status === FILTER_ALL.statuses || row.status === status;
       return matchSearch && matchRole && matchStatus;
     });
   }, [rows, search, role, status]);
@@ -272,7 +265,7 @@ export default function PeoplePage() {
     }
   };
 
-  const statusOptions = ["Tous les statuts", "Actif", "Suspendu"];
+  const statusOptions = [FILTER_ALL.statuses, ...PERSON_STATUS_OPTIONS];
 
   return (
     <>
@@ -312,7 +305,7 @@ export default function PeoplePage() {
           {
             label: "Rôle",
             value: role,
-            options: ["Tous les rôles", ...roleOptions],
+            options: [FILTER_ALL.roles, ...ROLE_OPTIONS],
             onChange: setRole,
           },
           {
@@ -324,8 +317,8 @@ export default function PeoplePage() {
         ]}
         onReset={() => {
           setSearch("");
-          setRole("Tous les rôles");
-          setStatus("Tous les statuts");
+          setRole(FILTER_ALL.roles);
+          setStatus(FILTER_ALL.statuses);
         }}
       />
 
@@ -362,7 +355,7 @@ export default function PeoplePage() {
             render: (row) => (
               <span className="flex flex-wrap gap-1">
                 {row.roles.map((item) => (
-                  <b key={item} className={cn("rounded-full px-2 py-1 text-[9.5px] font-bold", roleTone[item])}>
+                  <b key={item} className={cn("rounded-full px-2 py-1 text-[9.5px] font-bold", ROLE_TONE_CLASSES[item])}>
                     {item}
                   </b>
                 ))}

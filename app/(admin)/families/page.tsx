@@ -2,14 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Home } from "lucide-react";
-import { type Family } from "@/lib/data";
 import { familyToRow } from "@/lib/adapters";
-import { api, type AdminFamilyDto } from "@/lib/api";
+import { api } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
 import { Status } from "@/components/status";
 import { DataTable } from "@/components/data-table";
 import { Filters } from "@/components/filters";
 import { PageHeader } from "@/components/page-header";
+import type { AdminFamilyDto, Family } from "@/types";
 
 export default function FamiliesPage() {
   const [rows, setRows] = useState<Family[]>([]);

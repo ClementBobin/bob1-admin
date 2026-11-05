@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
-import { api, type NotificationDto } from "@/lib/api";
+import { api } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/data-table";
@@ -11,6 +11,7 @@ import { Filters } from "@/components/filters";
 import { PageHeader } from "@/components/page-header";
 import { Status } from "@/components/status";
 import { formatDateTime } from "@/lib/utils";
+import type { NotificationDto } from "@/types";
 
 function notificationType(row: NotificationDto) {
   if (!row.dataJson) return "broadcast";

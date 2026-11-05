@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type { Tone } from "@/lib/data";
+import type { Tone } from "@/types";
 
 const dots: Record<Tone, string> = {
   success: "bg-green",

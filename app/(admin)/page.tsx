@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CalendarDays, ChevronRight, Clock, Plus, ShieldAlert, Users } from "lucide-react";
-import { type Tone } from "@/lib/data";
-import { api, type MatchDto, type PenaltyDto, type UrgentSlotDto } from "@/lib/api";
+import { api } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
 import { displayName, useAuth } from "@/components/auth-provider";
 import { cn, formatDate, formatDateTime } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Status } from "@/components/status";
 import { PageHeader, CardHeading } from "@/components/page-header";
+import type { MatchDto, PenaltyDto, Tone, UrgentSlotDto } from "@/types";
 
 const kpiIcons = {
   calendar: CalendarDays,

@@ -7,203 +7,33 @@
  *  - every failure is normalized to an ApiError carrying the API's stable code.
  */
 
+import type {
+  AdminFamilyDto,
+  AuthResponse,
+  AuthUser,
+  BroadcastResponse,
+  CreatePersonResponse,
+  DivisionDto,
+  EntryDto,
+  FamilyRankingResponse,
+  MatchDto,
+  MatchInput,
+  NotificationDto,
+  PenaltyDto,
+  PersonDto,
+  PersonInput,
+  RankingResponse,
+  RankingRuleDto,
+  SlotInput,
+  TeamDto,
+  UrgentSlotDto,
+  VenueDto,
+} from "@/types";
+
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 if (!API_BASE_URL) {
   throw new Error("NEXT_PUBLIC_API_URL is not configured");
 }
-
-// ---------------------------------------------------------------------------
-// DTOs (mirror the records exposed by Bob1-api)
-// ---------------------------------------------------------------------------
-
-export type AuthUser = {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  roles: string[];
-  familyId: string | null;
-};
-
-export type AuthResponse = {
-  accessToken: string;
-  refreshToken: string;
-  expiresInSeconds: number;
-  user: AuthUser;
-};
-
-export type DivisionDto = { id: string; name: string; sortOrder: number; category: string; gender: string; isActive: boolean };
-export type TeamDto = { id: string; name: string; divisionId: string; coachName: string | null; coachUserId: string | null; logoUrl: string | null; isActive: boolean; trainingVenueId: string | null; trainingVenueName: string | null };
-export type VenueDto = { id: string; name: string; address: string | null; city: string | null; postalCode: string | null };
-
-export type MatchStatus = "Scheduled" | "Cancelled" | "Played";
-
-export type MatchDto = {
-  id: string;
-  title: string;
-  divisionId: string;
-  divisionName: string;
-  opponent: string;
-  isHome: boolean;
-  venueName: string;
-  startsAtUtc: string;
-  status: MatchStatus;
-  homeScore: number | null;
-  awayScore: number | null;
-};
-
-export type MatchInput = {
-  divisionId: string;
-  opponent: string;
-  isHome: boolean;
-  venueId: string;
-  startsAtUtc: string;
-};
-
-export type SlotInput = {
-  kind: "Staff" | "Volunteer";
-  role: string;
-  capacity: number;
-  startsAtUtc?: string | null;
-  endsAtUtc?: string | null;
-};
-
-export type PersonDto = {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  roles: string[];
-  isActive: boolean;
-  suspendedFromParticipation: boolean;
-  familyId: string | null;
-};
-
-export type PersonInput = {
-  email: string;
-  firstName: string;
-  lastName: string;
-  roles: string[];
-  familyId?: string | null;
-  password?: string | null;
-};
-
-export type CreatePersonResponse = {
-  person: PersonDto;
-  temporaryPassword: string | null;
-};
-
-export type AdminFamilyMemberDto = {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  roles: string[];
-  isActive: boolean;
-};
-
-export type AdminFamilyChildDto = {
-  id: string;
-  firstName: string;
-  lastName: string;
-  birthDate: string;
-  divisionId: string | null;
-};
-
-export type AdminFamilyDto = {
-  id: string;
-  name: string;
-  members: AdminFamilyMemberDto[];
-  children: AdminFamilyChildDto[];
-  createdAtUtc: string;
-};
-
-// Person-level ranking
-export type PersonRankingRowDto = {
-  rank: number;
-  personId: string;
-  personName: string;
-  familyName: string | null;
-  points: number;
-  isMine: boolean;
-};
-
-export type RankingResponse = {
-  season: string;
-  top: PersonRankingRowDto[];
-  mine: PersonRankingRowDto | null;
-};
-
-// Family-level ranking
-export type FamilyRankingRowDto = {
-  rank: number;
-  familyId: string;
-  familyName: string;
-  points: number;
-  isMine: boolean;
-};
-
-export type FamilyRankingResponse = {
-  season: string;
-  top: FamilyRankingRowDto[];
-  mine: FamilyRankingRowDto | null;
-};
-
-export type RankingRuleDto = {
-  key: string;
-  category: string;
-  label: string;
-  points: number;
-  pointsJ15: number | null;
-  pointsJ4: number | null;
-  hasJ15J4: boolean;
-};
-
-export type PenaltyDto = {
-  id: string;
-  personId: string;
-  personName: string;
-  points: number;
-  reason: string;
-  matchId: string | null;
-  season: string;
-  createdAtUtc: string;
-};
-
-export type EntryDto = {
-  id: string;
-  category: string;
-  points: number;
-  reason: string;
-  matchId: string | null;
-  createdAtUtc: string;
-  personId: string;
-  personName: string;
-};
-
-export type NotificationDto = {
-  id: string;
-  title: string;
-  body: string;
-  dataJson: string | null;
-  createdAtUtc: string;
-  isRead: boolean;
-  expiresAtUtc: string | null;
-  recurring: boolean;
-  startup: boolean;
-};
-
-export type BroadcastResponse = { recipients: number };
-
-export type UrgentSlotDto = {
-  slotId: string;
-  matchId: string;
-  matchTitle: string;
-  matchStartsAtUtc: string;
-  kind: string;
-  role: string;
-  missing: number;
-};
 
 // ---------------------------------------------------------------------------
 // Errors

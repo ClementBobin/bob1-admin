@@ -1,17 +1,6 @@
-import type {
-  AdminFamilyDto,
-  DivisionDto,
-  MatchDto,
-  PenaltyDto,
-  PersonDto,
-  PersonRankingRowDto,
-  FamilyRankingRowDto,
-  RankingRuleDto,
-  TeamDto,
-  EntryDto,
-} from "@/lib/api";
-import { type Family, type MatchRow, type HistoryEntry, type Person, type PersonRankingRow, type FamilyRankingRow, type RuleRow, RULE_CATEGORY_LABELS } from "@/lib/data";
+import { POINT_CATEGORY_LABELS } from "@/lib/constants";
 import { formatDate, formatDateTime, matchStatusLabel } from "./utils";
+import type { AdminFamilyDto, DivisionDto, EntryDto, Family, FamilyRankingRow, FamilyRankingRowDto, HistoryEntry, MatchDto, MatchRow, PenaltyDto, Person, PersonDto, PersonRankingRow, PersonRankingRowDto, RankingRuleDto, RuleRow, TeamDto } from "@/types";
 
 export function matchToRow(match: MatchDto): MatchRow {
   return {
@@ -144,5 +133,5 @@ export function teamCountByDivision(teams: TeamDto[]): Map<string, number> {
 }
 
 export function ruleCategoryLabel(category: string): string {
-  return RULE_CATEGORY_LABELS[category] ?? category;
+  return POINT_CATEGORY_LABELS[category] ?? category;
 }

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Bell, CalendarDays, Save, Send, Users, Smartphone } from "lucide-react";
-import { api, errorMessage, type DivisionDto, type TeamDto, type NotificationDto } from "@/lib/api";
+import { api, errorMessage } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { OptionSelect } from "@/components/option-select";
 import { PageHeader, CardHeading } from "@/components/page-header";
 import { cn } from "@/lib/utils";
+import type { DivisionDto, NotificationDto, TeamDto } from "@/types";
 
 function parseType(dataJson: string | null) {
   if (!dataJson) return null;

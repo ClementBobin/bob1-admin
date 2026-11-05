@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { MoreHorizontal, Plus } from "lucide-react";
 import { divisionToRow, teamCountByDivision } from "@/lib/adapters";
-import { api, errorMessage, type DivisionDto, type TeamDto } from "@/lib/api";
+import { api, errorMessage } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,8 @@ import { DataTable } from "@/components/data-table";
 import { Filters } from "@/components/filters";
 import { PageHeader } from "@/components/page-header";
 import { FormSheet, FormSheetFooter } from "@/components/form-sheet";
+import { statusTone } from "@/lib/constants";
+import type { DivisionDto, TeamDto } from "@/types";
 
 type DivisionRow = {
   id: string;
@@ -25,7 +27,6 @@ type DivisionRow = {
   status: string;
 };
 
-const statusTone = (status: string) => (status === "Active" ? ("success" as const) : ("neutral" as const));
 const genderOptions = ["Masculin", "Féminin", "Mixte"];
 const statusOptions = ["Active", "Inactive"];
 
@@ -173,7 +174,7 @@ export default function DivisionsPage() {
           {
             key: "status",
             label: "Statut",
-            render: (row) => <Status tone={statusTone(row.status)}>{row.status}</Status>,
+            render: (row) => <Status tone={statusTone(row.status, "neutral")}>{row.status}</Status>,
           },
           {
             key: "actions",

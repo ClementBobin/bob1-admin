@@ -2,14 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { Filter, Plus, Undo2 } from "lucide-react";
-import { type HistoryEntry } from "@/lib/data";
 import { ruleCategoryLabel } from "@/lib/adapters";
-import {
-  api,
-  errorMessage,
-  type EntryDto,
-  type RankingRuleDto,
-} from "@/lib/api";
+import { api, errorMessage } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -22,14 +16,15 @@ import { DataTable } from "@/components/data-table";
 import { Filters } from "@/components/filters";
 import { PageHeader } from "@/components/page-header";
 import { FormSheet, FormSheetFooter } from "@/components/form-sheet";
+import { FILTER_ALL, POINT_CATEGORIES } from "@/lib/constants";
+import type { EntryDto, HistoryEntry, RankingRuleDto } from "@/types";
 
-const CATEGORIES = ["presence", "volunteer", "staff", "carpool", "penalty"];
 
 type HistoryRow = HistoryEntry & { categoryLabel?: string };
 
 export default function PointsHistoryPage() {
   const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("Toutes les catégories");
+  const [categoryFilter, setCategoryFilter] = useState(FILTER_ALL.categories);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<HistoryRow | null>(null);
   const [saving, setSaving] = useState(false);
@@ -47,7 +42,7 @@ export default function PointsHistoryPage() {
   const { data: apiRules } = useApiData<RankingRuleDto[]>(() => api.rankings.rules(), []);
 
   const penaltyCategoryOptions = [
-    "Toutes les catégories",
+    FILTER_ALL.categories,
     ...Array.from(new Set((apiRules ?? []).map((r) => ruleCategoryLabel(r.category)))),
   ];
 
@@ -74,7 +69,7 @@ export default function PointsHistoryPage() {
     const needle = search.trim().toLowerCase();
     return rows.filter((row) => {
       const matchSearch = `${row.person} ${row.reason} ${row.match}`.toLowerCase().includes(needle);
-      const matchCategory = categoryFilter === "Toutes les catégories" || row.categoryLabel === categoryFilter;
+      const matchCategory = categoryFilter === FILTER_ALL.categories || row.categoryLabel === categoryFilter;
       return matchSearch && matchCategory;
     });
   }, [rows, search, categoryFilter]);
@@ -162,7 +157,7 @@ export default function PointsHistoryPage() {
         ]}
         onReset={() => {
           setSearch("");
-          setCategoryFilter("Toutes les catégories");
+          setCategoryFilter(FILTER_ALL.categories);
         }}
       />
 
@@ -284,7 +279,7 @@ export default function PointsHistoryPage() {
             key={editing?.id ?? "new"}
             row={editing}
             personOptions={personOptions}
-            categoryOptions={CATEGORIES}
+            categoryOptions={POINT_CATEGORIES}
             onSave={save}
           />
         )}

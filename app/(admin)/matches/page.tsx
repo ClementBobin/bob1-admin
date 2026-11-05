@@ -2,11 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Minus, MoreHorizontal, Plus } from "lucide-react";
-import { type MatchRow } from "@/lib/data";
 import { matchToRow } from "@/lib/adapters";
-import { api, errorMessage, type DivisionDto, type MatchDto, type VenueDto } from "@/lib/api";
+import { api, errorMessage } from "@/lib/api";
 import { useApiData } from "@/lib/use-api-data";
-import { cn } from "@/lib/utils";
+import { cn, formatDateLabel, localDateParts } from "@/lib/utils";
+import { FILTER_ALL, MATCH_STATUS_OPTIONS, statusTone } from "@/lib/constants";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ import { Filters } from "@/components/filters";
 import { PageHeader } from "@/components/page-header";
 import { FormSheet, FormSheetFooter } from "@/components/form-sheet";
 import { Progress } from "@/components/ui/progress";
+import type { DivisionDto, MatchDto, MatchRow, VenueDto } from "@/types";
 
 function FillMeter({ value, total }: { value: number; total: number }) {
   const ratio = total === 0 ? 0 : Math.min(100, Math.round((value / total) * 100));
@@ -61,39 +62,6 @@ const slotLabels: Array<{ key: string; label: string; kind: "Staff" | "Volunteer
   { key: "mar", label: "MAR", kind: "Staff" },
   { key: "buvette", label: "Buvette", kind: "Volunteer" },
 ];
-
-const statusTone = (status: string) => {
-  if (status === "Confirmé" || status === "J-4") return "success" as const;
-  if (status === "Brouillon" || status === "Annulé") return "neutral" as const;
-  return "warning" as const;
-};
-
-function pad(value: number) {
-  return String(value).padStart(2, "0");
-}
-
-function localDateParts(iso?: string): { date: string; time: string } {
-  const date = iso ? new Date(iso) : null;
-  if (!date || Number.isNaN(date.getTime())) {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return {
-      date: `${tomorrow.getFullYear()}-${pad(tomorrow.getMonth() + 1)}-${pad(tomorrow.getDate())}`,
-      time: "14:30",
-    };
-  }
-  return {
-    date: `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
-    time: `${pad(date.getHours())}:${pad(date.getMinutes())}`,
-  };
-}
-
-function formatDateLabel(value: string, time: string) {
-  const date = new Date(`${value}T12:00:00`);
-  if (Number.isNaN(date.getTime())) return `${value} · ${time}`;
-  const label = date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" }).replace(".", "");
-  return `${label} · ${time}`;
-}
 
 type MatchPayload = {
   divisionName: string;
@@ -287,8 +255,8 @@ function MatchForm({
 export default function MatchesPage() {
   const [rows, setRows] = useState<MatchRowEx[]>([]);
   const [search, setSearch] = useState("");
-  const [division, setDivision] = useState("Toutes les divisions");
-  const [status, setStatus] = useState("Tous les statuts");
+  const [division, setDivision] = useState(FILTER_ALL.divisions);
+  const [status, setStatus] = useState(FILTER_ALL.statuses);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<MatchRowEx | null>(null);
   const [saving, setSaving] = useState(false);
@@ -324,7 +292,7 @@ export default function MatchesPage() {
     return names;
   }, [venueOptions, editing]);
 
-  const statusOptions = ["Tous les statuts", "J-15", "Confirmé", "Annulé"];
+  const statusOptions = [FILTER_ALL.statuses, ...MATCH_STATUS_OPTIONS];
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -332,8 +300,8 @@ export default function MatchesPage() {
       const matchSearch = `${row.home} ${row.away} ${row.division} ${row.venue} ${row.date}`
         .toLowerCase()
         .includes(needle);
-      const matchDivision = division === "Toutes les divisions" || row.division === division;
-      const matchStatus = status === "Tous les statuts" || row.status === status;
+      const matchDivision = division === FILTER_ALL.divisions || row.division === division;
+      const matchStatus = status === FILTER_ALL.statuses || row.status === status;
       return matchSearch && matchDivision && matchStatus;
     });
   }, [rows, search, division, status]);
@@ -416,15 +384,15 @@ export default function MatchesPage() {
           {
             label: "Division",
             value: division,
-            options: ["Toutes les divisions", ...divisionNames],
+            options: [FILTER_ALL.divisions, ...divisionNames],
             onChange: setDivision,
           },
           { label: "Statut", value: status, options: statusOptions, onChange: setStatus },
         ]}
         onReset={() => {
           setSearch("");
-          setDivision("Toutes les divisions");
-          setStatus("Tous les statuts");
+          setDivision(FILTER_ALL.divisions);
+          setStatus(FILTER_ALL.statuses);
         }}
       />
 
