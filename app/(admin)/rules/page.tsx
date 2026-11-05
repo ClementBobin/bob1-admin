@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import { Info, Save, ShieldCheck } from "lucide-react";
 import { ruleCategoryLabel, ruleToRow } from "@/lib/adapters";
 import { api, errorMessage } from "@/lib/api";
-import { useApiData } from "@/lib/use-api-data";
+import { useApiData } from "@/hooks/use-api-data";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { DataTable } from "@/components/data-table";
-import { PageHeader } from "@/components/page-header";
+import { DataTable } from "@/components/shared/data-table";
+import { PageHeader } from "@/components/layout/page-header";
+import { ErrorBanner } from "@/components/shared/error-banner";
 import type { RankingRuleDto } from "@/types";
 
 export default function RulesPage() {
@@ -129,9 +130,7 @@ export default function RulesPage() {
         </div>
       </div>
 
-      {error && (
-        <div className="mb-4 rounded-xl bg-danger-soft px-4 py-3 text-[12px] font-medium text-danger">{error}</div>
-      )}
+      <ErrorBanner message={error} />
 
       <p className="mb-4 rounded-xl bg-muted px-4 py-3 text-[11px] leading-relaxed text-soft">
         Chaque règle utilise soit le système J-15/J-4 (points distincts selon le délai), soit une valeur de points

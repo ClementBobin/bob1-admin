@@ -4,8 +4,8 @@ import "./globals.css";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider } from "@/components/auth-provider";
-import { AppTourProvider } from "@/components/app-tour";
+import { AuthProvider } from "@/components/auth/auth-provider";
+import { AppTourProvider } from "@/components/tour/app-tour";
 
 export const metadata: Metadata = {
   title: {

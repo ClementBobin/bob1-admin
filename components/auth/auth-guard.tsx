@@ -2,8 +2,8 @@
 
 import { useEffect, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useAuth } from "@/components/auth-provider";
-import { Logo } from "@/components/logo";
+import { useAuth } from "@/components/auth/auth-provider";
+import { Logo } from "@/components/layout/logo";
 
 export function AuthGuard({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();

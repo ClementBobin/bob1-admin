@@ -4,11 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import { Home } from "lucide-react";
 import { familyToRow } from "@/lib/adapters";
 import { api } from "@/lib/api";
-import { useApiData } from "@/lib/use-api-data";
-import { Status } from "@/components/status";
-import { DataTable } from "@/components/data-table";
-import { Filters } from "@/components/filters";
-import { PageHeader } from "@/components/page-header";
+import { useApiData } from "@/hooks/use-api-data";
+import { Status } from "@/components/shared/status";
+import { DataTable } from "@/components/shared/data-table";
+import { Filters } from "@/components/shared/filters";
+import { PageHeader } from "@/components/layout/page-header";
+import { ErrorBanner } from "@/components/shared/error-banner";
 import type { AdminFamilyDto, Family } from "@/types";
 
 export default function FamiliesPage() {
@@ -77,9 +78,7 @@ export default function FamiliesPage() {
         }}
       />
 
-      {error && (
-        <div className="mb-4 rounded-xl bg-danger-soft px-4 py-3 text-[12px] font-medium text-danger">{error}</div>
-      )}
+      <ErrorBanner message={error} />
 
       <DataTable
         id="tour-families-table"

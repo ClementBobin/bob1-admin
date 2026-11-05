@@ -3,7 +3,7 @@
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
-import { OptionSelect } from "@/components/option-select";
+import { OptionSelect } from "@/components/shared/option-select";
 
 export function Filters({
   search,

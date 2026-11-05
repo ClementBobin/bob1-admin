@@ -4,12 +4,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CalendarDays, ChevronRight, Clock, Plus, ShieldAlert, Users } from "lucide-react";
 import { api } from "@/lib/api";
-import { useApiData } from "@/lib/use-api-data";
-import { displayName, useAuth } from "@/components/auth-provider";
+import { useApiData } from "@/hooks/use-api-data";
+import { displayName, useAuth } from "@/components/auth/auth-provider";
 import { cn, formatDate, formatDateTime } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
-import { Status } from "@/components/status";
-import { PageHeader, CardHeading } from "@/components/page-header";
+import { Status } from "@/components/shared/status";
+import { PageHeader, CardHeading } from "@/components/layout/page-header";
 import type { MatchDto, PenaltyDto, Tone, UrgentSlotDto } from "@/types";
 
 const kpiIcons = {

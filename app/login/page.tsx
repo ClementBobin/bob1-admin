@@ -3,8 +3,8 @@
 import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, LockKeyhole, Mail, ShieldCheck, Sparkles } from "lucide-react";
-import { useAuth } from "@/components/auth-provider";
-import { Logo } from "@/components/logo";
+import { useAuth } from "@/components/auth/auth-provider";
+import { Logo } from "@/components/layout/logo";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";

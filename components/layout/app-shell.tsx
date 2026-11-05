@@ -7,11 +7,11 @@ import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { Bell, Compass, LogOut, Moon, Plus, Search, Settings, Sun, UserRound } from "lucide-react";
 import { adminNav } from "@/lib/nav";
-import { NavMain } from "@/components/nav-main";
-import { Logo } from "@/components/logo";
-import { InitialsAvatar } from "@/components/initials-avatar";
-import { useAppTour } from "@/components/app-tour";
-import { displayName, primaryRole, useAuth } from "@/components/auth-provider";
+import { NavMain } from "@/components/layout/nav-main";
+import { Logo } from "@/components/layout/logo";
+import { InitialsAvatar } from "@/components/shared/initials-avatar";
+import { useAppTour } from "@/components/tour/app-tour";
+import { displayName, primaryRole, useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
 import {
   CommandDialog,

@@ -4,18 +4,19 @@ import { useState } from "react";
 import { MoreHorizontal, Plus, TrendingUp, Users, User, ChevronDown } from "lucide-react";
 import { personRankingToRow, familyRankingToRow } from "@/lib/adapters";
 import { api, errorMessage } from "@/lib/api";
-import { useApiData } from "@/lib/use-api-data";
+import { useApiData } from "@/hooks/use-api-data";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
-import { OptionSelect } from "@/components/option-select";
-import { InitialsAvatar } from "@/components/initials-avatar";
-import { DataTable } from "@/components/data-table";
-import { PageHeader } from "@/components/page-header";
-import { FormSheet, FormSheetFooter } from "@/components/form-sheet";
+import { OptionSelect } from "@/components/shared/option-select";
+import { InitialsAvatar } from "@/components/shared/initials-avatar";
+import { DataTable } from "@/components/shared/data-table";
+import { PageHeader } from "@/components/layout/page-header";
+import { FormSheet, FormSheetFooter } from "@/components/shared/form-sheet";
 import { POINT_CATEGORIES, POINT_CATEGORY_LABELS } from "@/lib/constants";
+import { ErrorBanner } from "@/components/shared/error-banner";
 import type { FamilyRankingRow, FamilyRankingRowDto, PersonDto, PersonRankingRow, PersonRankingRowDto, PointCategory } from "@/types";
 
 type ViewMode = "person" | "family";
@@ -109,9 +110,7 @@ export default function RankingsPage() {
         </div>
       </div>
 
-      {error && (
-        <div className="mb-4 rounded-xl bg-danger-soft px-4 py-3 text-[12px] font-medium text-danger">{error}</div>
-      )}
+      <ErrorBanner message={error} />
 
       <DataTable
         id="tour-rankings-table"

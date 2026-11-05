@@ -4,19 +4,20 @@ import { useMemo, useState } from "react";
 import { Filter, Plus, Undo2 } from "lucide-react";
 import { ruleCategoryLabel } from "@/lib/adapters";
 import { api, errorMessage } from "@/lib/api";
-import { useApiData } from "@/lib/use-api-data";
+import { useApiData } from "@/hooks/use-api-data";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
-import { OptionSelect } from "@/components/option-select";
-import { InitialsAvatar } from "@/components/initials-avatar";
-import { Status } from "@/components/status";
-import { DataTable } from "@/components/data-table";
-import { Filters } from "@/components/filters";
-import { PageHeader } from "@/components/page-header";
-import { FormSheet, FormSheetFooter } from "@/components/form-sheet";
+import { OptionSelect } from "@/components/shared/option-select";
+import { InitialsAvatar } from "@/components/shared/initials-avatar";
+import { Status } from "@/components/shared/status";
+import { DataTable } from "@/components/shared/data-table";
+import { Filters } from "@/components/shared/filters";
+import { PageHeader } from "@/components/layout/page-header";
+import { FormSheet, FormSheetFooter } from "@/components/shared/form-sheet";
 import { FILTER_ALL, POINT_CATEGORIES } from "@/lib/constants";
+import { ErrorBanner } from "@/components/shared/error-banner";
 import type { EntryDto, HistoryEntry, RankingRuleDto } from "@/types";
 
 
@@ -161,9 +162,7 @@ export default function PointsHistoryPage() {
         }}
       />
 
-      {error && (
-        <div className="mb-4 rounded-xl bg-danger-soft px-4 py-3 text-[12px] font-medium text-danger">{error}</div>
-      )}
+      <ErrorBanner message={error} />
 
       <DataTable
         id="tour-history-table"

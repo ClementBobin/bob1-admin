@@ -4,21 +4,22 @@ import { useEffect, useMemo, useState } from "react";
 import { MoreHorizontal, Plus, ShieldCheck, X } from "lucide-react";
 import { personToRow } from "@/lib/adapters";
 import { api, errorMessage } from "@/lib/api";
-import { useApiData } from "@/lib/use-api-data";
+import { useApiData } from "@/hooks/use-api-data";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Field, FieldLabel } from "@/components/ui/field";
-import { OptionSelect } from "@/components/option-select";
-import { InitialsAvatar } from "@/components/initials-avatar";
-import { Status } from "@/components/status";
-import { DataTable } from "@/components/data-table";
-import { Filters } from "@/components/filters";
-import { PageHeader } from "@/components/page-header";
-import { FormSheet, FormSheetFooter } from "@/components/form-sheet";
+import { OptionSelect } from "@/components/shared/option-select";
+import { InitialsAvatar } from "@/components/shared/initials-avatar";
+import { Status } from "@/components/shared/status";
+import { DataTable } from "@/components/shared/data-table";
+import { Filters } from "@/components/shared/filters";
+import { PageHeader } from "@/components/layout/page-header";
+import { FormSheet, FormSheetFooter } from "@/components/shared/form-sheet";
 import { FILTER_ALL, PERSON_STATUS_OPTIONS, ROLE_OPTIONS, ROLE_TONE_CLASSES } from "@/lib/constants";
+import { ErrorBanner } from "@/components/shared/error-banner";
 import type { Person, PersonDto } from "@/types";
 
 type PersonRowEx = Person & { familyId?: string | null; personId?: string };
@@ -322,9 +323,7 @@ export default function PeoplePage() {
         }}
       />
 
-      {error && (
-        <div className="mb-4 rounded-xl bg-danger-soft px-4 py-3 text-[12px] font-medium text-danger">{error}</div>
-      )}
+      <ErrorBanner message={error} />
 
       <DataTable
         id="tour-people-table"

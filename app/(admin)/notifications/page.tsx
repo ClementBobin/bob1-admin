@@ -4,13 +4,14 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { api } from "@/lib/api";
-import { useApiData } from "@/lib/use-api-data";
+import { useApiData } from "@/hooks/use-api-data";
 import { Badge } from "@/components/ui/badge";
-import { DataTable } from "@/components/data-table";
-import { Filters } from "@/components/filters";
-import { PageHeader } from "@/components/page-header";
-import { Status } from "@/components/status";
+import { DataTable } from "@/components/shared/data-table";
+import { Filters } from "@/components/shared/filters";
+import { PageHeader } from "@/components/layout/page-header";
+import { Status } from "@/components/shared/status";
 import { formatDateTime } from "@/lib/utils";
+import { ErrorBanner } from "@/components/shared/error-banner";
 import type { NotificationDto } from "@/types";
 
 function notificationType(row: NotificationDto) {
@@ -86,9 +87,7 @@ export default function NotificationsListPage() {
         }}
       />
 
-      {error && (
-        <div className="mb-4 rounded-xl bg-danger-soft px-4 py-3 text-[12px] font-medium text-danger">{error}</div>
-      )}
+      <ErrorBanner message={error} />
 
       <DataTable
         id="tour-notifications-table"

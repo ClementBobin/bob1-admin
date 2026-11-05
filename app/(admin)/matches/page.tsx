@@ -4,20 +4,21 @@ import { useEffect, useMemo, useState } from "react";
 import { Minus, MoreHorizontal, Plus } from "lucide-react";
 import { matchToRow } from "@/lib/adapters";
 import { api, errorMessage } from "@/lib/api";
-import { useApiData } from "@/lib/use-api-data";
+import { useApiData } from "@/hooks/use-api-data";
 import { cn, formatDateLabel, localDateParts } from "@/lib/utils";
 import { FILTER_ALL, MATCH_STATUS_OPTIONS, statusTone } from "@/lib/constants";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field, FieldLabel } from "@/components/ui/field";
-import { OptionSelect } from "@/components/option-select";
-import { Status } from "@/components/status";
-import { DataTable } from "@/components/data-table";
-import { Filters } from "@/components/filters";
-import { PageHeader } from "@/components/page-header";
-import { FormSheet, FormSheetFooter } from "@/components/form-sheet";
+import { OptionSelect } from "@/components/shared/option-select";
+import { Status } from "@/components/shared/status";
+import { DataTable } from "@/components/shared/data-table";
+import { Filters } from "@/components/shared/filters";
+import { PageHeader } from "@/components/layout/page-header";
+import { FormSheet, FormSheetFooter } from "@/components/shared/form-sheet";
 import { Progress } from "@/components/ui/progress";
+import { ErrorBanner } from "@/components/shared/error-banner";
 import type { DivisionDto, MatchDto, MatchRow, VenueDto } from "@/types";
 
 function FillMeter({ value, total }: { value: number; total: number }) {
@@ -396,9 +397,7 @@ export default function MatchesPage() {
         }}
       />
 
-      {error && (
-        <div className="mb-4 rounded-xl bg-danger-soft px-4 py-3 text-[12px] font-medium text-danger">{error}</div>
-      )}
+      <ErrorBanner message={error} />
 
       <DataTable
         id="tour-matches-table"
