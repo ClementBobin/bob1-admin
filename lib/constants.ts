@@ -1,4 +1,5 @@
-import type { PointCategory, Tone } from "@/types";
+import { CalendarDays, Clock, ShieldAlert, Users } from "lucide-react";
+import type { KpiIconMap, PointCategory, SlotSpec, Tone } from "@/types";
 
 /* ── Points ─────────────────────────────────────────────── */
 export const POINT_CATEGORIES: PointCategory[] = ["presence", "volunteer", "staff", "carpool", "penalty"];
@@ -53,3 +54,58 @@ export const STATUS_TONES: Record<string, Tone> = {
 export function statusTone(status: string, fallback: Tone = "warning"): Tone {
   return STATUS_TONES[status] ?? fallback;
 }
+
+export const GENDER_OPTIONS = ["Masculin", "Féminin", "Mixte"];
+export const ACTIVE_STATUS_OPTIONS = ["Active", "Inactive"];
+
+/* ── Matches ────────────────────────────────────────────── */
+export const TEAM_OPTIONS = [
+  "BOB1",
+  "Castelnau Basket",
+  "Lattes Basket",
+  "Mauguio BC",
+  "Nîmes Gard BC",
+  "Lunel Basket",
+  "Sète Basket",
+];
+
+export const SLOT_SPECS: SlotSpec[] = [
+  { key: "arbitres", label: "Arbitres", kind: "Staff" },
+  { key: "chrono", label: "Chrono", kind: "Staff" },
+  { key: "mar", label: "MAR", kind: "Staff" },
+  { key: "buvette", label: "Buvette", kind: "Volunteer" },
+];
+
+/* ── Dashboard ──────────────────────────────────────────── */
+export const KPI_ICONS: KpiIconMap = {
+  calendar: CalendarDays,
+  users: Users,
+  clock: Clock,
+  shield: ShieldAlert,
+};
+
+export const KPI_TONE_CLASSES: Record<Tone, string> = {
+  success: "bg-mint text-mint-foreground",
+  warning: "bg-brand-soft text-brand",
+  info: "bg-info-soft text-info",
+  danger: "bg-danger-soft text-danger",
+  neutral: "bg-muted text-soft",
+};
+
+export const DOT_TONE_CLASSES: Record<Tone, string> = {
+  success: "bg-green",
+  warning: "bg-brand",
+  danger: "bg-danger",
+  info: "bg-info",
+  neutral: "bg-soft",
+};
+
+export const KPI_LINKS: Record<string, string> = {
+  "Matchs à venir": "/matches",
+  "Postes non pourvus": "/matches",
+  "Confirmations en attente": "/matches",
+  "Points récents": "/points-history",
+  "Pénalités récentes": "/points-history",
+};
+
+export const NOTIFICATION_STATUS_FILTER = ["Lue", "Non lue"] as const;
