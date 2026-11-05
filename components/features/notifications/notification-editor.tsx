@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Field, FieldLabel } from "@/components/ui/field";
+import { GroupedSelect, type SelectChoice, type SelectGroup } from "@/components/shared/grouped-select";
 import { OptionSelect } from "@/components/shared/option-select";
 import { PageHeader, CardHeading } from "@/components/layout/page-header";
 import { cn } from "@/lib/utils";
@@ -64,11 +65,17 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
     setStartup(existing.startup);
   }, [existing]);
 
-  const targetOptions = [
-    "Tous les membres",
-    ...(apiDivisions ?? []).map((division) => `Division: ${division.name}`),
-    ...(apiTeams ?? []).map((team) => `Équipe: ${team.name}`),
-  ];
+  const targetChoices: SelectChoice[] = [{ value: "Tous les membres", label: "Tous les membres" }];
+  const targetGroups: SelectGroup[] = [
+    {
+      heading: "Divisions",
+      options: (apiDivisions ?? []).map((division) => ({ value: `Division: ${division.name}`, label: division.name })),
+    },
+    {
+      heading: "Équipes",
+      options: (apiTeams ?? []).map((team) => ({ value: `Équipe: ${team.name}`, label: team.name })),
+    },
+  ].filter((group) => group.options.length > 0);
 
   const save = () => {
     if (!title.trim() || !message.trim()) {
@@ -187,12 +194,15 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
                 <FieldLabel htmlFor="notifications-field-10" className="text-[11px] font-bold text-muted-foreground">
                   Destinataires
                 </FieldLabel>
-                <OptionSelect
+                <GroupedSelect
                   id="notifications-field-10"
                   value={target}
                   onValueChange={setTarget}
                   disabled={editing}
-                  options={targetOptions}
+                  choices={targetChoices}
+                  groups={targetGroups}
+                  placeholder="Choisir les destinataires"
+                  searchPlaceholder="Rechercher une division, une équipe…"
                 />
               </Field>
               <Field className="col-span-full">
