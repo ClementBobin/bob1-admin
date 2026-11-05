@@ -1,14 +1,20 @@
 "use client";
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState } from "react";
+import { Check, ChevronDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-/** shadcn Select driven by a plain list of string options. */
+/** Combobox driven by a plain list of string options: click to open, type to filter. */
 export function OptionSelect({
   value,
   onValueChange,
   options,
-  placeholder,
+  placeholder = "Sélectionner…",
+  searchPlaceholder = "Rechercher…",
+  emptyMessage = "Aucun résultat.",
   className,
   id,
   disabled,
@@ -18,23 +24,59 @@ export function OptionSelect({
   onValueChange: (value: string) => void;
   options: string[];
   placeholder?: string;
+  searchPlaceholder?: string;
+  emptyMessage?: string;
   className?: string;
   id?: string;
   disabled?: boolean;
   "aria-label"?: string;
 }) {
+  const [open, setOpen] = useState(false);
+
   return (
-    <Select value={value} onValueChange={onValueChange} disabled={disabled}>
-      <SelectTrigger id={id} aria-label={ariaLabel} className={cn("h-10 w-full cursor-pointer", className)}>
-        <SelectValue placeholder={placeholder} />
-      </SelectTrigger>
-      <SelectContent>
-        {options.map((option) => (
-          <SelectItem key={option} value={option}>
-            {option}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          id={id}
+          type="button"
+          role="combobox"
+          variant="outline"
+          aria-expanded={open}
+          aria-label={ariaLabel}
+          disabled={disabled}
+          className={cn(
+            "h-10 w-full cursor-pointer justify-between gap-2 px-3 text-sm font-normal shadow-xs",
+            !value && "text-muted-foreground",
+            className,
+          )}
+        >
+          <span className="truncate">{value || placeholder}</span>
+          <ChevronDown className="size-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-(--radix-popover-trigger-width) min-w-[180px] p-0">
+        <Command>
+          <CommandInput placeholder={searchPlaceholder} />
+          <CommandList>
+            <CommandEmpty>{emptyMessage}</CommandEmpty>
+            <CommandGroup>
+              {options.map((option) => (
+                <CommandItem
+                  key={option}
+                  value={option}
+                  onSelect={() => {
+                    onValueChange(option);
+                    setOpen(false);
+                  }}
+                >
+                  <span className="truncate">{option}</span>
+                  <Check className={cn("ml-auto size-4", option === value ? "opacity-100" : "opacity-0")} />
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
