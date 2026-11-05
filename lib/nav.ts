@@ -9,8 +9,7 @@ import {
   UserRound,
   Users,
   UsersRound,
-  History,
-  type LucideIcon,
+  History
 } from "lucide-react";
 
 import type {
