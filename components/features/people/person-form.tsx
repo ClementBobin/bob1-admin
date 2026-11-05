@@ -7,17 +7,19 @@ import { Switch } from "@/components/ui/switch";
 import { EntityForm } from "@/components/shared/entity-form";
 import { FormField } from "@/components/shared/form-field";
 import { OptionSelect } from "@/components/shared/option-select";
-import { PERSON_STATUS_OPTIONS, ROLE_OPTIONS } from "@/lib/constants";
+import { PERSON_STATUS_OPTIONS } from "@/lib/constants";
+import { useLookups } from "@/hooks/use-lookups";
 import { cn } from "@/lib/utils";
 import type { Person, PersonPayload } from "@/types";
 
 export const PERSON_FORM_ID = "person-form";
 
 export function PersonForm({ person, onSave }: { person: Person | null; onSave: (payload: PersonPayload) => void }) {
+  const { roles: roleOptions } = useLookups();
   const [firstName, setFirstName] = useState(person?.name.split(" ")[0] ?? "");
   const [lastName, setLastName] = useState(person?.name.split(" ").slice(1).join(" ") ?? "");
   const [email, setEmail] = useState(person?.email ?? "");
-  const [roles, setRoles] = useState<string[]>(person?.roles ?? ["Parent"]);
+  const [roles, setRoles] = useState<string[]>(person?.roles ?? (roleOptions[0] ? [roleOptions[0]] : []));
   const [status, setStatus] = useState(person?.status ?? "Actif");
   const [suspendedFromParticipation, setSuspendedFromParticipation] = useState(person?.suspendedFromParticipation ?? false);
 
@@ -53,7 +55,7 @@ export function PersonForm({ person, onSave }: { person: Person | null; onSave: 
 
       <span className="col-span-full mt-1 text-[10px] font-extrabold uppercase tracking-[0.08em] text-soft">Rôles</span>
       <div className="col-span-full flex flex-wrap gap-2">
-        {ROLE_OPTIONS.map((role) => {
+        {roleOptions.map((role) => {
           const active = roles.includes(role);
           return (
             <button

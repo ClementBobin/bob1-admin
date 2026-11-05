@@ -102,3 +102,8 @@ export function pointsAdjustmentError(
   if (!payload.personId) return `Sélectionnez ${subject}.`;
   return null;
 }
+
+/** Unique values, in first-seen order. */
+export function distinct<T>(values: Iterable<T>): T[] {
+  return [...new Set(values)];
+}

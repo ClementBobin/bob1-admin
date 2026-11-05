@@ -5,14 +5,10 @@ import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { matchToRow } from "@/lib/adapters";
 import { api, errorMessage } from "@/lib/api";
-import {
-  FILTER_ALL,
-  MATCH_STATUS_OPTIONS,
-  SLOT_SPECS,
-  statusTone,
-} from "@/lib/constants";
-import { cn, matchesSearch } from "@/lib/utils";
+import { FILTER_ALL, statusTone } from "@/lib/constants";
+import { cn, distinct, matchesSearch } from "@/lib/utils";
 import { useApiData } from "@/hooks/use-api-data";
+import { useLookups } from "@/hooks/use-lookups";
 import { useFormSheet } from "@/hooks/use-form-sheet";
 import { PageHeader } from "@/components/layout/page-header";
 import { DataTable } from "@/components/shared/data-table";
@@ -29,10 +25,12 @@ import type {
   MatchPayload,
   MatchRow,
   NamedOption,
+  TeamDto,
   VenueDto,
 } from "@/types";
 
 export function MatchesView() {
+  const { clubName, slotTemplates } = useLookups();
   const [rows, setRows] = useState<MatchRow[]>([]);
   const [search, setSearch] = useState("");
   const [division, setDivision] = useState(FILTER_ALL.divisions);
@@ -91,7 +89,20 @@ export function MatchesView() {
     return names;
   }, [venueOptions, editing]);
 
-  const statusOptions = [FILTER_ALL.statuses, ...MATCH_STATUS_OPTIONS];
+  const { data: apiTeams } = useApiData<TeamDto[]>(() => api.teams.list(), []);
+
+  const teamOptions = useMemo(() => {
+    const names = new Set<string>([clubName]);
+    for (const team of apiTeams ?? []) names.add(team.name);
+    for (const match of apiMatches ?? []) names.add(match.opponent);
+    names.delete("");
+    return [...names];
+  }, [clubName, apiTeams, apiMatches]);
+
+  const statusOptions = [
+    FILTER_ALL.statuses,
+    ...distinct(rows.map((row) => row.status)),
+  ];
 
   const filtered = useMemo(() => {
     return rows.filter((row) => {
@@ -139,17 +150,17 @@ export function MatchesView() {
       } else {
         const created = await api.matches.create(input);
         const failures: string[] = [];
-        for (const spec of SLOT_SPECS) {
+        for (const spec of slotTemplates) {
           const capacity = payload.slots[spec.key] ?? 0;
           if (capacity <= 0) continue;
           try {
             await api.slots.create(created.id, {
               kind: spec.kind,
-              role: spec.label,
+              role: spec.role,
               capacity,
             });
           } catch {
-            failures.push(spec.label);
+            failures.push(spec.role);
           }
         }
         (failures.length ? toast.error : toast.success)(
@@ -329,6 +340,9 @@ export function MatchesView() {
             match={editing}
             divisionOptions={divisionNames}
             venueOptions={venueNames}
+            clubName={clubName}
+            teamOptions={teamOptions}
+            slotTemplates={slotTemplates}
             onSave={save}
           />
         )}

@@ -1,16 +1,5 @@
 import { CalendarDays, Clock, ShieldAlert, Users } from "lucide-react";
-import type { KpiIconMap, PointCategory, SlotSpec, Tone } from "@/types";
-
-/* ── Points ─────────────────────────────────────────────── */
-export const POINT_CATEGORIES: PointCategory[] = ["presence", "volunteer", "staff", "carpool", "penalty"];
-
-export const POINT_CATEGORY_LABELS: Record<string, string> = {
-  presence: "Présence",
-  volunteer: "Bénévolat",
-  staff: "Officiel / staff",
-  carpool: "Covoiturage",
-  penalty: "Pénalité",
-};
+import type { KpiIconMap, Tone } from "@/types";
 
 /* ── Filter sentinels ("all" option of each filter) ─────── */
 export const FILTER_ALL: Record<"statuses" | "roles" | "types" | "accounts" | "divisions" | "categories", string> = {
@@ -23,13 +12,10 @@ export const FILTER_ALL: Record<"statuses" | "roles" | "types" | "accounts" | "d
 };
 
 /* ── Option lists ───────────────────────────────────────── */
-export const ROLE_OPTIONS = ["Parent", "Staff", "Admin"];
 export const PERSON_STATUS_OPTIONS = ["Actif", "Suspendu"];
-export const TEAM_STATUS_OPTIONS = ["Active", "Externe", "Archivée"];
-export const MATCH_STATUS_OPTIONS = ["J-15", "Confirmé", "Annulé"];
+export const TEAM_STATUS_OPTIONS = ["Active", "Archivée"];
 export const ACCOUNTS_OPTIONS = ["Complet", "À compléter"];
 export const READ_STATUS_OPTIONS = ["Lue", "Non lue"];
-export const NOTIFICATION_TYPE_OPTIONS = ["Général", "Match", "Urgent", "Pénalité"];
 
 /* ── Tone class maps ────────────────────────────────────── */
 export const ROLE_TONE_CLASSES: Record<string, string> = {
@@ -55,7 +41,6 @@ export function statusTone(status: string, fallback: Tone = "warning"): Tone {
   return STATUS_TONES[status] ?? fallback;
 }
 
-export const GENDER_OPTIONS = ["Masculin", "Féminin", "Mixte"];
 export const ACTIVE_STATUS_OPTIONS = ["Active", "Inactive"];
 
 /* ── Dashboard ──────────────────────────────────────────── */
@@ -91,21 +76,3 @@ export const KPI_LINKS: Record<string, string> = {
 };
 
 export const NOTIFICATION_STATUS_FILTER = ["Lue", "Non lue"] as const;
-
-/* ── Matches ────────────────────────────────────────────── */
-export const TEAM_OPTIONS = [
-  "BOB1",
-  "Castelnau Basket",
-  "Lattes Basket",
-  "Mauguio BC",
-  "Nîmes Gard BC",
-  "Lunel Basket",
-  "Sète Basket",
-];
-
-export const SLOT_SPECS: SlotSpec[] = [
-  { key: "arbitres", label: "Arbitres", kind: "Staff" },
-  { key: "chrono", label: "Chrono", kind: "Staff" },
-  { key: "mar", label: "MAR", kind: "Staff" },
-  { key: "buvette", label: "Buvette", kind: "Volunteer" },
-];

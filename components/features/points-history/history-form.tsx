@@ -23,7 +23,9 @@ export function HistoryForm({
   onSave: (payload: PointsPayload) => void;
 }) {
   const [person, setPerson] = useState(row?.person ?? personOptions[0] ?? "");
-  const [category, setCategory] = useState(row?.category ?? "penalty");
+  const [category, setCategory] = useState(
+    row?.category ?? categoryOptions[0] ?? "",
+  );
   const [reason, setReason] = useState(row?.reason ?? "");
   const [points, setPoints] = useState(
     row ? `${row.points > 0 ? "+" : ""}${row.points}` : "-10",
@@ -65,6 +67,7 @@ export function HistoryForm({
           {(id) => (
             <Input
               id={id}
+              required
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="Saisissez le motif"

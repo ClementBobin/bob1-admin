@@ -6,40 +6,58 @@ import { Input } from "@/components/ui/input";
 import { EntityForm } from "@/components/shared/entity-form";
 import { FormField } from "@/components/shared/form-field";
 import { OptionSelect } from "@/components/shared/option-select";
-import { SLOT_SPECS, TEAM_OPTIONS } from "@/lib/constants";
 import { formatDateLabel, localDateParts } from "@/lib/utils";
-import type { MatchPayload, MatchRow } from "@/types";
+import type { MatchPayload, MatchRow, SlotTemplate } from "@/types";
 
 export const MATCH_FORM_ID = "match-form";
+
+const withCurrent = (options: string[], current: string) =>
+  current && !options.includes(current) ? [current, ...options] : options;
 
 export function MatchForm({
   match,
   divisionOptions,
   venueOptions,
+  clubName,
+  teamOptions,
+  slotTemplates,
   onSave,
 }: {
   match: MatchRow | null;
   divisionOptions: string[];
   venueOptions: string[];
+  clubName: string;
+  teamOptions: string[];
+  slotTemplates: SlotTemplate[];
   onSave: (payload: MatchPayload) => void;
 }) {
   const initial = localDateParts(match?.startsAtUtc);
   const [division, setDivision] = useState(
-    match?.division ?? divisionOptions[0] ?? "U13 M",
+    match?.division ?? divisionOptions[0] ?? "",
   );
-  const [homeTeam, setHomeTeam] = useState(match?.home ?? "BOB1");
-  const [awayTeam, setAwayTeam] = useState(match?.away ?? "Castelnau Basket");
+  const [homeTeam, setHomeTeam] = useState(match?.home ?? clubName);
+  const [awayTeam, setAwayTeam] = useState(
+    match?.away ?? teamOptions.find((name) => name !== clubName) ?? "",
+  );
   const [date, setDate] = useState(initial.date);
   const [time, setTime] = useState(initial.time);
-  const [venue, setVenue] = useState(
-    match?.venue ?? venueOptions[0] ?? "Coubertin",
+  const [venue, setVenue] = useState(match?.venue ?? venueOptions[0] ?? "");
+  const existingSlots: Record<string, number | undefined> = {
+    arbitres: match?.officials[1],
+    chrono: match?.chrono[1],
+    mar: match?.mar[1],
+    buvette: match?.buvette[1],
+  };
+  const [slotOverrides, setSlotOverrides] = useState<Record<string, number>>(
+    {},
   );
-  const [slots, setSlots] = useState<Record<string, number>>({
-    arbitres: match?.officials[1] || 4,
-    chrono: match?.chrono[1] || 1,
-    mar: match?.mar[1] || 1,
-    buvette: match?.buvette[1] || 2,
-  });
+  const slots: Record<string, number> = Object.fromEntries(
+    slotTemplates.map((slot) => [
+      slot.key,
+      slotOverrides[slot.key] ??
+        (existingSlots[slot.key] || slot.defaultCapacity),
+    ]),
+  );
 
   // Divisions/venues load asynchronously; keep the selects on a valid option.
   useEffect(() => {
@@ -53,9 +71,9 @@ export function MatchForm({
   }, [venueOptions, venue]);
 
   const updateSlot = (key: string, amount: number) => {
-    setSlots((current) => ({
+    setSlotOverrides((current) => ({
       ...current,
-      [key]: Math.max(0, Math.min(12, current[key] + amount)),
+      [key]: Math.max(0, Math.min(12, slots[key] + amount)),
     }));
   };
 
@@ -64,10 +82,7 @@ export function MatchForm({
       <EntityForm
         id={MATCH_FORM_ID}
         onSubmit={() => {
-          const isHome =
-            homeTeam === "BOB1" ||
-            homeTeam === "BOB1 U13 M" ||
-            homeTeam.startsWith("BOB1");
+          const isHome = homeTeam === clubName;
           const opponentName = isHome ? awayTeam : homeTeam;
           onSave({
             divisionName: division,
@@ -84,10 +99,10 @@ export function MatchForm({
               home: homeTeam,
               away: awayTeam,
               venue,
-              officials: [match?.officials[0] ?? 0, slots.arbitres],
-              buvette: [match?.buvette[0] ?? 0, slots.buvette],
-              chrono: [0, slots.chrono],
-              mar: [0, slots.mar],
+              officials: [match?.officials[0] ?? 0, slots.arbitres ?? 0],
+              buvette: [match?.buvette[0] ?? 0, slots.buvette ?? 0],
+              chrono: [0, slots.chrono ?? 0],
+              mar: [0, slots.mar ?? 0],
               carpool: match?.carpool ?? "0 place",
               status: match?.status ?? "Brouillon",
               opponent: opponentName,
@@ -114,7 +129,7 @@ export function MatchForm({
               id={id}
               value={homeTeam}
               onValueChange={setHomeTeam}
-              options={TEAM_OPTIONS}
+              options={withCurrent(teamOptions, homeTeam)}
             />
           )}
         </FormField>
@@ -124,7 +139,7 @@ export function MatchForm({
               id={id}
               value={awayTeam}
               onValueChange={setAwayTeam}
-              options={TEAM_OPTIONS}
+              options={withCurrent(teamOptions, awayTeam)}
             />
           )}
         </FormField>
@@ -167,7 +182,7 @@ export function MatchForm({
         Postes nécessaires
       </span>
       <div className="mt-3 overflow-hidden rounded-[13px] border border-line">
-        {SLOT_SPECS.map(({ key, label }) => (
+        {slotTemplates.map(({ key, role: label }) => (
           <div
             key={key}
             className="flex min-h-[50px] items-center justify-between gap-3 border-b border-line px-3.5 last:border-b-0"

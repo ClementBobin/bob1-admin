@@ -5,6 +5,7 @@ import { Plus, TrendingUp, Users, User, ChevronDown } from "lucide-react";
 import { personRankingToRow, familyRankingToRow } from "@/lib/adapters";
 import { api, errorMessage } from "@/lib/api";
 import { useApiData } from "@/hooks/use-api-data";
+import { useLookups } from "@/hooks/use-lookups";
 import { cn, pointsAdjustmentError } from "@/lib/utils";
 import { toast } from "sonner";
 import { RowActionButton } from "@/components/shared/row-action-button";
@@ -14,7 +15,6 @@ import { InitialsAvatar } from "@/components/shared/initials-avatar";
 import { DataTable } from "@/components/shared/data-table";
 import { PageHeader } from "@/components/layout/page-header";
 import { FormSheet, FormSheetFooter } from "@/components/shared/form-sheet";
-import { POINT_CATEGORIES, POINT_CATEGORY_LABELS } from "@/lib/constants";
 import { ErrorBanner } from "@/components/shared/error-banner";
 import type {
   FamilyRankingRow,
@@ -28,8 +28,10 @@ import type {
 } from "@/types";
 
 export function RankingsView() {
+  const { pointCategoryKeys, pointCategoryLabel } = useLookups();
   const [viewMode, setRankingViewMode] = useState<RankingViewMode>("person");
-  const [category, setCategory] = useState<PointCategory>("staff");
+  const [selectedCategory, setCategory] = useState<PointCategory>("");
+  const category = selectedCategory || pointCategoryKeys[0] || "";
   const sheet = useFormSheet<null>();
   const [saving, setSaving] = useState(false);
 
@@ -42,7 +44,10 @@ export function RankingsView() {
     reload: reloadPerson,
   } = useApiData<RankingsData<PersonRankingRow>>(
     () =>
-      api.rankings.get(category, "person").then((response) => {
+      (category
+        ? api.rankings.get(category, "person")
+        : Promise.resolve({ top: [], season: "" })
+      ).then((response) => {
         const r = response as { top: PersonRankingRowDto[]; season: string };
         return { rows: r.top.map(personRankingToRow), season: r.season };
       }),
@@ -56,7 +61,10 @@ export function RankingsView() {
     reload: reloadFamily,
   } = useApiData<RankingsData<FamilyRankingRow>>(
     () =>
-      api.rankings.get(category, "family").then((response) => {
+      (category
+        ? api.rankings.get(category, "family")
+        : Promise.resolve({ top: [], season: "" })
+      ).then((response) => {
         const r = response as { top: FamilyRankingRowDto[]; season: string };
         return { rows: r.top.map(familyRankingToRow), season: r.season };
       }),
@@ -115,9 +123,9 @@ export function RankingsView() {
             onChange={(e) => setCategory(e.target.value as PointCategory)}
             className="bg-transparent text-[12.5px] font-medium text-ink outline-none cursor-pointer"
           >
-            {POINT_CATEGORIES.map((cat) => (
+            {pointCategoryKeys.map((cat) => (
               <option key={cat} value={cat}>
-                {POINT_CATEGORY_LABELS[cat]}
+                {pointCategoryLabel(cat)}
               </option>
             ))}
           </select>

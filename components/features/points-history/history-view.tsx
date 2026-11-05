@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { Filter, Plus, Undo2 } from "lucide-react";
-import { ruleCategoryLabel } from "@/lib/adapters";
 import { api, errorMessage } from "@/lib/api";
 import { useApiData } from "@/hooks/use-api-data";
+import { useLookups } from "@/hooks/use-lookups";
 import { cn, matchesSearch, pointsAdjustmentError } from "@/lib/utils";
 import { useFormSheet } from "@/hooks/use-form-sheet";
 import { HISTORY_FORM_ID, HistoryForm } from "./history-form";
@@ -15,7 +15,7 @@ import { DataTable } from "@/components/shared/data-table";
 import { Filters } from "@/components/shared/filters";
 import { PageHeader } from "@/components/layout/page-header";
 import { FormSheet, FormSheetFooter } from "@/components/shared/form-sheet";
-import { FILTER_ALL, POINT_CATEGORIES } from "@/lib/constants";
+import { FILTER_ALL } from "@/lib/constants";
 import { ErrorBanner } from "@/components/shared/error-banner";
 import type {
   EntryDto,
@@ -40,6 +40,7 @@ export function HistoryView() {
     [],
   );
 
+  const { pointCategoryKeys, pointCategoryLabel } = useLookups();
   const { data: apiRules } = useApiData<RankingRuleDto[]>(
     () => api.rankings.rules(),
     [],
@@ -48,7 +49,7 @@ export function HistoryView() {
   const penaltyCategoryOptions = [
     FILTER_ALL.categories,
     ...Array.from(
-      new Set((apiRules ?? []).map((r) => ruleCategoryLabel(r.category))),
+      new Set((apiRules ?? []).map((r) => pointCategoryLabel(r.category))),
     ),
   ];
 
@@ -65,7 +66,7 @@ export function HistoryView() {
       date: entry.createdAtUtc,
       isPenalty,
       isRevoked,
-      categoryLabel: ruleCategoryLabel(entry.category),
+      categoryLabel: pointCategoryLabel(entry.category),
     };
   });
 
@@ -315,7 +316,7 @@ export function HistoryView() {
             key={sheet.editing?.id ?? "new"}
             row={sheet.editing}
             personOptions={personOptions}
-            categoryOptions={POINT_CATEGORIES}
+            categoryOptions={pointCategoryKeys}
             onSave={save}
           />
         )}

@@ -70,7 +70,8 @@ export type RuleRow = {
   hasJ15J4: boolean;
 };
 
-export type PointCategory = "presence" | "volunteer" | "staff" | "carpool" | "penalty";
+/** Point category key (served by GET /lookups). */
+export type PointCategory = string;
 
 export type RankingViewMode = "person" | "family";
 

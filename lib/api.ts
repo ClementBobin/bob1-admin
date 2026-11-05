@@ -17,6 +17,7 @@ import type {
   EntryDto,
   FamilyRankingResponse,
   MatchDto,
+  LookupsDto,
   MatchInput,
   NotificationDto,
   PenaltyDto,
@@ -257,6 +258,10 @@ export const api = {
   me: () => apiFetch<AuthUser>("/me"),
 
   // ---- Club ----
+  lookups: {
+    get: () => apiFetch<LookupsDto>("/lookups"),
+  },
+
   divisions: {
     list: () => apiFetch<DivisionDto[]>("/divisions"),
     create: (input: { name: string; sortOrder: number; category: string; gender: string; isActive: boolean }) =>

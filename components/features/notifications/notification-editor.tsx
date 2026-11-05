@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Bell, CalendarDays, Save, Send, Users, Smartphone } from "lucide-react";
 import { api, errorMessage } from "@/lib/api";
 import { useApiData } from "@/hooks/use-api-data";
+import { useLookups } from "@/hooks/use-lookups";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -32,7 +33,9 @@ function parseType(dataJson: string | null) {
 export function NotificationEditor({ notificationId }: { notificationId?: string }) {
   const router = useRouter();
   const editing = Boolean(notificationId);
-  const [type, setType] = useState("Général");
+  const { notificationTypeNames } = useLookups();
+  const [selectedType, setType] = useState("");
+  const type = selectedType || notificationTypeNames[0] || "";
   const [target, setTarget] = useState("");
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
@@ -57,7 +60,7 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
   useEffect(() => {
     if (!existing || prefilled.current) return;
     prefilled.current = true;
-    setType(parseType(existing.dataJson) ?? "Général");
+    setType(parseType(existing.dataJson) ?? "");
     setTitle(existing.title);
     setMessage(existing.body);
     setExpiry(existing.expiresAtUtc ? existing.expiresAtUtc.slice(0, 10) : "");
@@ -187,7 +190,7 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
                   id="notifications-field-9"
                   value={type}
                   onValueChange={setType}
-                  options={["Général", "Match", "Urgent", "Pénalité"]}
+                  options={notificationTypeNames}
                 />
               </Field>
               <Field>

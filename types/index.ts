@@ -13,3 +13,4 @@ export * from "./ranking";
 export * from "./team";
 export * from "./ui";
 export * from "./venue";
+export * from "./lookups";

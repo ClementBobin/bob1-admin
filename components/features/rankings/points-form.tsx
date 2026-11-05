@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { EntityForm } from "@/components/shared/entity-form";
 import { FormField } from "@/components/shared/form-field";
 import { OptionSelect } from "@/components/shared/option-select";
-import { POINT_CATEGORY_LABELS } from "@/lib/constants";
+import { useLookups } from "@/hooks/use-lookups";
 import { parsePoints } from "@/lib/utils";
 import type { PersonDto, PointCategory, PointsPayload } from "@/types";
 
@@ -21,10 +21,11 @@ export function PointsForm({
   persons: PersonDto[];
   onSave: (payload: PointsPayload) => void;
 }) {
+  const { pointCategoryLabel } = useLookups();
   const personOptions = persons.map((person) => person.id);
   const [target, setTarget] = useState(personOptions[0] ?? "");
-  const [points, setPoints] = useState("5");
-  const [motif, setMotif] = useState("Participation exceptionnelle");
+  const [points, setPoints] = useState("");
+  const [motif, setMotif] = useState("");
 
   return (
     <>
@@ -52,11 +53,7 @@ export function PointsForm({
         </FormField>
         <FormField label="Catégorie">
           {(id) => (
-            <Input
-              id={id}
-              value={POINT_CATEGORY_LABELS[category] ?? category}
-              readOnly
-            />
+            <Input id={id} value={pointCategoryLabel(category)} readOnly />
           )}
         </FormField>
         <FormField label="Points">
@@ -79,6 +76,7 @@ export function PointsForm({
           {(id) => (
             <Input
               id={id}
+              required
               value={motif}
               onChange={(e) => setMotif(e.target.value)}
             />

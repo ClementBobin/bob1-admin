@@ -23,7 +23,7 @@ export type MatchInput = {
 };
 
 export type SlotInput = {
-  kind: "Staff" | "Volunteer";
+  kind: string;
   role: string;
   capacity: number;
   startsAtUtc?: string | null;
@@ -61,7 +61,6 @@ export type MatchRow = {
 
 export type SlotKind = "Staff" | "Volunteer";
 
-export type SlotSpec = { key: string; label: string; kind: SlotKind };
 
 /** What the match form hands back to the page. */
 export type MatchPayload = {

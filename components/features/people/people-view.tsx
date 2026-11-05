@@ -5,10 +5,11 @@ import { Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { personToRow } from "@/lib/adapters";
 import { api, errorMessage } from "@/lib/api";
-import { FILTER_ALL, PERSON_STATUS_OPTIONS, ROLE_OPTIONS, ROLE_TONE_CLASSES, statusTone } from "@/lib/constants";
+import { FILTER_ALL, PERSON_STATUS_OPTIONS, ROLE_TONE_CLASSES, statusTone } from "@/lib/constants";
 import { cn, matchesSearch } from "@/lib/utils";
 import { useApiData } from "@/hooks/use-api-data";
 import { useFormSheet } from "@/hooks/use-form-sheet";
+import { useLookups } from "@/hooks/use-lookups";
 import { PageHeader } from "@/components/layout/page-header";
 import { DataTable } from "@/components/shared/data-table";
 import { ErrorBanner } from "@/components/shared/error-banner";
@@ -21,6 +22,7 @@ import { PERSON_FORM_ID, PersonForm } from "./person-form";
 import type { Person, PersonDto, PersonPayload } from "@/types";
 
 export function PeopleView() {
+  const { roles } = useLookups();
   const [rows, setRows] = useState<Person[]>([]);
   const [search, setSearch] = useState("");
   const [role, setRole] = useState(FILTER_ALL.roles);
@@ -146,7 +148,7 @@ export function PeopleView() {
           {
             label: "Rôle",
             value: role,
-            options: [FILTER_ALL.roles, ...ROLE_OPTIONS],
+            options: [FILTER_ALL.roles, ...roles],
             onChange: setRole,
           },
           {

@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { Info, Save, ShieldCheck } from "lucide-react";
-import { ruleCategoryLabel, ruleToRow } from "@/lib/adapters";
+import { ruleToRow } from "@/lib/adapters";
 import { api, errorMessage } from "@/lib/api";
 import { useApiData } from "@/hooks/use-api-data";
+import { useLookups } from "@/hooks/use-lookups";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { PointsInput } from "./points-input";
@@ -14,6 +15,7 @@ import { ErrorBanner } from "@/components/shared/error-banner";
 import type { RankingRuleDto } from "@/types";
 
 export function RulesView() {
+  const { pointCategoryLabel } = useLookups();
   const [liveRows, setLiveRows] = useState<RankingRuleDto[]>([]);
   const [dirty, setDirty] = useState(false);
   const [dirtyKeys, setDirtyKeys] = useState<Record<string, boolean>>({});
@@ -110,7 +112,7 @@ export function RulesView() {
             {
               key: "category",
               label: "Catégorie",
-              render: (row) => <span className="text-soft">{ruleCategoryLabel(row.category)}</span>,
+              render: (row) => <span className="text-soft">{pointCategoryLabel(row.category)}</span>,
             },
             {
               key: "points",

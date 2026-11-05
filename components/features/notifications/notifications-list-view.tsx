@@ -5,12 +5,13 @@ import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { api } from "@/lib/api";
 import { useApiData } from "@/hooks/use-api-data";
+import { useLookups } from "@/hooks/use-lookups";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/shared/data-table";
 import { Filters } from "@/components/shared/filters";
 import { PageHeader } from "@/components/layout/page-header";
 import { Status } from "@/components/shared/status";
-import { FILTER_ALL, NOTIFICATION_TYPE_OPTIONS, READ_STATUS_OPTIONS } from "@/lib/constants";
+import { FILTER_ALL, READ_STATUS_OPTIONS } from "@/lib/constants";
 import { formatDateTime, matchesSearch } from "@/lib/utils";
 import { ErrorBanner } from "@/components/shared/error-banner";
 import type { NotificationDto } from "@/types";
@@ -25,6 +26,7 @@ function notificationType(row: NotificationDto) {
 }
 
 export function NotificationsListView() {
+  const { notificationTypeNames } = useLookups();
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState(FILTER_ALL.types);
@@ -68,7 +70,7 @@ export function NotificationsListView() {
           {
             label: "Type",
             value: typeFilter,
-            options: [FILTER_ALL.types, ...NOTIFICATION_TYPE_OPTIONS],
+            options: [FILTER_ALL.types, ...notificationTypeNames],
             onChange: setTypeFilter,
           },
           {
