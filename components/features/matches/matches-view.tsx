@@ -96,12 +96,11 @@ export function MatchesView() {
   const { data: apiTeams } = useApiData<TeamDto[]>(() => api.teams.all(), []);
 
   const teamOptions = useMemo(() => {
-    const names = new Set<string>([clubName]);
+    const names = new Set<string>();
     for (const team of apiTeams ?? []) names.add(team.name);
-    for (const match of apiMatches ?? []) names.add(match.opponent);
     names.delete("");
     return [...names];
-  }, [clubName, apiTeams, apiMatches]);
+  }, [apiTeams]);
 
   const statusOptions = [FILTER_ALL.statuses, ...Object.values(MATCH_STATUS_LABELS)];
 

@@ -35,10 +35,8 @@ export function MatchForm({
   const [division, setDivision] = useState(
     match?.division ?? divisionOptions[0] ?? "",
   );
-  const [homeTeam, setHomeTeam] = useState(match?.home ?? clubName);
-  const [awayTeam, setAwayTeam] = useState(
-    match?.away ?? teamOptions.find((name) => name !== clubName) ?? "",
-  );
+  const [homeTeam, setHomeTeam] = useState(match?.home ?? "");
+  const [awayTeam, setAwayTeam] = useState(match?.away ?? "");
   const [date, setDate] = useState(initial.date);
   const [time, setTime] = useState(initial.time);
   const [venue, setVenue] = useState(match?.venue ?? venueOptions[0] ?? "");
