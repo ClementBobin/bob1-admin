@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { api, errorMessage } from "@/lib/api";
 import { FILTER_ALL, TEAM_STATUS_OPTIONS, statusTone } from "@/lib/constants";
-import { fullName, matchesSearch } from "@/lib/utils";
+import { fullName } from "@/lib/utils";
 import { useApiData } from "@/hooks/use-api-data";
+import { usePagedQuery } from "@/hooks/use-paged-query";
 import { useFormSheet } from "@/hooks/use-form-sheet";
 import { PageHeader } from "@/components/layout/page-header";
 import { DataTable } from "@/components/shared/data-table";
@@ -16,7 +17,7 @@ import { FormSheet, FormSheetFooter } from "@/components/shared/form-sheet";
 import { RowActionButton } from "@/components/shared/row-action-button";
 import { Status } from "@/components/shared/status";
 import { TEAM_FORM_ID, TeamForm } from "./team-form";
-import type { DivisionDto, PersonDto, TeamDto, TeamRow, VenueDto } from "@/types";
+import type { DivisionDto, PersonDto, TeamRow, VenueDto } from "@/types";
 
 export function TeamsView() {
   const [rows, setRows] = useState<TeamRow[]>([]);
@@ -24,9 +25,13 @@ export function TeamsView() {
   const [status, setStatus] = useState(FILTER_ALL.statuses);
   const sheet = useFormSheet<TeamRow>();
 
-  const { data: apiTeams, loading, error, reload } = useApiData<TeamDto[]>(() => api.teams.list(), []);
-  const { data: apiDivisions } = useApiData<DivisionDto[]>(() => api.divisions.list(), []);
-  const { data: apiVenues } = useApiData<VenueDto[]>(() => api.venues.list(), []);
+  const query = usePagedQuery((params) => api.teams.list(params), {
+    search,
+    isActive: status === FILTER_ALL.statuses ? undefined : status === "Active",
+  });
+  const { items: apiTeams, loading, error, reload } = query;
+  const { data: apiDivisions } = useApiData<DivisionDto[]>(() => api.divisions.all(), []);
+  const { data: apiVenues } = useApiData<VenueDto[]>(() => api.venues.all(), []);
   const { data: apiPeople } = useApiData<PersonDto[]>(
     async () => (await api.people.list({ take: 200 })).items,
     [],
@@ -55,16 +60,6 @@ export function TeamsView() {
       })),
     );
   }, [apiTeams, apiDivisions, apiVenues]);
-
-  const filtered = useMemo(
-    () =>
-      rows.filter(
-        (row) =>
-          matchesSearch(search, row.name, row.division, row.coach, row.trainingVenueName) &&
-          (status === FILTER_ALL.statuses || row.status === status),
-      ),
-    [rows, search, status],
-  );
 
   const save = async (row: TeamRow) => {
     const division = (apiDivisions ?? []).find((item) => item.name === row.division);
@@ -125,7 +120,9 @@ export function TeamsView() {
 
       <DataTable
         id="tour-teams-table"
-        rows={filtered}
+        rows={rows}
+        server={{ total: query.total, page: query.page, onPageChange: query.setPage }}
+        pageSize={query.pageSize}
         rowKey={(row) => row.id}
         minWidth={1000}
         grid="1.5fr 1fr 1.2fr 1fr .9fr 36px"

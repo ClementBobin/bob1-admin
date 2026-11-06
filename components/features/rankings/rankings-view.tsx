@@ -5,6 +5,7 @@ import { Plus, TrendingUp, Users, User, ChevronDown } from "lucide-react";
 import { personRankingToRow, familyRankingToRow } from "@/lib/adapters";
 import { api, errorMessage } from "@/lib/api";
 import { useApiData } from "@/hooks/use-api-data";
+import { usePagedQuery } from "@/hooks/use-paged-query";
 import { useLookups } from "@/hooks/use-lookups";
 import { cn, pointsAdjustmentError } from "@/lib/utils";
 import { toast } from "sonner";
@@ -18,13 +19,13 @@ import { FormSheet, FormSheetFooter } from "@/components/shared/form-sheet";
 import { ErrorBanner } from "@/components/shared/error-banner";
 import type {
   FamilyRankingRow,
-  FamilyRankingRowDto,
+  FamilyRankingResponse,
+  Paged,
   PersonDto,
   PersonRankingRow,
-  PersonRankingRowDto,
   PointCategory,
+  RankingResponse,
   RankingViewMode,
-  RankingsData,
 } from "@/types";
 
 export function RankingsView() {
@@ -37,57 +38,43 @@ export function RankingsView() {
 
   const isPersonView = viewMode === "person";
 
-  const {
-    data: personData,
-    loading: personLoading,
-    error: personError,
-    reload: reloadPerson,
-  } = useApiData<RankingsData<PersonRankingRow>>(
-    () =>
-      (category
-        ? api.rankings.get(category, "person")
-        : Promise.resolve({ top: [], season: "" })
-      ).then((response) => {
-        const r = response as { top: PersonRankingRowDto[]; season: string };
-        return { rows: r.top.map(personRankingToRow), season: r.season };
-      }),
-    [category, viewMode],
+  const [season, setSeason] = useState("");
+
+  const query = usePagedQuery<
+    PersonRankingRow | FamilyRankingRow,
+    { category: string; view: RankingViewMode }
+  >(
+    async (params) => {
+      if (!params.category) return { items: [], total: 0 };
+      const response = await api.rankings.get(params);
+      setSeason(response.season);
+      return params.view === "person"
+        ? {
+            items: (response as RankingResponse).top.map(personRankingToRow),
+            total: response.total,
+          }
+        : {
+            items: (response as FamilyRankingResponse).top.map(
+              familyRankingToRow,
+            ),
+            total: response.total,
+          };
+    },
+    { category, view: viewMode },
   );
 
-  const {
-    data: familyData,
-    loading: familyLoading,
-    error: familyError,
-    reload: reloadFamily,
-  } = useApiData<RankingsData<FamilyRankingRow>>(
-    () =>
-      (category
-        ? api.rankings.get(category, "family")
-        : Promise.resolve({ top: [], season: "" })
-      ).then((response) => {
-        const r = response as { top: FamilyRankingRowDto[]; season: string };
-        return { rows: r.top.map(familyRankingToRow), season: r.season };
-      }),
-    [category, viewMode],
-  );
-
-  const { data: apiPerson } = useApiData<{ total: number; items: PersonDto[] }>(
+  const { data: apiPerson } = useApiData<Paged<PersonDto>>(
     () => api.people.list({ take: 300 }),
     [],
   );
 
-  const rows = isPersonView
-    ? (personData?.rows ?? [])
-    : (familyData?.rows ?? []);
-  const loading = isPersonView ? personLoading : familyLoading;
-  const error = isPersonView ? personError : familyError;
-  const reload = isPersonView ? reloadPerson : reloadFamily;
+  const { items: rows, loading, error, reload } = query;
 
   return (
     <>
       <PageHeader
         id="tour-rankings-header"
-        eyebrow={`Saison ${isPersonView ? personData?.season : familyData?.season}`}
+        eyebrow={`Saison ${season}`}
         title="Classements"
         description={
           isPersonView
@@ -138,6 +125,12 @@ export function RankingsView() {
       <DataTable
         id="tour-rankings-table"
         rows={rows}
+        server={{
+          total: query.total,
+          page: query.page,
+          onPageChange: query.setPage,
+        }}
+        pageSize={query.pageSize}
         rowKey={(row) => {
           const r = row as
             | (PersonRankingRow & { family?: string })

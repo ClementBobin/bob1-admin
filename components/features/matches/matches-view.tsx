@@ -5,9 +5,10 @@ import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { matchToRow } from "@/lib/adapters";
 import { api, errorMessage } from "@/lib/api";
-import { FILTER_ALL, statusTone } from "@/lib/constants";
-import { cn, distinct, matchesSearch } from "@/lib/utils";
+import { FILTER_ALL, MATCH_STATUS_LABELS, statusTone } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 import { useApiData } from "@/hooks/use-api-data";
+import { usePagedQuery } from "@/hooks/use-paged-query";
 import { useLookups } from "@/hooks/use-lookups";
 import { useFormSheet } from "@/hooks/use-form-sheet";
 import { PageHeader } from "@/components/layout/page-header";
@@ -21,7 +22,6 @@ import { Status } from "@/components/shared/status";
 import { MATCH_FORM_ID, MatchForm } from "./match-form";
 import type {
   DivisionDto,
-  MatchDto,
   MatchPayload,
   MatchRow,
   NamedOption,
@@ -39,20 +39,24 @@ export function MatchesView() {
   const editing = sheet.editing;
   const [saving, setSaving] = useState(false);
 
-  const {
-    data: apiMatches,
-    loading,
-    error,
-    reload,
-  } = useApiData<MatchDto[]>(() => api.matches.list(), []);
   const { data: apiDivisions } = useApiData<DivisionDto[]>(
-    () => api.divisions.list(),
+    () => api.divisions.all(),
     [],
   );
   const { data: apiVenues } = useApiData<VenueDto[]>(
-    () => api.venues.list(),
+    () => api.venues.all(),
     [],
   );
+
+  const query = usePagedQuery((params) => api.matches.list(params), {
+    search,
+    divisionId:
+      division === FILTER_ALL.divisions
+        ? undefined
+        : (apiDivisions ?? []).find((item) => item.name === division)?.id,
+    status: Object.entries(MATCH_STATUS_LABELS).find(([, label]) => label === status)?.[0],
+  });
+  const { items: apiMatches, loading, error, reload } = query;
 
   useEffect(() => {
     setRows(
@@ -89,7 +93,7 @@ export function MatchesView() {
     return names;
   }, [venueOptions, editing]);
 
-  const { data: apiTeams } = useApiData<TeamDto[]>(() => api.teams.list(), []);
+  const { data: apiTeams } = useApiData<TeamDto[]>(() => api.teams.all(), []);
 
   const teamOptions = useMemo(() => {
     const names = new Set<string>([clubName]);
@@ -99,28 +103,7 @@ export function MatchesView() {
     return [...names];
   }, [clubName, apiTeams, apiMatches]);
 
-  const statusOptions = [
-    FILTER_ALL.statuses,
-    ...distinct(rows.map((row) => row.status)),
-  ];
-
-  const filtered = useMemo(() => {
-    return rows.filter((row) => {
-      const matchSearch = matchesSearch(
-        search,
-        row.home,
-        row.away,
-        row.division,
-        row.venue,
-        row.date,
-      );
-      const matchDivision =
-        division === FILTER_ALL.divisions || row.division === division;
-      const matchStatus =
-        status === FILTER_ALL.statuses || row.status === status;
-      return matchSearch && matchDivision && matchStatus;
-    });
-  }, [rows, search, division, status]);
+  const statusOptions = [FILTER_ALL.statuses, ...Object.values(MATCH_STATUS_LABELS)];
 
   const save = async (payload: MatchPayload) => {
     const divisionId = divisionOptions.find(
@@ -222,7 +205,9 @@ export function MatchesView() {
 
       <DataTable
         id="tour-matches-table"
-        rows={filtered}
+        rows={rows}
+        server={{ total: query.total, page: query.page, onPageChange: query.setPage }}
+        pageSize={query.pageSize}
         rowKey={(row) => row.id}
         minWidth={1060}
         grid="1.1fr .65fr 1.4fr 1.1fr .9fr .9fr 1fr .8fr 36px"

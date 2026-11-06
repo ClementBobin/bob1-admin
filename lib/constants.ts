@@ -76,3 +76,10 @@ export const KPI_LINKS: Record<string, string> = {
 };
 
 export const NOTIFICATION_STATUS_FILTER = ["Lue", "Non lue"] as const;
+
+/** Server match status (see GET /lookups matchStatuses) → label shown in the status filter. */
+export const MATCH_STATUS_LABELS: Record<string, string> = {
+  Scheduled: "Programmé",
+  Cancelled: "Annulé",
+  Played: "Joué",
+};

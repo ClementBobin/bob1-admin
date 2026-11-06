@@ -47,10 +47,10 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
   const [recipients, setRecipients] = useState<number | null>(null);
   // Drafts are now managed in the notifications list page
 
-  const { data: apiDivisions } = useApiData<DivisionDto[]>(() => api.divisions.list(), []);
-  const { data: apiTeams } = useApiData<TeamDto[]>(() => api.teams.list(), []);
+  const { data: apiDivisions } = useApiData<DivisionDto[]>(() => api.divisions.all(), []);
+  const { data: apiTeams } = useApiData<TeamDto[]>(() => api.teams.all(), []);
   const { data: notifications, loading: loadingNotification } = useApiData<NotificationDto[]>(
-    () => (editing ? api.notifications.list(200) : Promise.resolve([])),
+    () => (editing ? api.notifications.adminList({ take: 200 }).then((page) => page.items) : Promise.resolve([])),
     [editing],
   );
   const existing = editing ? notifications?.find((item) => item.id === notificationId) : undefined;

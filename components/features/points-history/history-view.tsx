@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Filter, Plus, Undo2 } from "lucide-react";
 import { api, errorMessage } from "@/lib/api";
 import { useApiData } from "@/hooks/use-api-data";
+import { usePagedQuery } from "@/hooks/use-paged-query";
 import { useLookups } from "@/hooks/use-lookups";
-import { cn, matchesSearch, pointsAdjustmentError } from "@/lib/utils";
+import { cn, fullName, pointsAdjustmentError } from "@/lib/utils";
 import { useFormSheet } from "@/hooks/use-form-sheet";
 import { HISTORY_FORM_ID, HistoryForm } from "./history-form";
 import { toast } from "sonner";
@@ -18,7 +19,7 @@ import { FormSheet, FormSheetFooter } from "@/components/shared/form-sheet";
 import { FILTER_ALL } from "@/lib/constants";
 import { ErrorBanner } from "@/components/shared/error-banner";
 import type {
-  EntryDto,
+  PersonDto,
   HistoryRow,
   PointsPayload,
   RankingRuleDto,
@@ -30,19 +31,24 @@ export function HistoryView() {
   const sheet = useFormSheet<HistoryRow>();
   const [saving, setSaving] = useState(false);
 
-  const {
-    data: apiHistory,
-    loading,
-    error,
-    reload,
-  } = useApiData<EntryDto[]>(
-    async () => (await api.rankings.history({ take: 500 })).items,
+  const { pointCategoryKeys, pointCategoryLabel } = useLookups();
+
+  const query = usePagedQuery((params) => api.rankings.history(params), {
+    search,
+    category:
+      categoryFilter === FILTER_ALL.categories
+        ? undefined
+        : pointCategoryKeys.find(
+            (key) => pointCategoryLabel(key) === categoryFilter,
+          ),
+  });
+  const { items: apiHistory, loading, error, reload } = query;
+  const { data: apiPeople } = useApiData<PersonDto[]>(
+    () => api.people.all(),
     [],
   );
-
-  const { pointCategoryKeys, pointCategoryLabel } = useLookups();
   const { data: apiRules } = useApiData<RankingRuleDto[]>(
-    () => api.rankings.rules(),
+    () => api.rankings.allRules(),
     [],
   );
 
@@ -70,24 +76,9 @@ export function HistoryView() {
     };
   });
 
-  const personOptions = Array.from(
-    new Set((apiHistory ?? []).map((entry) => entry.personName)),
+  const personOptions = (apiPeople ?? []).map((person) =>
+    fullName(person.firstName, person.lastName),
   );
-
-  const filtered = useMemo(() => {
-    return rows.filter((row) => {
-      const matchSearch = matchesSearch(
-        search,
-        row.person,
-        row.reason,
-        row.match,
-      );
-      const matchCategory =
-        categoryFilter === FILTER_ALL.categories ||
-        row.categoryLabel === categoryFilter;
-      return matchSearch && matchCategory;
-    });
-  }, [rows, search, categoryFilter]);
 
   const openEdit = (row: HistoryRow) => {
     if (!row.isPenalty && !row.isRevoked) {
@@ -116,8 +107,15 @@ export function HistoryView() {
   };
 
   const save = async (payload: PointsPayload) => {
-    const invalid = pointsAdjustmentError(payload);
-    if (invalid || !payload.personId) {
+    const personId = (apiPeople ?? []).find(
+      (person) =>
+        fullName(person.firstName, person.lastName) === payload.target,
+    )?.id;
+    const invalid = pointsAdjustmentError({
+      ...payload,
+      personId: personId ?? null,
+    });
+    if (invalid || !personId) {
       toast.error(invalid ?? "Sélectionnez une personne.");
       return;
     }
@@ -125,7 +123,7 @@ export function HistoryView() {
     setSaving(true);
     try {
       await api.rankings.createPenalty({
-        personId: payload.personId,
+        personId,
         points: payload.points,
         reason: payload.reason,
       });
@@ -176,7 +174,13 @@ export function HistoryView() {
 
       <DataTable
         id="tour-history-table"
-        rows={filtered}
+        rows={rows}
+        server={{
+          total: query.total,
+          page: query.page,
+          onPageChange: query.setPage,
+        }}
+        pageSize={query.pageSize}
         rowKey={(row) => row.id}
         minWidth={1100}
         grid="1.2fr 1fr 1.5fr .8fr 1fr 1fr 36px"

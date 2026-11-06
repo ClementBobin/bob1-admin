@@ -14,3 +14,4 @@ export * from "./team";
 export * from "./ui";
 export * from "./venue";
 export * from "./lookups";
+export * from "./query";

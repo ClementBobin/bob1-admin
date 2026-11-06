@@ -22,7 +22,7 @@ export function RulesView() {
   const [saving, setSaving] = useState(false);
 
   const { data: apiRules, loading, error, reload } = useApiData<RankingRuleDto[]>(
-    () => api.rankings.rules(),
+    () => api.rankings.allRules(),
     [],
   );
 

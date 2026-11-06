@@ -13,6 +13,7 @@ export type PersonRankingRowDto = {
 
 export type RankingResponse = {
   season: string;
+  total: number;
   top: PersonRankingRowDto[];
   mine: PersonRankingRowDto | null;
 };
@@ -28,6 +29,7 @@ export type FamilyRankingRowDto = {
 
 export type FamilyRankingResponse = {
   season: string;
+  total: number;
   top: FamilyRankingRowDto[];
   mine: FamilyRankingRowDto | null;
 };

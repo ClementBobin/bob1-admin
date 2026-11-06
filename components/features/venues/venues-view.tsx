@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { MapPin, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { api, errorMessage } from "@/lib/api";
-import { matchesSearch } from "@/lib/utils";
-import { useApiData } from "@/hooks/use-api-data";
+import { usePagedQuery } from "@/hooks/use-paged-query";
 import { useFormSheet } from "@/hooks/use-form-sheet";
 import { PageHeader } from "@/components/layout/page-header";
 import { DataTable } from "@/components/shared/data-table";
@@ -14,14 +13,15 @@ import { Filters } from "@/components/shared/filters";
 import { FormSheet, FormSheetFooter } from "@/components/shared/form-sheet";
 import { RowActionButton } from "@/components/shared/row-action-button";
 import { VENUE_FORM_ID, VenueForm } from "./venue-form";
-import type { VenueDto, VenueRow } from "@/types";
+import type { VenueRow } from "@/types";
 
 export function VenuesView() {
   const [rows, setRows] = useState<VenueRow[]>([]);
   const [search, setSearch] = useState("");
   const sheet = useFormSheet<VenueRow>();
 
-  const { data: apiVenues, loading, error, reload } = useApiData<VenueDto[]>(() => api.venues.list(), []);
+  const query = usePagedQuery((params) => api.venues.list(params), { search });
+  const { items: apiVenues, loading, error, reload } = query;
 
   useEffect(() => {
     setRows(
@@ -35,11 +35,6 @@ export function VenuesView() {
       })),
     );
   }, [apiVenues]);
-
-  const filtered = useMemo(
-    () => rows.filter((row) => matchesSearch(search, row.name, row.address, row.city, row.postalCode)),
-    [rows, search],
-  );
 
   const save = async (row: VenueRow) => {
     const address = row.address.trim() === "" || row.address === "—" ? null : row.address.trim();
@@ -77,7 +72,9 @@ export function VenuesView() {
 
       <DataTable
         id="tour-venues-table"
-        rows={filtered}
+        rows={rows}
+        server={{ total: query.total, page: query.page, onPageChange: query.setPage }}
+        pageSize={query.pageSize}
         rowKey={(row) => row.id}
         minWidth={900}
         grid="1.3fr 1.3fr 1fr .8fr .8fr 36px"

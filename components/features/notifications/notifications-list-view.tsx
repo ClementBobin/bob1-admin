@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { api } from "@/lib/api";
-import { useApiData } from "@/hooks/use-api-data";
+import { usePagedQuery } from "@/hooks/use-paged-query";
 import { useLookups } from "@/hooks/use-lookups";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/shared/data-table";
@@ -12,7 +12,7 @@ import { Filters } from "@/components/shared/filters";
 import { PageHeader } from "@/components/layout/page-header";
 import { Status } from "@/components/shared/status";
 import { FILTER_ALL, READ_STATUS_OPTIONS } from "@/lib/constants";
-import { formatDateTime, matchesSearch } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
 import { ErrorBanner } from "@/components/shared/error-banner";
 import type { NotificationDto } from "@/types";
 
@@ -33,22 +33,12 @@ export function NotificationsListView() {
   const [statusFilter, setStatusFilter] = useState(FILTER_ALL.statuses);
   // No delete for sent notifications
 
-  const {
-    data: rows,
-    loading,
-    error,
-  } = useApiData<NotificationDto[]>(
-    () => api.notifications.adminList({ take: 200 }).then((r) => r.items)
-  );
-
-  const filtered = useMemo(() => {
-    return (rows ?? []).filter((row) => {
-      const matchSearch = matchesSearch(search, row.title, row.body);
-      const matchType = typeFilter === FILTER_ALL.types || notificationType(row) === typeFilter;
-      const matchStatus = statusFilter === FILTER_ALL.statuses || (statusFilter === "Lue" ? row.isRead : !row.isRead);
-      return matchSearch && matchType && matchStatus;
-    });
-  }, [rows, search, typeFilter, statusFilter]);
+  const query = usePagedQuery((params) => api.notifications.adminList(params), {
+    search,
+    type: typeFilter === FILTER_ALL.types ? undefined : typeFilter,
+    read: statusFilter === FILTER_ALL.statuses ? undefined : statusFilter === "Lue",
+  });
+  const { items: rows, loading, error } = query;
 
   // Notifications cannot be deleted once sent
 
@@ -91,7 +81,9 @@ export function NotificationsListView() {
 
       <DataTable
         id="tour-notifications-table"
-        rows={filtered}
+        rows={rows}
+        server={{ total: query.total, page: query.page, onPageChange: query.setPage }}
+        pageSize={query.pageSize}
         rowKey={(row) => row.id}
         minWidth={900}
         emptyMessage={loading ? "Chargement des notifications…" : undefined}

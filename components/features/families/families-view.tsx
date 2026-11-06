@@ -1,18 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Home } from "lucide-react";
 import { familyToRow } from "@/lib/adapters";
 import { api } from "@/lib/api";
 import { ACCOUNTS_OPTIONS, FILTER_ALL } from "@/lib/constants";
-import { matchesSearch } from "@/lib/utils";
-import { useApiData } from "@/hooks/use-api-data";
+import { usePagedQuery } from "@/hooks/use-paged-query";
 import { Status } from "@/components/shared/status";
 import { DataTable } from "@/components/shared/data-table";
 import { Filters } from "@/components/shared/filters";
 import { PageHeader } from "@/components/layout/page-header";
 import { ErrorBanner } from "@/components/shared/error-banner";
-import type { AdminFamilyDto, Family } from "@/types";
+import type { Family } from "@/types";
 
 export function FamiliesView() {
   const [rows, setRows] = useState<Family[]>([]);
@@ -20,28 +19,16 @@ export function FamiliesView() {
   const [accountsFilter, setAccountsFilter] = useState(FILTER_ALL.accounts);
   const [hideInactive, setHideInactive] = useState(true); // Default: hide families with all inactive accounts
 
-  const {
-    data: apiFamilies,
-    loading,
-    error,
-  } = useApiData<AdminFamilyDto[]>(
-    () => api.families.list({ take: 300 }).then(({ items }) => items),
-  );
+  const query = usePagedQuery((params) => api.families.list(params), {
+    search,
+    hasAccounts: accountsFilter === FILTER_ALL.accounts ? undefined : accountsFilter === "Complet",
+    hideInactive: hideInactive || undefined,
+  });
+  const { items: apiFamilies, loading, error } = query;
 
   useEffect(() => {
     setRows(apiFamilies?.map(familyToRow) ?? []);
   }, [apiFamilies]);
-
-  const filtered = useMemo(() => {
-    return rows.filter((row) => {
-      const matchSearch = matchesSearch(search, row.name, row.parents, row.children);
-      const matchAccounts =
-        accountsFilter === FILTER_ALL.accounts ||
-        (accountsFilter === "Complet" ? row.status === "Complet" : row.status === "À compléter");
-      const matchInactive = !hideInactive || !row.hasInactiveAccounts;
-      return matchSearch && matchAccounts && matchInactive;
-    });
-  }, [rows, search, accountsFilter, hideInactive]);
 
   return (
     <>
@@ -82,7 +69,9 @@ export function FamiliesView() {
 
       <DataTable
         id="tour-families-table"
-        rows={filtered}
+        rows={rows}
+        server={{ total: query.total, page: query.page, onPageChange: query.setPage }}
+        pageSize={query.pageSize}
         rowKey={(row) => row.id}
         minWidth={900}
         grid="1.2fr 1.25fr 1.3fr .8fr 1fr 1fr 36px"

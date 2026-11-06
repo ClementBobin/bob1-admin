@@ -17,7 +17,21 @@ import type {
   EntryDto,
   FamilyRankingResponse,
   MatchDto,
+  DivisionQuery,
+  FamilyQuery,
   LookupsDto,
+  MatchQuery,
+  NotificationQuery,
+  Paged,
+  PeopleQuery,
+  PenaltyQuery,
+  PointsHistoryQuery,
+  RankingQuery,
+  RuleQuery,
+  TeamQuery,
+  UrgentQuery,
+  UrgentSlotPage,
+  VenueQuery,
   MatchInput,
   NotificationDto,
   PenaltyDto,
@@ -128,7 +142,7 @@ export function clearSession() {
 // ---------------------------------------------------------------------------
 
 type RequestOptions = {
-  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  method?: "GET" | "QUERY" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   auth?: boolean;
   retry?: boolean;
@@ -230,14 +244,19 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
 // Endpoint helpers
 // ---------------------------------------------------------------------------
 
-function query(params: Record<string, string | number | boolean | null | undefined>): string {
-  const search = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== null && value !== "") search.set(key, String(value));
-  }
-  const serialized = search.toString();
-  return serialized ? `?${serialized}` : "";
+/**
+ * Lists use the HTTP QUERY method: a safe, idempotent read whose search / filter / paging
+ * criteria travel in the JSON body. A body is always sent (even empty) so the content type is set.
+ */
+function search<T>(path: string, criteria: object = {}) {
+  const body = Object.fromEntries(
+    Object.entries(criteria).filter(([, value]) => value !== undefined && value !== null && value !== ""),
+  );
+  return apiFetch<T>(path, { method: "QUERY", body });
 }
+
+/** Page size used when a screen needs every row (dropdowns, lookups). */
+const ALL = 500;
 
 export const api = {
   // ---- Auth ----
@@ -263,7 +282,8 @@ export const api = {
   },
 
   divisions: {
-    list: () => apiFetch<DivisionDto[]>("/divisions"),
+    list: (params: DivisionQuery = {}) => search<Paged<DivisionDto>>("/divisions", params),
+    all: () => search<Paged<DivisionDto>>("/divisions", { take: ALL }).then((page) => page.items),
     create: (input: { name: string; sortOrder: number; category: string; gender: string; isActive: boolean }) =>
       apiFetch<DivisionDto>("/admin/divisions", { method: "POST", body: input }),
     update: (id: string, input: { name: string; sortOrder: number; category: string; gender: string; isActive: boolean }) =>
@@ -272,8 +292,8 @@ export const api = {
   },
 
   teams: {
-    list: (divisionId?: string) =>
-      apiFetch<TeamDto[]>(`/teams${query({ divisionId })}`),
+    list: (params: TeamQuery = {}) => search<Paged<TeamDto>>("/teams", params),
+    all: () => search<Paged<TeamDto>>("/teams", { take: ALL }).then((page) => page.items),
     create: (input: { name: string; divisionId: string; coachName?: string | null; coachUserId?: string | null; logoUrl?: string | null; isActive?: boolean; trainingVenueId?: string | null }) =>
       apiFetch<TeamDto>("/admin/teams", { method: "POST", body: input }),
     update: (id: string, input: { name: string; divisionId: string; coachName?: string | null; coachUserId?: string | null; logoUrl?: string | null; isActive?: boolean; trainingVenueId?: string | null }) =>
@@ -282,7 +302,8 @@ export const api = {
   },
 
   venues: {
-    list: () => apiFetch<VenueDto[]>("/venues"),
+    list: (params: VenueQuery = {}) => search<Paged<VenueDto>>("/venues", params),
+    all: () => search<Paged<VenueDto>>("/venues", { take: ALL }).then((page) => page.items),
     create: (input: { name: string; address: string | null; city: string | null; postalCode: string | null }) =>
       apiFetch<VenueDto>("/admin/venues", { method: "POST", body: input }),
     update: (id: string, input: { name: string; address: string | null; city: string | null; postalCode: string | null }) =>
@@ -292,8 +313,9 @@ export const api = {
 
   // ---- Matches ----
   matches: {
-    list: (params: { divisionId?: string; from?: string; to?: string } = {}) =>
-      apiFetch<MatchDto[]>(`/matches${query(params)}`),
+    list: (params: MatchQuery = {}) => search<Paged<MatchDto>>("/matches", params),
+    all: (params: MatchQuery = {}) =>
+      search<Paged<MatchDto>>("/matches", { ...params, take: 300 }).then((page) => page.items),
     create: (input: MatchInput) =>
       apiFetch<MatchDto>("/admin/matches", { method: "POST", body: input }),
     update: (id: string, input: MatchInput) =>
@@ -306,13 +328,14 @@ export const api = {
   slots: {
     create: (matchId: string, input: SlotInput) =>
       apiFetch<{ id: string }>(`/admin/matches/${matchId}/slots`, { method: "POST", body: input }),
-    urgent: (days?: number) => apiFetch<UrgentSlotDto[]>(`/admin/slots/urgent${query({ days })}`),
+    urgent: (params: UrgentQuery = {}) => search<UrgentSlotPage<UrgentSlotDto>>("/admin/slots/urgent", params),
   },
 
   // ---- People (admin) ----
   people: {
-    list: (params: { search?: string; role?: string; skip?: number; take?: number } = {}) =>
-      apiFetch<{ total: number; items: PersonDto[] }>(`/admin/people${query(params)}`),
+    list: (params: PeopleQuery = {}) =>
+      search<Paged<PersonDto>>("/admin/people", params),
+    all: () => search<Paged<PersonDto>>("/admin/people", { take: 200 }).then((page) => page.items),
     create: (input: PersonInput) =>
       apiFetch<CreatePersonResponse>("/admin/people", { method: "POST", body: input }),
     update: (id: string, input: Omit<PersonInput, "roles" | "password">) =>
@@ -327,8 +350,8 @@ export const api = {
 
   // ---- Families (admin) ----
   families: {
-    list: (params: { search?: string; skip?: number; take?: number } = {}) =>
-      apiFetch<{ total: number; items: AdminFamilyDto[] }>(`/admin/families${query(params)}`),
+    list: (params: FamilyQuery = {}) =>
+      search<Paged<AdminFamilyDto>>("/admin/families", params),
     create: (name: string) =>
       apiFetch<AdminFamilyDto>("/admin/families", { method: "POST", body: { name } }),
     update: (id: string, name: string) =>
@@ -339,18 +362,19 @@ export const api = {
   // ---- Ranking ----
   rankings: {
     // Person rankings
-    get: (category?: string, view?: "person" | "family") =>
-      apiFetch<RankingResponse | FamilyRankingResponse>(`/admin/rankings${query({ category, view })}`),
+    get: (params: RankingQuery = {}) =>
+      search<RankingResponse | FamilyRankingResponse>("/admin/rankings", params),
     // My entries
     myEntries: (season?: string, take?: number) =>
-      apiFetch<EntryDto[]>(`/rankings/me/entries${query({ season, take })}`),
-    rules: () => apiFetch<RankingRuleDto[]>("/ranking-rules"),
+      search<EntryDto[]>("/rankings/me/entries", { season, take }),
+    rules: (params: RuleQuery = {}) => search<Paged<RankingRuleDto>>("/ranking-rules", params),
+    allRules: () => search<Paged<RankingRuleDto>>("/ranking-rules", { take: ALL }).then((page) => page.items),
     updateRule: (key: string, points: number, label?: string, pointsJ15?: number, pointsJ4?: number) =>
       apiFetch<RankingRuleDto>(`/admin/ranking-rules/${encodeURIComponent(key)}`, {
         method: "PUT",
         body: { points, label, pointsJ15, pointsJ4 },
       }),
-    penalties: (personId?: string) => apiFetch<PenaltyDto[]>(`/admin/penalties${query({ personId })}`),
+    penalties: (params: PenaltyQuery = {}) => search<Paged<PenaltyDto>>("/admin/penalties", params),
     createPenalty: (input: {
       personId: string;
       ruleKey?: string;
@@ -361,13 +385,12 @@ export const api = {
     revokePenalty: (id: string) =>
       apiFetch<void>(`/admin/penalties/${id}/revoke`, { method: "POST" }),
     // Points history
-    history: (params: { personId?: string; category?: string; season?: string; skip?: number; take?: number } = {}) =>
-      apiFetch<{ total: number; items: EntryDto[] }>(`/admin/points-history${query(params)}`),
+    history: (params: PointsHistoryQuery = {}) => search<Paged<EntryDto>>("/admin/points-history", params),
   },
 
   // ---- Notifications ----
   notifications: {
-    list: (take = 100) => apiFetch<NotificationDto[]>(`/notifications${query({ take })}`),
+    list: (take = 100) => search<NotificationDto[]>("/notifications", { take }),
     unreadCount: () => apiFetch<{ count: number }>("/notifications/unread-count"),
     markRead: (id: string) =>
       apiFetch<void>(`/notifications/${id}/read`, { method: "POST" }),
@@ -377,8 +400,7 @@ export const api = {
         method: "POST",
         body: { title, body, divisionId, expiresAtUtc, recurring, startup },
       }),
-    adminList: (params: { search?: string; skip?: number; take?: number } = {}) =>
-      apiFetch<{ total: number; items: NotificationDto[] }>(`/admin/notifications${query(params)}`),
+    adminList: (params: NotificationQuery = {}) => search<Paged<NotificationDto>>("/admin/notifications", params),
     update: (id: string, input: { title: string; body: string; expiresAtUtc?: string | null; recurring?: boolean; startup?: boolean }) =>
       apiFetch<NotificationDto>(`/admin/notifications/${id}`, { method: "PUT", body: input }),
     remove: (id: string) => apiFetch<void>(`/admin/notifications/${id}`, { method: "DELETE" }),

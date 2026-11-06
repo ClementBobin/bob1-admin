@@ -7,7 +7,7 @@ import { EntityForm } from "@/components/shared/entity-form";
 import { FormField } from "@/components/shared/form-field";
 import { OptionSelect } from "@/components/shared/option-select";
 import { useLookups } from "@/hooks/use-lookups";
-import { parsePoints } from "@/lib/utils";
+import { fullName, parsePoints } from "@/lib/utils";
 import type { PersonDto, PointCategory, PointsPayload } from "@/types";
 
 export const POINTS_FORM_ID = "points-form";
@@ -22,7 +22,8 @@ export function PointsForm({
   onSave: (payload: PointsPayload) => void;
 }) {
   const { pointCategoryLabel } = useLookups();
-  const personOptions = persons.map((person) => person.id);
+  const nameOf = (person: PersonDto) => fullName(person.firstName, person.lastName);
+  const personOptions = persons.map(nameOf);
   const [target, setTarget] = useState(personOptions[0] ?? "");
   const [points, setPoints] = useState("");
   const [motif, setMotif] = useState("");
@@ -34,7 +35,7 @@ export function PointsForm({
         single
         onSubmit={() =>
           onSave({
-            personId: personOptions.find((item) => item === target) ?? null,
+            personId: persons.find((person) => nameOf(person) === target)?.id ?? null,
             target,
             points: parsePoints(points),
             reason: motif,

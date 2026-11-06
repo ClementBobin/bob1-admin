@@ -33,7 +33,7 @@ export function HistoryForm({
 
   const submit = () =>
     onSave({
-      personId: personOptions.includes(person) ? person : null,
+      personId: null,
       target: person,
       points: parsePoints(points),
       reason,

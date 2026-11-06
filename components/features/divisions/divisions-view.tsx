@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { divisionToRow, teamCountByDivision } from "@/lib/adapters";
 import { api, errorMessage } from "@/lib/api";
 import { statusTone } from "@/lib/constants";
-import { matchesSearch } from "@/lib/utils";
 import { useApiData } from "@/hooks/use-api-data";
+import { usePagedQuery } from "@/hooks/use-paged-query";
 import { useFormSheet } from "@/hooks/use-form-sheet";
 import { PageHeader } from "@/components/layout/page-header";
 import { DataTable } from "@/components/shared/data-table";
@@ -17,25 +17,21 @@ import { FormSheet, FormSheetFooter } from "@/components/shared/form-sheet";
 import { RowActionButton } from "@/components/shared/row-action-button";
 import { Status } from "@/components/shared/status";
 import { DIVISION_FORM_ID, DivisionForm } from "./division-form";
-import type { DivisionDto, DivisionRow, TeamDto } from "@/types";
+import type { DivisionRow, TeamDto } from "@/types";
 
 export function DivisionsView() {
   const [rows, setRows] = useState<DivisionRow[]>([]);
   const [search, setSearch] = useState("");
   const sheet = useFormSheet<DivisionRow>();
 
-  const { data: apiDivisions, loading, error, reload } = useApiData<DivisionDto[]>(() => api.divisions.list(), []);
-  const { data: apiTeams } = useApiData<TeamDto[]>(() => api.teams.list());
+  const query = usePagedQuery((params) => api.divisions.list(params), { search });
+  const { items: apiDivisions, loading, error, reload } = query;
+  const { data: apiTeams } = useApiData<TeamDto[]>(() => api.teams.all());
 
   useEffect(() => {
     const counts = teamCountByDivision(apiTeams ?? []);
     setRows((apiDivisions ?? []).map((division) => divisionToRow(division, counts.get(division.id))));
   }, [apiDivisions, apiTeams]);
-
-  const filtered = useMemo(
-    () => rows.filter((row) => matchesSearch(search, row.name, row.category, row.gender)),
-    [rows, search],
-  );
 
   const save = async (row: DivisionRow) => {
     const payload = {
@@ -77,7 +73,9 @@ export function DivisionsView() {
 
       <DataTable
         id="tour-divisions-table"
-        rows={filtered}
+        rows={rows}
+        server={{ total: query.total, page: query.page, onPageChange: query.setPage }}
+        pageSize={query.pageSize}
         rowKey={(row) => row.id}
         minWidth={760}
         grid="1.4fr 1fr 1fr 1fr .8fr 36px"

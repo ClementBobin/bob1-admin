@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { personToRow } from "@/lib/adapters";
 import { api, errorMessage } from "@/lib/api";
 import { FILTER_ALL, PERSON_STATUS_OPTIONS, ROLE_TONE_CLASSES, statusTone } from "@/lib/constants";
-import { cn, matchesSearch } from "@/lib/utils";
-import { useApiData } from "@/hooks/use-api-data";
+import { cn } from "@/lib/utils";
+import { usePagedQuery } from "@/hooks/use-paged-query";
 import { useFormSheet } from "@/hooks/use-form-sheet";
 import { useLookups } from "@/hooks/use-lookups";
 import { PageHeader } from "@/components/layout/page-header";
@@ -19,7 +19,7 @@ import { InitialsAvatar } from "@/components/shared/initials-avatar";
 import { RowActionButton } from "@/components/shared/row-action-button";
 import { Status } from "@/components/shared/status";
 import { PERSON_FORM_ID, PersonForm } from "./person-form";
-import type { Person, PersonDto, PersonPayload } from "@/types";
+import type { Person, PersonPayload } from "@/types";
 
 export function PeopleView() {
   const { roles } = useLookups();
@@ -31,12 +31,12 @@ export function PeopleView() {
   const [tempPassword, setTempPassword] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const {
-    data: apiPeople,
-    loading,
-    error,
-    reload,
-  } = useApiData<PersonDto[]>(() => api.people.list({ take: 200 }).then((response) => response.items));
+  const query = usePagedQuery((params) => api.people.list(params), {
+    search,
+    role: role === FILTER_ALL.roles ? undefined : role,
+    isActive: status === FILTER_ALL.statuses ? undefined : status === "Actif",
+  });
+  const { items: apiPeople, loading, error, reload } = query;
 
   useEffect(() => {
     setRows(
@@ -47,15 +47,6 @@ export function PeopleView() {
       })),
     );
   }, [apiPeople]);
-
-  const filtered = useMemo(() => {
-    return rows.filter((row) => {
-      const matchSearch = matchesSearch(search, row.name, row.email, row.roles.join(" "));
-      const matchRole = role === FILTER_ALL.roles || row.roles.includes(role);
-      const matchStatus = status === FILTER_ALL.statuses || row.status === status;
-      return matchSearch && matchRole && matchStatus;
-    });
-  }, [rows, search, role, status]);
 
   const save = async (payload: PersonPayload) => {
     const editing = sheet.editing;
@@ -169,7 +160,9 @@ export function PeopleView() {
 
       <DataTable
         id="tour-people-table"
-        rows={filtered}
+        rows={rows}
+        server={{ total: query.total, page: query.page, onPageChange: query.setPage }}
+        pageSize={query.pageSize}
         rowKey={(row) => row.id}
         minWidth={940}
         grid="1.25fr 1.35fr 1.3fr .8fr 1fr 36px"
