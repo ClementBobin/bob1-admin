@@ -1,0 +1,27 @@
+{
+  "clubName": "BOB1",
+  "roles": ["Parent", "Staff", "Admin"],
+  "divisionGenders": ["Masculin", "Féminin", "Mixte"],
+  "divisionCategories": ["U11", "U13", "U15", "U17", "U18", "Senior"],
+  "matchStatuses": ["Scheduled", "Cancelled", "Played"],
+  "slotKinds": ["Volunteer", "Staff"],
+  "slotTemplates": [
+    { "key": "arbitres", "role": "Arbitres", "kind": "Staff", "defaultCapacity": 4 },
+    { "key": "chrono", "role": "Chrono", "kind": "Staff", "defaultCapacity": 1 },
+    { "key": "mar", "role": "MAR", "kind": "Staff", "defaultCapacity": 1 },
+    { "key": "buvette", "role": "Buvette", "kind": "Volunteer", "defaultCapacity": 2 }
+  ],
+  "pointCategories": [
+    { "value": "presence", "label": "Présence" },
+    { "value": "volunteer", "label": "Bénévolat" },
+    { "value": "staff", "label": "Officiel / staff" },
+    { "value": "carpool", "label": "Covoiturage" },
+    { "value": "penalty", "label": "Pénalité" }
+  ],
+  "notificationTypes": [
+    { "value": "Général", "label": "Général" },
+    { "value": "Match", "label": "Match" },
+    { "value": "Urgent", "label": "Urgent" },
+    { "value": "Pénalité", "label": "Pénalité" }
+  ]
+}

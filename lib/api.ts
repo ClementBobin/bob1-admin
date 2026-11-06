@@ -19,7 +19,6 @@ import type {
   MatchDto,
   DivisionQuery,
   FamilyQuery,
-  LookupsDto,
   MatchQuery,
   NotificationQuery,
   Paged,
@@ -277,10 +276,6 @@ export const api = {
   me: () => apiFetch<AuthUser>("/me"),
 
   // ---- Club ----
-  lookups: {
-    get: () => apiFetch<LookupsDto>("/lookups"),
-  },
-
   divisions: {
     list: (params: DivisionQuery = {}) => search<Paged<DivisionDto>>("/divisions", params),
     all: () => search<Paged<DivisionDto>>("/divisions", { take: ALL }).then((page) => page.items),
