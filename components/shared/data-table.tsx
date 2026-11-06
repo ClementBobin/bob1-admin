@@ -25,6 +25,7 @@ export function DataTable<T>({
   rowClassName,
   emptyMessage = "Aucun résultat ne correspond à votre recherche.",
   id,
+  server,
 }: {
   columns: Column<T>[];
   rows: T[];
@@ -36,11 +37,15 @@ export function DataTable<T>({
   rowClassName?: (row: T, index: number) => string | undefined;
   emptyMessage?: string;
   id?: string;
+  /** Server-side paging: `rows` is already the current page, `total` the row count before paging. */
+  server?: { total: number; page: number; onPageChange: (page: number) => void };
 }) {
-  const [page, setPage] = useState(1);
-  const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
-  const currentPage = Math.min(page, pageCount);
-  const visible = rows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const [localPage, setLocalPage] = useState(1);
+  const total = server ? server.total : rows.length;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const currentPage = Math.min(server ? server.page : localPage, pageCount);
+  const setPage = server ? server.onPageChange : setLocalPage;
+  const visible = server ? rows : rows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const pages = Array.from({ length: pageCount }, (_, index) => index + 1).filter(
     (item) => item === 1 || item === pageCount || Math.abs(item - currentPage) <= 1,
   );
@@ -91,7 +96,7 @@ export function DataTable<T>({
         </TableBody>
       </Table>
       <div className="flex min-h-[54px] flex-wrap items-center justify-between gap-3 border-t px-4 py-2 text-[11px] text-muted-foreground">
-        <span>{formatCount(rows.length, currentPage, pageSize)}</span>
+        <span>{formatCount(total, currentPage, pageSize)}</span>
         <Pagination className="mx-0 w-auto">
           <PaginationContent>
             <PaginationItem>

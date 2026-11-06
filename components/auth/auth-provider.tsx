@@ -9,13 +9,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import {
-  api,
-  clearSession,
-  getStoredUser,
-  saveSession,
-  type AuthUser,
-} from "@/lib/api";
+import { api, clearSession, getStoredUser, saveSession } from "@/lib/api";
+import type { AuthUser } from "@/types";
 
 type AuthContextValue = {
   user: AuthUser | null;

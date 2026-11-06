@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight } from "lucide-react";
-import { adminNavGroups, type NavGroup, type NavItem } from "@/lib/nav";
+import { adminNavGroups } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -19,6 +19,7 @@ import {
   SidebarMenuSubItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import type { NavGroup, NavItem } from "@/types";
 
 const activeColors = "data-[active=true]:bg-mint data-[active=true]:text-mint-foreground";
 

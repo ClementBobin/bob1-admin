@@ -1,0 +1,93 @@
+"use client";
+
+import { useState } from "react";
+import { FieldDescription } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { EntityForm } from "@/components/shared/entity-form";
+import { FormField } from "@/components/shared/form-field";
+import { OptionSelect } from "@/components/shared/option-select";
+import { useLookups } from "@/hooks/use-lookups";
+import { fullName, parsePoints } from "@/lib/utils";
+import type { PersonDto, PointCategory, PointsPayload } from "@/types";
+
+export const POINTS_FORM_ID = "points-form";
+
+export function PointsForm({
+  category,
+  persons,
+  onSave,
+}: {
+  category: PointCategory;
+  persons: PersonDto[];
+  onSave: (payload: PointsPayload) => void;
+}) {
+  const { pointCategoryLabel } = useLookups();
+  const nameOf = (person: PersonDto) => fullName(person.firstName, person.lastName);
+  const personOptions = persons.map(nameOf);
+  const [target, setTarget] = useState(personOptions[0] ?? "");
+  const [points, setPoints] = useState("");
+  const [motif, setMotif] = useState("");
+
+  return (
+    <>
+      <EntityForm
+        id={POINTS_FORM_ID}
+        single
+        onSubmit={() =>
+          onSave({
+            personId: persons.find((person) => nameOf(person) === target)?.id ?? null,
+            target,
+            points: parsePoints(points),
+            reason: motif,
+          })
+        }
+      >
+        <FormField label="Personne">
+          {(id) => (
+            <OptionSelect
+              id={id}
+              value={target}
+              onValueChange={setTarget}
+              options={personOptions}
+            />
+          )}
+        </FormField>
+        <FormField label="Catégorie">
+          {(id) => (
+            <Input id={id} value={pointCategoryLabel(category)} readOnly />
+          )}
+        </FormField>
+        <FormField label="Points">
+          {(id) => (
+            <>
+              <Input
+                id={id}
+                value={points}
+                onChange={(e) => setPoints(e.target.value)}
+                inputMode="numeric"
+                type="number"
+              />
+              <FieldDescription className="text-[10px]">
+                Un nombre négatif retire des points.
+              </FieldDescription>
+            </>
+          )}
+        </FormField>
+        <FormField label="Motif">
+          {(id) => (
+            <Input
+              id={id}
+              required
+              value={motif}
+              onChange={(e) => setMotif(e.target.value)}
+            />
+          )}
+        </FormField>
+      </EntityForm>
+      <div className="mt-4 rounded-xl bg-brand-soft px-3.5 py-3 text-[11px] leading-relaxed text-[#8e4200] dark:text-[#ffc48f]">
+        L'ajustement crée une entrée dans l'historique des points et envoie une
+        notification.
+      </div>
+    </>
+  );
+}

@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Bell, CalendarDays, Save, Send, Users, Smartphone } from "lucide-react";
-import { api, errorMessage, type DivisionDto, type TeamDto, type NotificationDto } from "@/lib/api";
-import { useApiData } from "@/lib/use-api-data";
+import { api, errorMessage } from "@/lib/api";
+import { useApiData } from "@/hooks/use-api-data";
+import { useLookups } from "@/hooks/use-lookups";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -12,9 +13,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Field, FieldLabel } from "@/components/ui/field";
-import { OptionSelect } from "@/components/option-select";
-import { PageHeader, CardHeading } from "@/components/page-header";
+import { GroupedSelect, type SelectChoice, type SelectGroup } from "@/components/shared/grouped-select";
+import { OptionSelect } from "@/components/shared/option-select";
+import { PageHeader, CardHeading } from "@/components/layout/page-header";
 import { cn } from "@/lib/utils";
+import type { DivisionDto, NotificationDto, TeamDto } from "@/types";
 
 function parseType(dataJson: string | null) {
   if (!dataJson) return null;
@@ -30,7 +33,9 @@ function parseType(dataJson: string | null) {
 export function NotificationEditor({ notificationId }: { notificationId?: string }) {
   const router = useRouter();
   const editing = Boolean(notificationId);
-  const [type, setType] = useState("Général");
+  const { notificationTypeNames } = useLookups();
+  const [selectedType, setType] = useState("");
+  const type = selectedType || notificationTypeNames[0] || "";
   const [target, setTarget] = useState("");
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
@@ -42,10 +47,10 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
   const [recipients, setRecipients] = useState<number | null>(null);
   // Drafts are now managed in the notifications list page
 
-  const { data: apiDivisions } = useApiData<DivisionDto[]>(() => api.divisions.list(), []);
-  const { data: apiTeams } = useApiData<TeamDto[]>(() => api.teams.list(), []);
+  const { data: apiDivisions } = useApiData<DivisionDto[]>(() => api.divisions.all(), []);
+  const { data: apiTeams } = useApiData<TeamDto[]>(() => api.teams.all(), []);
   const { data: notifications, loading: loadingNotification } = useApiData<NotificationDto[]>(
-    () => (editing ? api.notifications.list(200) : Promise.resolve([])),
+    () => (editing ? api.notifications.adminList({ take: 200 }).then((page) => page.items) : Promise.resolve([])),
     [editing],
   );
   const existing = editing ? notifications?.find((item) => item.id === notificationId) : undefined;
@@ -55,7 +60,7 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
   useEffect(() => {
     if (!existing || prefilled.current) return;
     prefilled.current = true;
-    setType(parseType(existing.dataJson) ?? "Général");
+    setType(parseType(existing.dataJson) ?? "");
     setTitle(existing.title);
     setMessage(existing.body);
     setExpiry(existing.expiresAtUtc ? existing.expiresAtUtc.slice(0, 10) : "");
@@ -63,11 +68,17 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
     setStartup(existing.startup);
   }, [existing]);
 
-  const targetOptions = [
-    "Tous les membres",
-    ...(apiDivisions ?? []).map((division) => `Division: ${division.name}`),
-    ...(apiTeams ?? []).map((team) => `Équipe: ${team.name}`),
-  ];
+  const targetChoices: SelectChoice[] = [{ value: "Tous les membres", label: "Tous les membres" }];
+  const targetGroups: SelectGroup[] = [
+    {
+      heading: "Divisions",
+      options: (apiDivisions ?? []).map((division) => ({ value: `Division: ${division.name}`, label: division.name })),
+    },
+    {
+      heading: "Équipes",
+      options: (apiTeams ?? []).map((team) => ({ value: `Équipe: ${team.name}`, label: team.name })),
+    },
+  ].filter((group) => group.options.length > 0);
 
   const save = () => {
     if (!title.trim() || !message.trim()) {
@@ -179,19 +190,22 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
                   id="notifications-field-9"
                   value={type}
                   onValueChange={setType}
-                  options={["Général", "Match", "Urgent", "Pénalité"]}
+                  options={notificationTypeNames}
                 />
               </Field>
               <Field>
                 <FieldLabel htmlFor="notifications-field-10" className="text-[11px] font-bold text-muted-foreground">
                   Destinataires
                 </FieldLabel>
-                <OptionSelect
+                <GroupedSelect
                   id="notifications-field-10"
                   value={target}
                   onValueChange={setTarget}
                   disabled={editing}
-                  options={targetOptions}
+                  choices={targetChoices}
+                  groups={targetGroups}
+                  placeholder="Choisir les destinataires"
+                  searchPlaceholder="Rechercher une division, une équipe…"
                 />
               </Field>
               <Field className="col-span-full">

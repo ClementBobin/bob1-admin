@@ -2,14 +2,31 @@
 
 import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, LockKeyhole, Mail, ShieldCheck, Sparkles } from "lucide-react";
-import { useAuth } from "@/components/auth-provider";
-import { Logo } from "@/components/logo";
+import {
+  ArrowRight,
+  LockKeyhole,
+  Mail,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
+import { useAuth } from "@/components/auth/auth-provider";
+import { Logo } from "@/components/layout/logo";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import { API_BASE_URL, errorMessage } from "@/lib/api";
 
 function LoginForm() {
@@ -18,8 +35,8 @@ function LoginForm() {
   const { user, login } = useAuth();
 
   const next = searchParams.get("next") || "/";
-  const [email, setEmail] = useState("admin@bob1.local");
-  const [password, setPassword] = useState("Admin123!");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,7 +78,8 @@ function LoginForm() {
               Connexion
             </CardTitle>
             <CardDescription className="text-[12.5px] leading-relaxed">
-              Connectez-vous avec votre compte BOB1 pour gérer les matchs, les familles et les classements.
+              Connectez-vous avec votre compte BOB1 pour gérer les matchs, les
+              familles et les classements.
             </CardDescription>
           </CardHeader>
 
@@ -81,7 +99,7 @@ function LoginForm() {
                       value={email}
                       onChange={(event) => setEmail(event.target.value)}
                       required
-                      placeholder="vous@bob1.local"
+                      placeholder="vous@exemple.fr"
                     />
                   </InputGroup>
                 </Field>
@@ -106,23 +124,20 @@ function LoginForm() {
 
                 {error && (
                   <Alert variant="danger">
-                    <AlertDescription className="text-current">{error}</AlertDescription>
+                    <AlertDescription className="text-current">
+                      {error}
+                    </AlertDescription>
                   </Alert>
                 )}
 
-                <Button type="submit" disabled={submitting} className="mt-1 h-10 w-full">
+                <Button
+                  type="submit"
+                  disabled={submitting}
+                  className="mt-1 h-10 w-full"
+                >
                   {submitting ? "Connexion…" : "Se connecter"}
                   {!submitting && <ArrowRight />}
                 </Button>
-
-                <div className="rounded-xl bg-muted px-3.5 py-3 text-[11px] leading-relaxed text-muted-foreground">
-                  <strong className="mb-1 block text-[10.5px] uppercase tracking-[0.08em]">
-                    Comptes de développement
-                  </strong>
-                  <code className="block">admin@bob1.local / Admin123!</code>
-                  <code className="block">staff@bob1.local / Staff123!</code>
-                  <code className="block">parent@bob1.local / Parent123!</code>
-                </div>
               </FieldGroup>
             </form>
           </CardContent>
@@ -144,7 +159,11 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <Suspense
-      fallback={<div className="grid min-h-screen place-items-center bg-canvas text-[12px] text-soft">Chargement…</div>}
+      fallback={
+        <div className="grid min-h-screen place-items-center bg-canvas text-[12px] text-soft">
+          Chargement…
+        </div>
+      }
     >
       <LoginForm />
     </Suspense>

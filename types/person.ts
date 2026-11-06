@@ -1,0 +1,48 @@
+export type PersonDto = {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  roles: string[];
+  isActive: boolean;
+  suspendedFromParticipation: boolean;
+  familyId: string | null;
+};
+
+export type PersonInput = {
+  email: string;
+  firstName: string;
+  lastName: string;
+  roles: string[];
+  familyId?: string | null;
+  password?: string | null;
+};
+
+export type CreatePersonResponse = {
+  person: PersonDto;
+  temporaryPassword: string | null;
+};
+
+export type Person = {
+  id: string;
+  name: string;
+  email: string;
+  roles: string[];
+  status: string; // Actif / Suspendu / En attente
+  suspendedFromParticipation: boolean;
+  lastLogin: string;
+  /** Raw API fields, kept so the edit form can update the right records. */
+  familyId?: string | null;
+  personId?: string;
+};
+
+/** What the person form hands back to the page. */
+export type PersonPayload = {
+  personId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  roles: string[];
+  isActive: boolean;
+  suspendedFromParticipation: boolean;
+};

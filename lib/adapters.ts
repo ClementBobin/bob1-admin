@@ -1,17 +1,5 @@
-import type {
-  AdminFamilyDto,
-  DivisionDto,
-  MatchDto,
-  PenaltyDto,
-  PersonDto,
-  PersonRankingRowDto,
-  FamilyRankingRowDto,
-  RankingRuleDto,
-  TeamDto,
-  EntryDto,
-} from "@/lib/api";
-import { type Family, type MatchRow, type HistoryEntry, type Person, type PersonRankingRow, type FamilyRankingRow, type RuleRow, RULE_CATEGORY_LABELS } from "@/lib/data";
 import { formatDate, formatDateTime, matchStatusLabel } from "./utils";
+import type { AdminFamilyDto, DivisionDto, EntryDto, Family, FamilyRankingRow, FamilyRankingRowDto, HistoryEntry, MatchDto, MatchRow, PenaltyDto, Person, PersonDto, PersonRankingRow, PersonRankingRowDto, RankingRuleDto, RuleRow, TeamDto } from "@/types";
 
 export function matchToRow(match: MatchDto): MatchRow {
   return {
@@ -123,26 +111,15 @@ export function divisionToRow(division: DivisionDto, teamCount = 0) {
     id: division.id,
     name: division.name,
     category: division.category,
-    gender: division.gender || divisionGender(division.name),
+    gender: division.gender,
     teams: `${teamCount} équipe${teamCount > 1 ? "s" : ""}`,
     status: division.isActive ? "Active" : "Inactive",
     sortOrder: division.sortOrder,
   };
 }
 
-export function divisionGender(name: string): string {
-  const normalized = name.toLowerCase();
-  if (normalized.includes("fémin") || normalized.includes("femin") || /\bf\b/.test(normalized)) return "Féminin";
-  if (normalized.includes("mascul") || /\bm\b/.test(normalized)) return "Masculin";
-  return "Mixte";
-}
-
 export function teamCountByDivision(teams: TeamDto[]): Map<string, number> {
   const counts = new Map<string, number>();
   for (const team of teams) counts.set(team.divisionId, (counts.get(team.divisionId) ?? 0) + 1);
   return counts;
-}
-
-export function ruleCategoryLabel(category: string): string {
-  return RULE_CATEGORY_LABELS[category] ?? category;
 }
