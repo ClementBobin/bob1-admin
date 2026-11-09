@@ -16,7 +16,6 @@ export function matchToRow(match: MatchDto, names: MatchNames, slots: Record<str
     buvette: slots.buvette ?? [0, 0],
     chrono: slots.chrono ?? [0, 0],
     mar: slots.mar ?? [0, 0],
-    carpool: "—",
     status: matchStatusLabel(match.status),
   };
 }
@@ -31,15 +30,21 @@ export function slotCounts(roster: RosterDto | undefined, templates: SlotTemplat
   return counts;
 }
 
+/** Désactivé = account disabled; Suspendu = active account barred from participating; Actif otherwise. */
+export function personStatus(person: Pick<PersonDto, "isActive" | "suspendedFromParticipation">): string {
+  if (!person.isActive) return "Désactivé";
+  return person.suspendedFromParticipation ? "Suspendu" : "Actif";
+}
+
 export function personToRow(person: PersonDto): Person {
   return {
     id: person.id,
     name: `${person.firstName} ${person.lastName}`.trim(),
     email: person.email,
     roles: person.roles,
-    status: person.isActive ? "Actif" : "Suspendu",
+    status: personStatus(person),
+    isActive: person.isActive,
     suspendedFromParticipation: person.suspendedFromParticipation,
-    lastLogin: "—",
   };
 }
 

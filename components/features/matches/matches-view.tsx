@@ -51,6 +51,7 @@ export function MatchesView() {
   const editing = sheet.editing;
   const [saving, setSaving] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [confirmPlayed, setConfirmPlayed] = useState(false);
 
   const { data: apiDivisions } = useApiData<DivisionDto[]>(
     () => api.divisions.all(),
@@ -150,6 +151,22 @@ export function MatchesView() {
   ];
 
   const canCancel = editing?.status === MATCH_STATUS_LABELS.Scheduled;
+
+  const markPlayed = async () => {
+    if (!editing) return;
+    setSaving(true);
+    try {
+      await api.matches.markPlayed(editing.id);
+      toast.success("Le match est marqué comme joué.");
+      await reload();
+      sheet.close();
+    } catch (cause) {
+      toast.error(errorMessage(cause));
+    } finally {
+      setSaving(false);
+      setConfirmPlayed(false);
+    }
+  };
 
   const cancelMatch = async () => {
     if (!editing) return;
@@ -392,15 +409,24 @@ export function MatchesView() {
         footer={
           <>
             {canCancel && (
-              <Button
-                type="button"
-                variant="destructive"
-                className="mr-auto"
-                disabled={saving}
-                onClick={() => setConfirmCancel(true)}
-              >
-                Annuler le match
-              </Button>
+              <div className="mr-auto flex gap-2">
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={saving}
+                  onClick={() => setConfirmCancel(true)}
+                >
+                  Annuler le match
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={saving}
+                  onClick={() => setConfirmPlayed(true)}
+                >
+                  Marquer comme joué
+                </Button>
+              </div>
             )}
             <FormSheetFooter
               onCancel={sheet.close}
@@ -428,6 +454,26 @@ export function MatchesView() {
           />
         )}
       </FormSheet>
+
+      <AlertDialog open={confirmPlayed} onOpenChange={setConfirmPlayed}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Marquer ce match comme joué ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {editing
+                ? `${editing.home} — ${editing.away} (${editing.date}). `
+                : ""}
+              Le match passera au statut « Joué » et ne pourra plus être modifié.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Retour</AlertDialogCancel>
+            <AlertDialogAction onClick={markPlayed}>
+              Marquer comme joué
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={confirmCancel} onOpenChange={setConfirmCancel}>
         <AlertDialogContent>

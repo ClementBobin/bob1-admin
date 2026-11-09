@@ -34,7 +34,8 @@ export const STATUS_TONES: Record<string, Tone> = {
   Annulé: "neutral",
   Archivée: "neutral",
   Externe: "info",
-  Suspendu: "danger",
+  Suspendu: "warning",
+  Désactivé: "danger",
 };
 
 export function statusTone(status: string, fallback: Tone = "warning"): Tone {
