@@ -30,7 +30,8 @@ export type Person = {
   name: string;
   email: string;
   roles: string[];
-  status: string; // Actif / Suspendu / En attente
+  status: string; // Actif / Suspendu / Désactivé
+  isActive: boolean;
   suspendedFromParticipation: boolean;
   /** Raw API fields, kept so the edit form can update the right records. */
   familyId?: string | null;

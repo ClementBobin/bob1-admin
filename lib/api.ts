@@ -122,10 +122,6 @@ export function saveSession(response: AuthResponse) {
   writeStorage(USER_KEY, JSON.stringify(response.user));
 }
 
-export function saveUser(user: AuthUser) {
-  writeStorage(USER_KEY, JSON.stringify(user));
-}
-
 export function clearSession() {
   if (typeof window === "undefined") return;
   try {
@@ -318,6 +314,8 @@ export const api = {
       apiFetch<MatchDto>(`/admin/matches/${id}`, { method: "PUT", body: input }),
     cancel: (id: string) =>
       apiFetch<MatchDto>(`/admin/matches/${id}/cancel`, { method: "POST" }),
+    markPlayed: (id: string) =>
+      apiFetch<MatchDto>(`/admin/matches/${id}/played`, { method: "POST" }),
   },
 
   // ---- Participation (admin) ----

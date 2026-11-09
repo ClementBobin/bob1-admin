@@ -29,9 +29,11 @@ export function PersonForm({
   const [lastName, setLastName] = useState(person?.name.split(" ").slice(1).join(" ") ?? "");
   const [email, setEmail] = useState(person?.email ?? "");
   const [roles, setRoles] = useState<string[]>(person?.roles ?? (roleOptions[0] ? [roleOptions[0]] : []));
-  const [status, setStatus] = useState(person?.status ?? "Actif");
+  const [isActive, setIsActive] = useState(person?.isActive ?? true);
+  const [suspendedFromParticipation, setSuspendedFromParticipation] = useState(
+    person?.suspendedFromParticipation ?? false,
+  );
   const [divisionId, setDivisionId] = useState<string | null>(person?.divisionId ?? null);
-  const [suspendedFromParticipation, setSuspendedFromParticipation] = useState(person?.suspendedFromParticipation ?? false);
 
   const toggleRole = (role: string) => {
     setRoles((current) => (current.includes(role) ? current.filter((item) => item !== role) : [...current, role]));
@@ -44,7 +46,7 @@ export function PersonForm({
       lastName: lastName.trim(),
       email: email.trim(),
       roles: roles.length ? roles : ["Parent"],
-      isActive: status === "Actif",
+      isActive,
       suspendedFromParticipation,
       divisionId,
     });
@@ -98,9 +100,9 @@ export function PersonForm({
       <div className="col-span-full flex items-center justify-between gap-3 rounded-xl bg-muted px-3.5 py-3">
         <span className="flex flex-col">
           <strong className="text-[12px]">Statut du compte</strong>
-          <small className="mt-0.5 text-[10.5px] text-soft">Activer ou suspendre l'accès à l'application</small>
+          <small className="mt-0.5 text-[10.5px] text-soft">Activer ou désactiver l'accès à l'application</small>
         </span>
-        <Switch checked={status === "Actif"} onCheckedChange={(checked) => setStatus(checked ? "Actif" : "Suspendu")} />
+        <Switch checked={isActive} onCheckedChange={setIsActive} />
       </div>
 
       <div className="col-span-full flex items-center justify-between gap-3 rounded-xl bg-muted px-3.5 py-3">
@@ -114,7 +116,7 @@ export function PersonForm({
       </div>
 
       <div className="col-span-full rounded-xl bg-brand-soft px-3.5 py-3 text-[11px] leading-relaxed text-[#8e4200] dark:text-[#ffc48f]">
-        La modification prend effet immédiatement. Une personne suspendue ne peut plus se connecter.
+        La modification prend effet immédiatement. Une personne désactivée ne peut plus se connecter.
       </div>
     </EntityForm>
   );

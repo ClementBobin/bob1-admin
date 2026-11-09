@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { MATCH_STATUS_LABELS } from "@/lib/constants";
 import type { MatchStatus } from "@/types";
 
 export function cn(...inputs: ClassValue[]) {
@@ -40,21 +41,12 @@ export function formatDate(iso: string): string {
 export function matchStatusLabel(status: MatchStatus): string {
   switch (status) {
     case "Cancelled":
-      return "Annulé";
+      return MATCH_STATUS_LABELS.Cancelled;
     case "Played":
-      return "Confirmé";
+      return MATCH_STATUS_LABELS.Played;
     default:
-      return "J-15";
+      return MATCH_STATUS_LABELS.Scheduled;
   }
-}
-export function matchesSearch(needle: string, ...haystacks: Array<string | null | undefined>): boolean {
-  const n = needle.trim().toLowerCase();
-  if (!n) return true;
-  return haystacks.some((h) => (h ?? "").toLowerCase().includes(n));
-}
-
-export function plural(count: number, singular: string, pluralForm = `${singular}s`): string {
-  return `${count} ${count > 1 ? pluralForm : singular}`;
 }
 
 export function fullName(...parts: Array<string | null | undefined>): string {
@@ -101,9 +93,4 @@ export function pointsAdjustmentError(
   if (!Number.isFinite(payload.points) || payload.points === 0) return "Saisissez un nombre de points non nul.";
   if (!payload.personId) return `Sélectionnez ${subject}.`;
   return null;
-}
-
-/** Unique values, in first-seen order. */
-export function distinct<T>(values: Iterable<T>): T[] {
-  return [...new Set(values)];
 }

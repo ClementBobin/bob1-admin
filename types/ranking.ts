@@ -76,5 +76,3 @@ export type RuleRow = {
 export type PointCategory = string;
 
 export type RankingViewMode = "person" | "family";
-
-export type RankingsData<Row> = { rows: Row[]; season: string };

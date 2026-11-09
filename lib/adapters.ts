@@ -30,13 +30,20 @@ export function slotCounts(roster: RosterDto | undefined, templates: SlotTemplat
   return counts;
 }
 
+/** Désactivé = account disabled; Suspendu = active account barred from participating; Actif otherwise. */
+export function personStatus(person: Pick<PersonDto, "isActive" | "suspendedFromParticipation">): string {
+  if (!person.isActive) return "Désactivé";
+  return person.suspendedFromParticipation ? "Suspendu" : "Actif";
+}
+
 export function personToRow(person: PersonDto): Person {
   return {
     id: person.id,
     name: `${person.firstName} ${person.lastName}`.trim(),
     email: person.email,
     roles: person.roles,
-    status: person.isActive ? "Actif" : "Suspendu",
+    status: personStatus(person),
+    isActive: person.isActive,
     suspendedFromParticipation: person.suspendedFromParticipation,
   };
 }
@@ -84,38 +91,6 @@ export function ruleToRow(rule: RankingRuleDto): RuleRow {
     pointsJ15: rule.pointsJ15 ?? undefined,
     pointsJ4: rule.pointsJ4 ?? undefined,
     hasJ15J4: rule.hasJ15J4,
-  };
-}
-
-export function historyEntryToRow(entry: EntryDto): HistoryEntry {
-  return {
-    id: entry.id,
-    person: entry.personName,
-    category: entry.category,
-    points: entry.points,
-    reason: entry.reason,
-    match: entry.matchId ? `Match ${entry.matchId.slice(0, 8)}` : "—",
-    date: formatDate(entry.createdAtUtc),
-    isPenalty: entry.points < 0,
-    isManual: entry.isManual,
-    isRevoked: entry.isRevoked,
-    isRevocation: !entry.isManual && entry.reason.startsWith("Annulation"),
-  };
-}
-
-export function penaltyToRow(penalty: PenaltyDto): HistoryEntry {
-  return {
-    id: penalty.id,
-    person: penalty.personName,
-    category: "",
-    points: penalty.points,
-    reason: penalty.reason,
-    match: penalty.matchId ? `Match ${penalty.matchId.slice(0, 8)}` : "—",
-    date: formatDate(penalty.createdAtUtc),
-    isPenalty: penalty.points < 0,
-    isManual: penalty.isManual,
-    isRevoked: penalty.isRevoked,
-    isRevocation: false,
   };
 }
 

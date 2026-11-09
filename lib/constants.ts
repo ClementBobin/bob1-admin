@@ -14,7 +14,6 @@ export const FILTER_ALL: Record<"statuses" | "roles" | "types" | "accounts" | "d
 /* ── Option lists ───────────────────────────────────────── */
 export const PERSON_STATUS_OPTIONS = ["Actif", "Suspendu", "Désactivé"];
 export const TEAM_STATUS_OPTIONS = ["Active", "Archivée"];
-export const ACCOUNTS_OPTIONS = ["Complet", "À compléter"];
 export const READ_STATUS_OPTIONS = ["Lue", "Non lue"];
 
 /* ── Tone class maps ────────────────────────────────────── */
@@ -32,9 +31,12 @@ export const STATUS_TONES: Record<string, Tone> = {
   Actif: "success",
   Brouillon: "neutral",
   Annulé: "neutral",
+  Programmé: "info",
+  Joué: "success",
   Archivée: "neutral",
   Externe: "info",
-  Suspendu: "danger",
+  Suspendu: "warning",
+  Désactivé: "danger",
 };
 
 export function statusTone(status: string, fallback: Tone = "warning"): Tone {
@@ -74,8 +76,6 @@ export const KPI_LINKS: Record<string, string> = {
   "Points récents": "/points-history",
   "Pénalités récentes": "/points-history",
 };
-
-export const NOTIFICATION_STATUS_FILTER = ["Lue", "Non lue"] as const;
 
 /** Server match status (see GET /lookups matchStatuses) → label shown in the status filter. */
 export const MATCH_STATUS_LABELS: Record<string, string> = {
