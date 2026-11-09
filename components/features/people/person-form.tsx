@@ -7,7 +7,6 @@ import { Switch } from "@/components/ui/switch";
 import { EntityForm } from "@/components/shared/entity-form";
 import { FormField } from "@/components/shared/form-field";
 import { OptionSelect } from "@/components/shared/option-select";
-import { PERSON_STATUS_OPTIONS } from "@/lib/constants";
 import { useLookups } from "@/hooks/use-lookups";
 import { cn } from "@/lib/utils";
 import type { DivisionDto, Person, PersonPayload } from "@/types";
@@ -70,9 +69,6 @@ export function PersonForm({
             options={[NO_DIVISION, ...divisions.map((item) => item.name)]}
           />
         )}
-      </FormField>
-      <FormField label="Statut" full>
-        {(id) => <OptionSelect id={id} value={status} onValueChange={setStatus} options={PERSON_STATUS_OPTIONS} />}
       </FormField>
 
       <span className="col-span-full mt-1 text-[10px] font-extrabold uppercase tracking-[0.08em] text-soft">Rôles</span>

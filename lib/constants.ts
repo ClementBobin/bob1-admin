@@ -12,7 +12,7 @@ export const FILTER_ALL: Record<"statuses" | "roles" | "types" | "accounts" | "d
 };
 
 /* ── Option lists ───────────────────────────────────────── */
-export const PERSON_STATUS_OPTIONS = ["Actif", "Suspendu"];
+export const PERSON_STATUS_OPTIONS = ["Actif", "Suspendu", "Désactivé"];
 export const TEAM_STATUS_OPTIONS = ["Active", "Archivée"];
 export const ACCOUNTS_OPTIONS = ["Complet", "À compléter"];
 export const READ_STATUS_OPTIONS = ["Lue", "Non lue"];
