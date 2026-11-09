@@ -30,7 +30,7 @@ import type {
 } from "@/types";
 
 export function MatchesView() {
-  const { clubName, slotTemplates } = useLookups();
+  const { slotTemplates } = useLookups();
   const [rows, setRows] = useState<MatchRow[]>([]);
   const [search, setSearch] = useState("");
   const [division, setDivision] = useState(FILTER_ALL.divisions);
@@ -58,16 +58,21 @@ export function MatchesView() {
   });
   const { items: apiMatches, loading, error, reload } = query;
 
+  const { data: apiTeams } = useApiData<TeamDto[]>(() => api.teams.all(), []);
+
+  // Matches only carry team / venue ids: names come from the club data.
   useEffect(() => {
+    const names = {
+      teams: new Map((apiTeams ?? []).map((team) => [team.id, team.name])),
+      venues: new Map((apiVenues ?? []).map((venue) => [venue.id, venue.name])),
+    };
     setRows(
       (apiMatches ?? []).map((match) => ({
-        ...matchToRow(match),
-        opponent: match.opponent,
-        isHome: match.isHome,
+        ...matchToRow(match, names),
         startsAtUtc: match.startsAtUtc,
       })),
     );
-  }, [apiMatches]);
+  }, [apiMatches, apiTeams, apiVenues]);
 
   const divisionOptions: NamedOption[] = (apiDivisions ?? []).map((item) => ({
     id: item.id,
@@ -93,14 +98,10 @@ export function MatchesView() {
     return names;
   }, [venueOptions, editing]);
 
-  const { data: apiTeams } = useApiData<TeamDto[]>(() => api.teams.all(), []);
-
-  const teamOptions = useMemo(() => {
-    const names = new Set<string>();
-    for (const team of apiTeams ?? []) names.add(team.name);
-    names.delete("");
-    return [...names];
-  }, [apiTeams]);
+  const teamOptions = useMemo(
+    () => [...new Set((apiTeams ?? []).map((team) => team.name))],
+    [apiTeams],
+  );
 
   const statusOptions = [FILTER_ALL.statuses, ...Object.values(MATCH_STATUS_LABELS)];
 
@@ -111,15 +112,17 @@ export function MatchesView() {
     const venueId = venueOptions.find(
       (item) => item.name === payload.venueName,
     )?.id;
-    if (!divisionId || !venueId) {
-      toast.error("Sélectionnez une division et un lieu existants.");
+    const homeTeamId = (apiTeams ?? []).find((item) => item.name === payload.homeTeamName)?.id;
+    const awayTeamId = (apiTeams ?? []).find((item) => item.name === payload.awayTeamName)?.id;
+    if (!divisionId || !venueId || !homeTeamId || !awayTeamId) {
+      toast.error("Sélectionnez une division, deux équipes et un lieu existants.");
       return;
     }
 
     const input = {
       divisionId,
-      opponent: payload.opponent,
-      isHome: payload.isHome,
+      homeTeamId,
+      awayTeamId,
       venueId,
       startsAtUtc: new Date(`${payload.date}T${payload.time}:00`).toISOString(),
     };
@@ -324,7 +327,6 @@ export function MatchesView() {
             match={editing}
             divisionOptions={divisionNames}
             venueOptions={venueNames}
-            clubName={clubName}
             teamOptions={teamOptions}
             slotTemplates={slotTemplates}
             onSave={save}

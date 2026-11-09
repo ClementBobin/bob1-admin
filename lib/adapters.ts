@@ -1,14 +1,17 @@
 import { formatDate, formatDateTime, matchStatusLabel } from "./utils";
 import type { AdminFamilyDto, DivisionDto, EntryDto, Family, FamilyRankingRow, FamilyRankingRowDto, HistoryEntry, MatchDto, MatchRow, PenaltyDto, Person, PersonDto, PersonRankingRow, PersonRankingRowDto, RankingRuleDto, RuleRow, TeamDto } from "@/types";
 
-export function matchToRow(match: MatchDto): MatchRow {
+/** Team and venue names are not in the match payload: callers pass id → name maps built from the club data. */
+export type MatchNames = { teams: Map<string, string>; venues: Map<string, string> };
+
+export function matchToRow(match: MatchDto, names: MatchNames): MatchRow {
   return {
     id: match.id,
     date: formatDateTime(match.startsAtUtc),
     division: match.divisionName,
-    home: match.isHome ? "BOB1" : match.opponent,
-    away: match.isHome ? match.opponent : "BOB1",
-    venue: match.venueName,
+    home: names.teams.get(match.homeTeamId) ?? "—",
+    away: names.teams.get(match.awayTeamId) ?? "—",
+    venue: names.venues.get(match.venueId) ?? "—",
     officials: [0, 0],
     buvette: [0, 0],
     chrono: [0, 0],
@@ -32,14 +35,12 @@ export function personToRow(person: PersonDto): Person {
 
 export function familyToRow(family: AdminFamilyDto): Family {
   const parents = family.members.map((member) => `${member.firstName} ${member.lastName}`.trim());
-  const children = family.children.map((child) => child.firstName);
-  const size = family.members.length + family.children.length;
+  const size = family.members.length;
   const hasInactiveAccounts = family.members.some((m) => !m.isActive);
   return {
     id: family.id,
     name: family.name,
     parents: parents.length ? parents.join(", ") : "À renseigner",
-    children: children.length ? children.join(", ") : "—",
     size: `${size} membre${size > 1 ? "s" : ""}`,
     accounts: `${family.members.length} compte${family.members.length > 1 ? "s" : ""}`,
     status: family.members.length > 0 ? "Complet" : "À compléter",
@@ -114,7 +115,6 @@ export function divisionToRow(division: DivisionDto, teamCount = 0) {
     gender: division.gender,
     teams: `${teamCount} équipe${teamCount > 1 ? "s" : ""}`,
     status: division.isActive ? "Active" : "Inactive",
-    sortOrder: division.sortOrder,
   };
 }
 

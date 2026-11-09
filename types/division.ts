@@ -1,4 +1,4 @@
-export type DivisionDto = { id: string; name: string; sortOrder: number; category: string; gender: string; isActive: boolean };
+export type DivisionDto = { id: string; name: string; category: string; gender: string; isActive: boolean };
 
 export type DivisionRow = {
   id: string;
@@ -7,5 +7,4 @@ export type DivisionRow = {
   gender: string | null;
   teams: string;
   status: string;
-  sortOrder?: number;
 };

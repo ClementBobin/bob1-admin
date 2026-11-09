@@ -18,7 +18,6 @@ export function MatchForm({
   match,
   divisionOptions,
   venueOptions,
-  clubName,
   teamOptions,
   slotTemplates,
   onSave,
@@ -26,7 +25,6 @@ export function MatchForm({
   match: MatchRow | null;
   divisionOptions: string[];
   venueOptions: string[];
-  clubName: string;
   teamOptions: string[];
   slotTemplates: SlotTemplate[];
   onSave: (payload: MatchPayload) => void;
@@ -68,6 +66,13 @@ export function MatchForm({
       setVenue(venueOptions[0]);
   }, [venueOptions, venue]);
 
+  // Teams load asynchronously too: never leave a side empty once they are known.
+  useEffect(() => {
+    if (teamOptions.length === 0) return;
+    if (!homeTeam) setHomeTeam(teamOptions[0]);
+    if (!awayTeam) setAwayTeam(teamOptions.find((name) => name !== homeTeam) ?? teamOptions[0]);
+  }, [teamOptions, homeTeam, awayTeam]);
+
   const updateSlot = (key: string, amount: number) => {
     setSlotOverrides((current) => ({
       ...current,
@@ -80,12 +85,10 @@ export function MatchForm({
       <EntityForm
         id={MATCH_FORM_ID}
         onSubmit={() => {
-          const isHome = homeTeam === clubName;
-          const opponentName = isHome ? awayTeam : homeTeam;
           onSave({
             divisionName: division,
-            opponent: opponentName,
-            isHome,
+            homeTeamName: homeTeam,
+            awayTeamName: awayTeam,
             venueName: venue,
             date,
             time,
@@ -103,8 +106,6 @@ export function MatchForm({
               mar: [0, slots.mar ?? 0],
               carpool: match?.carpool ?? "0 place",
               status: match?.status ?? "Brouillon",
-              opponent: opponentName,
-              isHome,
               startsAtUtc: new Date(`${date}T${time}:00`).toISOString(),
             },
           });

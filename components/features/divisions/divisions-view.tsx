@@ -36,7 +36,6 @@ export function DivisionsView() {
   const save = async (row: DivisionRow) => {
     const payload = {
       name: row.name,
-      sortOrder: 0,
       category: row.category ?? "",
       gender: row.gender ?? "",
       isActive: row.status === "Active",

@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { Home } from "lucide-react";
 import { familyToRow } from "@/lib/adapters";
 import { api } from "@/lib/api";
-import { ACCOUNTS_OPTIONS, FILTER_ALL } from "@/lib/constants";
 import { usePagedQuery } from "@/hooks/use-paged-query";
 import { Status } from "@/components/shared/status";
 import { DataTable } from "@/components/shared/data-table";
@@ -16,12 +15,10 @@ import type { Family } from "@/types";
 export function FamiliesView() {
   const [rows, setRows] = useState<Family[]>([]);
   const [search, setSearch] = useState("");
-  const [accountsFilter, setAccountsFilter] = useState(FILTER_ALL.accounts);
   const [hideInactive, setHideInactive] = useState(true); // Default: hide families with all inactive accounts
 
   const query = usePagedQuery((params) => api.families.list(params), {
     search,
-    hasAccounts: accountsFilter === FILTER_ALL.accounts ? undefined : accountsFilter === "Complet",
     hideInactive: hideInactive || undefined,
   });
   const { items: apiFamilies, loading, error } = query;
@@ -36,21 +33,15 @@ export function FamiliesView() {
         id="tour-families-header"
         eyebrow="Membres"
         title="Familles"
-        description="Consultez les foyers, parents et enfants associés (lecture seule)."
+        description="Consultez les foyers, membres (parents et enfants) associés (lecture seule)."
       />
 
       <Filters
         id="tour-families-filters"
         search={search}
         onSearch={setSearch}
-        searchPlaceholder="Rechercher une famille, un enfant…"
+        searchPlaceholder="Rechercher une famille, un membre…"
         selects={[
-          {
-            label: "Comptes",
-            value: accountsFilter,
-            options: [FILTER_ALL.accounts, ...ACCOUNTS_OPTIONS],
-            onChange: setAccountsFilter,
-          },
           {
             label: "Inactifs",
             value: hideInactive ? "Masquer" : "Afficher",
@@ -60,7 +51,6 @@ export function FamiliesView() {
         ]}
         onReset={() => {
           setSearch("");
-          setAccountsFilter(FILTER_ALL.accounts);
           setHideInactive(true);
         }}
       />
@@ -74,7 +64,7 @@ export function FamiliesView() {
         pageSize={query.pageSize}
         rowKey={(row) => row.id}
         minWidth={900}
-        grid="1.2fr 1.25fr 1.3fr .8fr 1fr 1fr 36px"
+        grid="1.2fr 1.4fr .8fr 1fr 1fr 36px"
         emptyMessage={loading ? "Chargement des familles…" : undefined}
         columns={[
           {
@@ -98,11 +88,6 @@ export function FamiliesView() {
             ),
           },
           { key: "parents", label: "Parents", render: (row) => <span className="truncate">{row.parents}</span> },
-          {
-            key: "children",
-            label: "Enfants",
-            render: (row) => <span className="truncate text-soft">{row.children}</span>,
-          },
           { key: "size", label: "Taille", render: (row) => row.size },
           {
             key: "accounts",

@@ -5,19 +5,17 @@ export type MatchDto = {
   title: string;
   divisionId: string;
   divisionName: string;
-  opponent: string;
-  isHome: boolean;
-  venueName: string;
+  homeTeamId: string;
+  awayTeamId: string;
+  venueId: string;
   startsAtUtc: string;
   status: MatchStatus;
-  homeScore: number | null;
-  awayScore: number | null;
 };
 
 export type MatchInput = {
   divisionId: string;
-  opponent: string;
-  isHome: boolean;
+  homeTeamId: string;
+  awayTeamId: string;
   venueId: string;
   startsAtUtc: string;
 };
@@ -54,8 +52,6 @@ export type MatchRow = {
   carpool: string;
   status: string;
   /** Raw API fields, kept so the edit form can be prefilled. */
-  opponent?: string;
-  isHome?: boolean;
   startsAtUtc?: string;
 };
 
@@ -65,8 +61,8 @@ export type SlotKind = "Staff" | "Volunteer";
 /** What the match form hands back to the page. */
 export type MatchPayload = {
   divisionName: string;
-  opponent: string;
-  isHome: boolean;
+  homeTeamName: string;
+  awayTeamName: string;
   venueName: string;
   date: string;
   time: string;

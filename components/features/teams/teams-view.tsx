@@ -56,7 +56,7 @@ export function TeamsView() {
         players: "—",
         status: team.isActive ? "Active" : "Archivée",
         trainingVenueId: team.trainingVenueId ?? null,
-        trainingVenueName: team.trainingVenueName ?? (team.trainingVenueId ? venueNames.get(team.trainingVenueId) ?? null : null),
+        trainingVenueName: team.trainingVenueId ? venueNames.get(team.trainingVenueId) ?? null : null,
       })),
     );
   }, [apiTeams, apiDivisions, apiVenues]);

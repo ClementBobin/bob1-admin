@@ -279,9 +279,9 @@ export const api = {
   divisions: {
     list: (params: DivisionQuery = {}) => search<Paged<DivisionDto>>("/divisions", params),
     all: () => search<Paged<DivisionDto>>("/divisions", { take: ALL }).then((page) => page.items),
-    create: (input: { name: string; sortOrder: number; category: string; gender: string; isActive: boolean }) =>
+    create: (input: { name: string; category: string; gender: string; isActive: boolean }) =>
       apiFetch<DivisionDto>("/admin/divisions", { method: "POST", body: input }),
-    update: (id: string, input: { name: string; sortOrder: number; category: string; gender: string; isActive: boolean }) =>
+    update: (id: string, input: { name: string; category: string; gender: string; isActive: boolean }) =>
       apiFetch<DivisionDto>(`/admin/divisions/${id}`, { method: "PUT", body: input }),
     remove: (id: string) => apiFetch<void>(`/admin/divisions/${id}`, { method: "DELETE" }),
   },

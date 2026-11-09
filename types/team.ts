@@ -1,4 +1,4 @@
-export type TeamDto = { id: string; name: string; divisionId: string; coachName: string | null; coachUserId: string | null; logoUrl: string | null; isActive: boolean; trainingVenueId: string | null; trainingVenueName: string | null };
+export type TeamDto = { id: string; name: string; divisionId: string; coachName: string | null; coachUserId: string | null; logoUrl: string | null; isActive: boolean; trainingVenueId: string | null };
 
 export type TeamRow = {
   id: string;
