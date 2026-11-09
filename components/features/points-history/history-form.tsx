@@ -28,7 +28,7 @@ export function HistoryForm({
   );
   const [reason, setReason] = useState(row?.reason ?? "");
   const [points, setPoints] = useState(
-    row ? `${row.points > 0 ? "+" : ""}${row.points}` : "-10",
+    row ? String(row.points) : "-10",
   );
 
   const submit = () =>
