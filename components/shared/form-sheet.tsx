@@ -40,19 +40,23 @@ export function FormSheet({
 
 export function FormSheetFooter({
   onCancel,
+  showCancel = true,
   submitLabel,
   form,
 }: {
   onCancel: () => void;
+  showCancel?: boolean;
   submitLabel: string;
   form?: string;
 }) {
   return (
     <>
-      <Button type="button" variant="ghost" onClick={onCancel}>
-        Annuler
-      </Button>
-      <Button type={form ? "submit" : "button"} form={form}>
+      {showCancel && (
+        <Button type="button" variant="ghost" onClick={onCancel}>
+          Annuler
+        </Button>
+      )}
+      <Button type={form ? "submit" : "button"} form={form} className={!showCancel ? "w-full" : undefined}>
         {submitLabel}
       </Button>
     </>

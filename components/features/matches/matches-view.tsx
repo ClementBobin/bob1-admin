@@ -430,6 +430,7 @@ export function MatchesView() {
             )}
             <FormSheetFooter
               onCancel={sheet.close}
+              showCancel={false}
               submitLabel={
                 saving
                   ? "Enregistrement…"
