@@ -6,8 +6,8 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function initials(name: string) {
-  return name
+export function initials(name?: string | null) {
+  return (name ?? "")
     .split(/\s+/)
     .filter(Boolean)
     .map((part) => part[0])
