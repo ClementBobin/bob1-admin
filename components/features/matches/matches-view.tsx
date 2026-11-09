@@ -3,6 +3,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import { matchToRow, slotCounts } from "@/lib/adapters";
 import { api, errorMessage } from "@/lib/api";
 import { FILTER_ALL, MATCH_STATUS_LABELS, statusTone } from "@/lib/constants";
@@ -39,6 +50,7 @@ export function MatchesView() {
   const sheet = useFormSheet<MatchRow>();
   const editing = sheet.editing;
   const [saving, setSaving] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
   const { data: apiDivisions } = useApiData<DivisionDto[]>(
     () => api.divisions.all(),
@@ -136,6 +148,26 @@ export function MatchesView() {
     FILTER_ALL.statuses,
     ...Object.values(MATCH_STATUS_LABELS),
   ];
+
+  const canCancel = editing?.status === MATCH_STATUS_LABELS.Scheduled;
+
+  const cancelMatch = async () => {
+    if (!editing) return;
+    setSaving(true);
+    try {
+      await api.matches.cancel(editing.id);
+      toast.success(
+        "Le match a été annulé. Les personnes concernées sont prévenues.",
+      );
+      await reload();
+      sheet.close();
+    } catch (cause) {
+      toast.error(errorMessage(cause));
+    } finally {
+      setSaving(false);
+      setConfirmCancel(false);
+    }
+  };
 
   const save = async (payload: MatchPayload) => {
     const divisionId = divisionOptions.find(
@@ -374,17 +406,30 @@ export function MatchesView() {
           editing ? `${editing.home} — ${editing.away}` : "Nouvelle rencontre"
         }
         footer={
-          <FormSheetFooter
-            onCancel={sheet.close}
-            submitLabel={
-              saving
-                ? "Enregistrement…"
-                : editing
-                  ? "Enregistrer les modifications"
-                  : "Créer le match"
-            }
-            form={MATCH_FORM_ID}
-          />
+          <>
+            {canCancel && (
+              <Button
+                type="button"
+                variant="destructive"
+                className="mr-auto"
+                disabled={saving}
+                onClick={() => setConfirmCancel(true)}
+              >
+                Annuler le match
+              </Button>
+            )}
+            <FormSheetFooter
+              onCancel={sheet.close}
+              submitLabel={
+                saving
+                  ? "Enregistrement…"
+                  : editing
+                    ? "Enregistrer les modifications"
+                    : "Créer le match"
+              }
+              form={MATCH_FORM_ID}
+            />
+          </>
         }
       >
         {sheet.open && (
@@ -399,6 +444,27 @@ export function MatchesView() {
           />
         )}
       </FormSheet>
+
+      <AlertDialog open={confirmCancel} onOpenChange={setConfirmCancel}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Annuler ce match ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {editing
+                ? `${editing.home} — ${editing.away} (${editing.date}). `
+                : ""}
+              Le match sera marqué « Annulé » et les personnes inscrites seront
+              prévenues. Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Retour</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={cancelMatch}>
+              Annuler le match
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
