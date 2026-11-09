@@ -19,7 +19,7 @@ export function VenueForm({ row, onSave }: { row: VenueRow | null; onSave: (row:
     <EntityForm
       id={VENUE_FORM_ID}
       onSubmit={() =>
-        onSave({ id: row?.id ?? `v${Date.now()}`, name, address, city, postalCode, matches: row?.matches ?? "—" })
+        onSave({ id: row?.id ?? `v${Date.now()}`, name, address, city, postalCode })
       }
     >
       <FormField label="Nom du lieu" full>

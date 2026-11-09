@@ -15,8 +15,7 @@
     { "value": "presence", "label": "Présence" },
     { "value": "volunteer", "label": "Bénévolat" },
     { "value": "staff", "label": "Officiel / staff" },
-    { "value": "carpool", "label": "Covoiturage" },
-    { "value": "penalty", "label": "Pénalité" }
+    { "value": "carpool", "label": "Covoiturage" }
   ],
   "notificationTypes": [
     { "value": "Général", "label": "Général" },

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Filter, Plus, Undo2 } from "lucide-react";
+import { Pencil, Plus, Undo2 } from "lucide-react";
 import { api, errorMessage } from "@/lib/api";
 import { useApiData } from "@/hooks/use-api-data";
 import { usePagedQuery } from "@/hooks/use-paged-query";
@@ -18,6 +18,16 @@ import { PageHeader } from "@/components/layout/page-header";
 import { FormSheet, FormSheetFooter } from "@/components/shared/form-sheet";
 import { FILTER_ALL } from "@/lib/constants";
 import { ErrorBanner } from "@/components/shared/error-banner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type {
   PersonDto,
   HistoryRow,
@@ -30,6 +40,7 @@ export function HistoryView() {
   const [categoryFilter, setCategoryFilter] = useState(FILTER_ALL.categories);
   const sheet = useFormSheet<HistoryRow>();
   const [saving, setSaving] = useState(false);
+  const [toRevoke, setToRevoke] = useState<HistoryRow | null>(null);
 
   const { pointCategoryKeys, pointCategoryLabel } = useLookups();
 
@@ -60,8 +71,6 @@ export function HistoryView() {
   ];
 
   const rows = (apiHistory ?? []).map((entry) => {
-    const isPenalty = entry.category === "penalty" && entry.points < 0;
-    const isRevoked = entry.points > 0 && entry.reason.startsWith("Annulation");
     return {
       id: entry.id,
       person: entry.personName,
@@ -70,8 +79,10 @@ export function HistoryView() {
       reason: entry.reason,
       match: entry.matchId ? `Match ${entry.matchId.slice(0, 8)}` : "—",
       date: entry.createdAtUtc,
-      isPenalty,
-      isRevoked,
+      isPenalty: entry.points < 0,
+      isManual: entry.isManual,
+      isRevoked: entry.isRevoked,
+      isRevocation: !entry.isManual && entry.reason.startsWith("Annulation"),
       categoryLabel: pointCategoryLabel(entry.category),
     };
   });
@@ -80,29 +91,16 @@ export function HistoryView() {
     fullName(person.firstName, person.lastName),
   );
 
-  const openEdit = (row: HistoryRow) => {
-    if (!row.isPenalty && !row.isRevoked) {
-      toast.error(
-        "Seules les pénalités et les points donnés par un admin peuvent être modifiés.",
-      );
-      return;
-    }
-    sheet.openEdit(row);
-  };
-
-  const revoke = async (row: HistoryRow) => {
-    if (
-      !window.confirm(
-        `Révoquer cet ajustement de ${row.points > 0 ? "+" : ""}${row.points} pts pour ${row.person} ?`,
-      )
-    )
-      return;
+  const revoke = async () => {
+    if (!toRevoke) return;
     try {
-      await api.rankings.revokePenalty(row.id);
+      await api.rankings.revokePoints(toRevoke.id);
       await reload();
       toast.success("L'ajustement a été révoqué.");
     } catch (cause) {
       toast.error(errorMessage(cause));
+    } finally {
+      setToRevoke(null);
     }
   };
 
@@ -122,13 +120,33 @@ export function HistoryView() {
 
     setSaving(true);
     try {
-      await api.rankings.createPenalty({
-        personId,
-        points: payload.points,
-        reason: payload.reason,
-      });
+      const category = pointCategoryKeys.find(
+        (key) => pointCategoryLabel(key) === payload.category,
+      );
+      if (!category) {
+        toast.error("Sélectionnez une catégorie.");
+        return;
+      }
+      if (sheet.editing) {
+        await api.rankings.updatePoints(sheet.editing.id, {
+          category,
+          points: payload.points,
+          reason: payload.reason,
+        });
+      } else {
+        await api.rankings.createPenalty({
+          personId,
+          category,
+          points: payload.points,
+          reason: payload.reason,
+        });
+      }
       await reload();
-      toast.success("L'ajustement de points a été appliqué.");
+      toast.success(
+        sheet.editing
+          ? "L'ajustement a été modifié."
+          : "L'ajustement de points a été appliqué.",
+      );
       sheet.close();
     } catch (cause) {
       toast.error(errorMessage(cause));
@@ -143,7 +161,7 @@ export function HistoryView() {
         id="tour-history-header"
         eyebrow="Modération"
         title="Historique des points"
-        description="Consultez tous les ajustements de points, pénalités et révocations."
+        description="Consultez tous les ajustements de points. Les lignes créées manuellement peuvent être modifiées ou révoquées."
         action={{
           label: "Ajouter des points",
           icon: Plus,
@@ -182,8 +200,8 @@ export function HistoryView() {
         }}
         pageSize={query.pageSize}
         rowKey={(row) => row.id}
-        minWidth={1100}
-        grid="1.2fr 1fr 1.5fr .8fr 1fr 1fr 36px"
+        minWidth={1200}
+        grid="1.2fr 1fr 1.5fr .8fr 1fr 1fr .9fr 76px"
         emptyMessage={loading ? "Chargement de l'historique…" : undefined}
         columns={[
           {
@@ -196,7 +214,7 @@ export function HistoryView() {
                   tone={
                     row.isPenalty
                       ? "orange"
-                      : row.isRevoked
+                      : row.isRevoked || row.isRevocation
                         ? "purple"
                         : "green"
                   }
@@ -214,7 +232,7 @@ export function HistoryView() {
                 tone={
                   row.isPenalty
                     ? "danger"
-                    : row.isRevoked
+                    : row.isRevoked || row.isRevocation
                       ? "warning"
                       : "success"
                 }
@@ -237,12 +255,12 @@ export function HistoryView() {
                   "font-bold",
                   row.points < 0
                     ? "text-danger"
-                    : row.isRevoked
+                    : row.isRevoked || row.isRevocation
                       ? "text-warning"
                       : "text-green",
                 )}
               >
-                {row.points > 0 && !row.isRevoked ? "+" : ""}
+                {row.points > 0 ? "+" : ""}
                 {row.points}
               </span>
             ),
@@ -257,6 +275,8 @@ export function HistoryView() {
             label: "Type",
             render: (row) =>
               row.isRevoked ? (
+                <Status tone="warning">Révoquée</Status>
+              ) : row.isRevocation ? (
                 <Status tone="warning">Révocation</Status>
               ) : row.isPenalty ? (
                 <Status tone="danger">Pénalité</Status>
@@ -265,31 +285,39 @@ export function HistoryView() {
               ),
           },
           {
+            key: "origin",
+            label: "Origine",
+            render: (row) =>
+              row.isManual ? (
+                <Status tone="info">Manuelle</Status>
+              ) : (
+                <Status tone="neutral">Automatique</Status>
+              ),
+          },
+          {
             key: "actions",
             label: "",
-            render: (row) => (
-              <div className="flex items-center gap-1.5 justify-center">
-                {row.isPenalty && !row.isRevoked && (
+            render: (row) =>
+              row.isManual && !row.isRevoked ? (
+                <div className="flex items-center justify-center gap-1.5">
                   <button
-                    onClick={() => revoke(row)}
+                    onClick={() => sheet.openEdit(row)}
+                    aria-label={`Modifier l'ajustement de ${row.person}`}
+                    title="Modifier"
+                    className="grid size-8 place-items-center rounded-lg text-soft transition hover:bg-muted"
+                  >
+                    <Pencil size={16} />
+                  </button>
+                  <button
+                    onClick={() => setToRevoke(row)}
                     aria-label={`Révoquer l'ajustement de ${row.person}`}
                     title="Révoquer"
                     className="grid size-8 place-items-center rounded-lg text-soft transition hover:bg-danger-soft hover:text-danger"
                   >
                     <Undo2 size={16} />
                   </button>
-                )}
-                {(row.isPenalty || row.isRevoked) && (
-                  <button
-                    onClick={() => openEdit(row)}
-                    aria-label="Modifier"
-                    className="grid size-8 place-items-center rounded-lg text-soft transition hover:bg-muted"
-                  >
-                    <Filter size={16} />
-                  </button>
-                )}
-              </div>
-            ),
+                </div>
+              ) : null,
           },
         ]}
       />
@@ -320,11 +348,33 @@ export function HistoryView() {
             key={sheet.editing?.id ?? "new"}
             row={sheet.editing}
             personOptions={personOptions}
-            categoryOptions={pointCategoryKeys}
+            categoryOptions={pointCategoryKeys.map((key) => pointCategoryLabel(key))}
             onSave={save}
           />
         )}
       </FormSheet>
+
+      <AlertDialog
+        open={toRevoke !== null}
+        onOpenChange={(open) => !open && setToRevoke(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Révoquer cet ajustement ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {toRevoke
+                ? `${toRevoke.points > 0 ? "+" : ""}${toRevoke.points} pts pour ${toRevoke.person} (${toRevoke.reason}). `
+                : ""}
+              Une ligne opposée sera ajoutée à l'historique et l'ajustement ne
+              pourra plus être modifié.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Retour</AlertDialogCancel>
+            <AlertDialogAction onClick={revoke}>Révoquer</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

@@ -16,7 +16,6 @@ export function matchToRow(match: MatchDto, names: MatchNames, slots: Record<str
     buvette: slots.buvette ?? [0, 0],
     chrono: slots.chrono ?? [0, 0],
     mar: slots.mar ?? [0, 0],
-    carpool: "—",
     status: matchStatusLabel(match.status),
   };
 }
@@ -39,7 +38,6 @@ export function personToRow(person: PersonDto): Person {
     roles: person.roles,
     status: person.isActive ? "Actif" : "Suspendu",
     suspendedFromParticipation: person.suspendedFromParticipation,
-    lastLogin: "—",
   };
 }
 
@@ -98,8 +96,10 @@ export function historyEntryToRow(entry: EntryDto): HistoryEntry {
     reason: entry.reason,
     match: entry.matchId ? `Match ${entry.matchId.slice(0, 8)}` : "—",
     date: formatDate(entry.createdAtUtc),
-    isPenalty: entry.category === "penalty" && entry.points < 0,
-    isRevoked: entry.points > 0 && entry.reason.startsWith("Annulation"),
+    isPenalty: entry.points < 0,
+    isManual: entry.isManual,
+    isRevoked: entry.isRevoked,
+    isRevocation: !entry.isManual && entry.reason.startsWith("Annulation"),
   };
 }
 
@@ -107,13 +107,15 @@ export function penaltyToRow(penalty: PenaltyDto): HistoryEntry {
   return {
     id: penalty.id,
     person: penalty.personName,
-    category: "penalty",
+    category: "",
     points: penalty.points,
     reason: penalty.reason,
     match: penalty.matchId ? `Match ${penalty.matchId.slice(0, 8)}` : "—",
     date: formatDate(penalty.createdAtUtc),
     isPenalty: penalty.points < 0,
-    isRevoked: false,
+    isManual: penalty.isManual,
+    isRevoked: penalty.isRevoked,
+    isRevocation: false,
   };
 }
 

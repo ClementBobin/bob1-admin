@@ -381,9 +381,14 @@ export const api = {
       points?: number;
       reason?: string;
       matchId?: string | null;
+      /** Points category (presence, volunteer…); negative points = penalty. */
+      category?: string;
     }) => apiFetch<{ id: string }>("/admin/penalties", { method: "POST", body: input }),
-    revokePenalty: (id: string) =>
-      apiFetch<void>(`/admin/penalties/${id}/revoke`, { method: "POST" }),
+    /** Edit a manual entry. */
+    updatePoints: (id: string, input: { category: string; points: number; reason: string; matchId?: string | null }) =>
+      apiFetch<EntryDto>(`/admin/points/${id}`, { method: "PUT", body: input }),
+    /** Revoke a manual entry (an opposite entry is appended). */
+    revokePoints: (id: string) => apiFetch<void>(`/admin/points/${id}/revoke`, { method: "POST" }),
     // Points history
     history: (params: PointsHistoryQuery = {}) => search<Paged<EntryDto>>("/admin/points-history", params),
   },
