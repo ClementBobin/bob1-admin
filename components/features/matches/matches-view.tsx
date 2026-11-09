@@ -409,7 +409,7 @@ export function MatchesView() {
         footer={
           <>
             {canCancel && (
-              <div className="mr-auto flex gap-2">
+              <div className="flex w-full basis-full gap-2 [&>button]:flex-1">
                 <Button
                   type="button"
                   variant="destructive"
