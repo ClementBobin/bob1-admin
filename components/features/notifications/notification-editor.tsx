@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Bell, CalendarDays, Save, Send, Users, Smartphone } from "lucide-react";
+import { ArrowLeft, Bell, Save, Send, Users, Smartphone } from "lucide-react";
 import { api, errorMessage } from "@/lib/api";
 import { useApiData } from "@/hooks/use-api-data";
 import { useLookups } from "@/hooks/use-lookups";
@@ -31,17 +31,19 @@ function parseType(dataJson: string | null) {
 
 /** Shared by "Nouvelle notification" and "Modifier la notification". */
 export function NotificationEditor({ notificationId }: { notificationId?: string }) {
+  const targetChoices: SelectChoice[] = [{ value: "Tous les membres", label: "Tous les membres" }];
+
   const router = useRouter();
   const editing = Boolean(notificationId);
   const { notificationTypeNames } = useLookups();
   const [selectedType, setType] = useState("");
   const type = selectedType || notificationTypeNames[0] || "";
-  const [target, setTarget] = useState("");
+  const [target, setTarget] = useState(targetChoices[0].value);
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [expiry, setExpiry] = useState("");
   const [recurring, setRecurring] = useState(false);
-  const [startup, setStartup] = useState(true);
+  const [startup, setStartup] = useState(false);
   const [sent, setSent] = useState(false);
   const [sending, setSending] = useState(false);
   const [recipients, setRecipients] = useState<number | null>(null);
@@ -68,7 +70,6 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
     setStartup(existing.startup);
   }, [existing]);
 
-  const targetChoices: SelectChoice[] = [{ value: "Tous les membres", label: "Tous les membres" }];
   const targetGroups: SelectGroup[] = [
     {
       heading: "Divisions",
