@@ -22,6 +22,12 @@ import { Status } from "@/components/shared/status";
 import { PERSON_FORM_ID, PersonForm } from "./person-form";
 import type { DivisionDto, Person, PersonPayload } from "@/types";
 
+const PERSON_STATUS_KEYS: Record<string, "active" | "suspended" | "deactivated" | undefined> = {
+  Actif: "active",
+  Suspendu: "suspended",
+  Désactivé: "deactivated",
+};
+
 export function PeopleView() {
   const { roles } = useLookups();
   const [rows, setRows] = useState<Person[]>([]);
@@ -35,7 +41,7 @@ export function PeopleView() {
   const query = usePagedQuery((params) => api.people.list(params), {
     search,
     role: role === FILTER_ALL.roles ? undefined : role,
-    isActive: status === FILTER_ALL.statuses ? undefined : status === "Actif",
+    status: PERSON_STATUS_KEYS[status],
   });
   const { items: apiPeople, loading, error, reload } = query;
   const { data: apiDivisions } = useApiData<DivisionDto[]>(() => api.divisions.all(), []);
@@ -68,7 +74,7 @@ export function PeopleView() {
           editing.roles.length !== payload.roles.length || editing.roles.some((item) => !payload.roles.includes(item));
         if (rolesChanged) await api.people.setRoles(editing.id, payload.roles);
 
-        if ((editing.status === "Actif") !== payload.isActive) {
+        if (editing.isActive !== payload.isActive) {
           await api.people.setActive(editing.id, payload.isActive);
         }
 

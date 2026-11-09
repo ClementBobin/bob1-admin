@@ -31,9 +31,12 @@ export const STATUS_TONES: Record<string, Tone> = {
   Actif: "success",
   Brouillon: "neutral",
   Annulé: "neutral",
+  Programmé: "info",
+  Joué: "success",
   Archivée: "neutral",
   Externe: "info",
-  Suspendu: "danger",
+  Suspendu: "warning",
+  Désactivé: "danger",
 };
 
 export function statusTone(status: string, fallback: Tone = "warning"): Tone {

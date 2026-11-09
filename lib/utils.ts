@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { MATCH_STATUS_LABELS } from "@/lib/constants";
 import type { MatchStatus } from "@/types";
 
 export function cn(...inputs: ClassValue[]) {
@@ -40,11 +41,11 @@ export function formatDate(iso: string): string {
 export function matchStatusLabel(status: MatchStatus): string {
   switch (status) {
     case "Cancelled":
-      return "Annulé";
+      return MATCH_STATUS_LABELS.Cancelled;
     case "Played":
-      return "Confirmé";
+      return MATCH_STATUS_LABELS.Played;
     default:
-      return "J-15";
+      return MATCH_STATUS_LABELS.Scheduled;
   }
 }
 

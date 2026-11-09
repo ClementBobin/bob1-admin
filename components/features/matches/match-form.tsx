@@ -104,7 +104,6 @@ export function MatchForm({
               buvette: [match?.buvette[0] ?? 0, slots.buvette ?? 0],
               chrono: [0, slots.chrono ?? 0],
               mar: [0, slots.mar ?? 0],
-              carpool: match?.carpool ?? "0 place",
               status: match?.status ?? "Brouillon",
               startsAtUtc: new Date(`${date}T${time}:00`).toISOString(),
             },

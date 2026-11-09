@@ -29,7 +29,7 @@ export function FormSheet({
         </SheetHeader>
         <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-6 sm:py-6">{children}</div>
         {footer && (
-          <SheetFooter className="min-h-[74px] flex-row items-center justify-end gap-2 border-t px-5 sm:px-6">
+          <SheetFooter className="min-h-[74px] flex-row flex-wrap items-center justify-end gap-2 border-t px-5 sm:px-6">
             {footer}
           </SheetFooter>
         )}
@@ -40,19 +40,23 @@ export function FormSheet({
 
 export function FormSheetFooter({
   onCancel,
+  showCancel = true,
   submitLabel,
   form,
 }: {
   onCancel: () => void;
+  showCancel?: boolean;
   submitLabel: string;
   form?: string;
 }) {
   return (
     <>
-      <Button type="button" variant="ghost" onClick={onCancel}>
-        Annuler
-      </Button>
-      <Button type={form ? "submit" : "button"} form={form}>
+      {showCancel && (
+        <Button type="button" variant="ghost" onClick={onCancel}>
+          Annuler
+        </Button>
+      )}
+      <Button type={form ? "submit" : "button"} form={form} className={!showCancel ? "w-full" : undefined}>
         {submitLabel}
       </Button>
     </>
