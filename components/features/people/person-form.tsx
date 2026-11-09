@@ -10,17 +10,28 @@ import { OptionSelect } from "@/components/shared/option-select";
 import { PERSON_STATUS_OPTIONS } from "@/lib/constants";
 import { useLookups } from "@/hooks/use-lookups";
 import { cn } from "@/lib/utils";
-import type { Person, PersonPayload } from "@/types";
+import type { DivisionDto, Person, PersonPayload } from "@/types";
 
 export const PERSON_FORM_ID = "person-form";
 
-export function PersonForm({ person, onSave }: { person: Person | null; onSave: (payload: PersonPayload) => void }) {
+const NO_DIVISION = "Aucune";
+
+export function PersonForm({
+  person,
+  divisions,
+  onSave,
+}: {
+  person: Person | null;
+  divisions: DivisionDto[];
+  onSave: (payload: PersonPayload) => void;
+}) {
   const { roles: roleOptions } = useLookups();
   const [firstName, setFirstName] = useState(person?.name.split(" ")[0] ?? "");
   const [lastName, setLastName] = useState(person?.name.split(" ").slice(1).join(" ") ?? "");
   const [email, setEmail] = useState(person?.email ?? "");
   const [roles, setRoles] = useState<string[]>(person?.roles ?? (roleOptions[0] ? [roleOptions[0]] : []));
   const [status, setStatus] = useState(person?.status ?? "Actif");
+  const [divisionId, setDivisionId] = useState<string | null>(person?.divisionId ?? null);
   const [suspendedFromParticipation, setSuspendedFromParticipation] = useState(person?.suspendedFromParticipation ?? false);
 
   const toggleRole = (role: string) => {
@@ -36,6 +47,7 @@ export function PersonForm({ person, onSave }: { person: Person | null; onSave: 
       roles: roles.length ? roles : ["Parent"],
       isActive: status === "Actif",
       suspendedFromParticipation,
+      divisionId,
     });
 
   return (
@@ -48,6 +60,16 @@ export function PersonForm({ person, onSave }: { person: Person | null; onSave: 
       </FormField>
       <FormField label="E-mail" full>
         {(id) => <Input id={id} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />}
+      </FormField>
+      <FormField label="Division (joueur)" full>
+        {(id) => (
+          <OptionSelect
+            id={id}
+            value={divisions.find((item) => item.id === divisionId)?.name ?? NO_DIVISION}
+            onValueChange={(name) => setDivisionId(divisions.find((item) => item.name === name)?.id ?? null)}
+            options={[NO_DIVISION, ...divisions.map((item) => item.name)]}
+          />
+        )}
       </FormField>
       <FormField label="Statut" full>
         {(id) => <OptionSelect id={id} value={status} onValueChange={setStatus} options={PERSON_STATUS_OPTIONS} />}

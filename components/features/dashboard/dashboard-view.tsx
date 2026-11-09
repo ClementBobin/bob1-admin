@@ -26,15 +26,10 @@ import type {
   Tone,
   UrgentSlotDto,
   UrgentSlotPage,
+  VenueDto,
 } from "@/types";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-
-function opponentFromTitle(title: string) {
-  const [home, away] = title.split(" vs ");
-  if (!away) return title;
-  return home.trim() === "BOB1" ? away.trim() : home.trim();
-}
 
 export function DashboardView() {
   const { user } = useAuth();
@@ -46,6 +41,8 @@ export function DashboardView() {
     () => api.matches.list({ status: "Scheduled", take: 50 }),
     { total: 0, items: [] },
   );
+  const { data: venues } = useApiData<VenueDto[]>(() => api.venues.all(), []);
+  const venueNames = new Map((venues ?? []).map((venue) => [venue.id, venue.name]));
   const { data: urgentPage } = useApiData<UrgentSlotPage<UrgentSlotDto>>(
     () => api.slots.urgent({ days: 7, take: 100 }),
     { total: 0, totalMissing: 0, items: [] },
@@ -88,7 +85,7 @@ export function DashboardView() {
         id: matchId,
         date: formatDateTime(entry.startsAt),
         division: match?.divisionName ?? "—",
-        opponent: match?.opponent ?? opponentFromTitle(entry.title),
+        title: match?.title ?? entry.title,
         slots: `${entry.missing} poste${entry.missing > 1 ? "s" : ""}`,
         urgent: days <= 3,
       };
@@ -129,7 +126,7 @@ export function DashboardView() {
     })),
     ...liveAttention.slice(0, 2).map((item) => ({
       id: `slot-${item.id}`,
-      text: `${item.slots} non pourvu${item.slots.startsWith("1 ") ? "" : "s"} pour ${item.opponent}`,
+      text: `${item.slots} non pourvu${item.slots.startsWith("1 ") ? "" : "s"} pour ${item.title}`,
       time: item.date,
       tone: "warning" as Tone,
     })),
@@ -222,8 +219,7 @@ export function DashboardView() {
                 />
                 <span className="flex min-w-0 flex-1 flex-col">
                   <strong className="truncate text-[12.5px]">
-                    BOB1 <span className="font-medium text-soft">vs</span>{" "}
-                    {match.opponent}
+                    {match.title}
                   </strong>
                   <small className="mt-1 text-[11px] text-soft">
                     {match.date} · {match.division}
@@ -280,7 +276,7 @@ export function DashboardView() {
                         {match.title}
                       </strong>
                       <small className="mt-0.5 truncate text-[10.5px] text-soft">
-                        {match.divisionName} · {match.venueName}
+                        {match.divisionName} · {venueNames.get(match.venueId) ?? "—"}
                       </small>
                     </span>
                   </Link>

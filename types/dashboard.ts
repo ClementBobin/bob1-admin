@@ -15,7 +15,7 @@ export type AttentionMatch = {
   id: string | number;
   date: string;
   division: string;
-  opponent: string;
+  title: string;
   slots: string;
   urgent: boolean;
 };

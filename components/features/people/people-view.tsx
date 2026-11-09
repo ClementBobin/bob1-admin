@@ -9,6 +9,7 @@ import { FILTER_ALL, PERSON_STATUS_OPTIONS, ROLE_TONE_CLASSES, statusTone } from
 import { cn } from "@/lib/utils";
 import { usePagedQuery } from "@/hooks/use-paged-query";
 import { useFormSheet } from "@/hooks/use-form-sheet";
+import { useApiData } from "@/hooks/use-api-data";
 import { useLookups } from "@/hooks/use-lookups";
 import { PageHeader } from "@/components/layout/page-header";
 import { DataTable } from "@/components/shared/data-table";
@@ -19,7 +20,7 @@ import { InitialsAvatar } from "@/components/shared/initials-avatar";
 import { RowActionButton } from "@/components/shared/row-action-button";
 import { Status } from "@/components/shared/status";
 import { PERSON_FORM_ID, PersonForm } from "./person-form";
-import type { Person, PersonPayload } from "@/types";
+import type { DivisionDto, Person, PersonPayload } from "@/types";
 
 export function PeopleView() {
   const { roles } = useLookups();
@@ -37,12 +38,14 @@ export function PeopleView() {
     isActive: status === FILTER_ALL.statuses ? undefined : status === "Actif",
   });
   const { items: apiPeople, loading, error, reload } = query;
+  const { data: apiDivisions } = useApiData<DivisionDto[]>(() => api.divisions.all(), []);
 
   useEffect(() => {
     setRows(
       (apiPeople || []).map((person) => ({
         ...personToRow(person),
         familyId: person.familyId,
+        divisionId: person.divisionId,
         personId: person.id,
       })),
     );
@@ -58,6 +61,7 @@ export function PeopleView() {
           firstName: payload.firstName,
           lastName: payload.lastName,
           familyId: editing.familyId,
+          divisionId: payload.divisionId,
         });
 
         const rolesChanged =
@@ -80,6 +84,7 @@ export function PeopleView() {
           lastName: payload.lastName,
           roles: payload.roles,
           familyId: null,
+          divisionId: payload.divisionId,
           password: null,
         });
         setTempPassword(created.temporaryPassword);
@@ -229,7 +234,7 @@ export function PeopleView() {
           />
         }
       >
-        {sheet.open && <PersonForm key={sheet.editing?.id ?? "new"} person={sheet.editing} onSave={save} />}
+        {sheet.open && <PersonForm key={sheet.editing?.id ?? "new"} person={sheet.editing} divisions={apiDivisions ?? []} onSave={save} />}
       </FormSheet>
     </>
   );

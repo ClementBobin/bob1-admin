@@ -3,7 +3,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
-import { matchToRow } from "@/lib/adapters";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { matchToRow, slotCounts } from "@/lib/adapters";
 import { api, errorMessage } from "@/lib/api";
 import { FILTER_ALL, MATCH_STATUS_LABELS, statusTone } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -25,12 +36,13 @@ import type {
   MatchPayload,
   MatchRow,
   NamedOption,
+  RosterDto,
   TeamDto,
   VenueDto,
 } from "@/types";
 
 export function MatchesView() {
-  const { clubName, slotTemplates } = useLookups();
+  const { slotTemplates } = useLookups();
   const [rows, setRows] = useState<MatchRow[]>([]);
   const [search, setSearch] = useState("");
   const [division, setDivision] = useState(FILTER_ALL.divisions);
@@ -38,6 +50,7 @@ export function MatchesView() {
   const sheet = useFormSheet<MatchRow>();
   const editing = sheet.editing;
   const [saving, setSaving] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
   const { data: apiDivisions } = useApiData<DivisionDto[]>(
     () => api.divisions.all(),
@@ -54,20 +67,53 @@ export function MatchesView() {
       division === FILTER_ALL.divisions
         ? undefined
         : (apiDivisions ?? []).find((item) => item.name === division)?.id,
-    status: Object.entries(MATCH_STATUS_LABELS).find(([, label]) => label === status)?.[0],
+    status: Object.entries(MATCH_STATUS_LABELS).find(
+      ([, label]) => label === status,
+    )?.[0],
   });
   const { items: apiMatches, loading, error, reload } = query;
 
+  const { data: apiTeams } = useApiData<TeamDto[]>(() => api.teams.all(), []);
+
+  // Slots (officials, buvette…) live in Participation: one roster per displayed match.
+  const [rosters, setRosters] = useState<Record<string, RosterDto>>({});
   useEffect(() => {
+    let cancelled = false;
+    Promise.all(
+      (apiMatches ?? []).map((match) =>
+        api.slots
+          .roster(match.id)
+          .then((roster) => [match.id, roster] as const)
+          .catch(() => null),
+      ),
+    ).then((entries) => {
+      if (!cancelled)
+        setRosters(
+          Object.fromEntries(entries.filter((entry) => entry !== null)),
+        );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [apiMatches]);
+
+  // Matches only carry team / venue ids: names come from the club data.
+  useEffect(() => {
+    const names = {
+      teams: new Map((apiTeams ?? []).map((team) => [team.id, team.name])),
+      venues: new Map((apiVenues ?? []).map((venue) => [venue.id, venue.name])),
+    };
     setRows(
       (apiMatches ?? []).map((match) => ({
-        ...matchToRow(match),
-        opponent: match.opponent,
-        isHome: match.isHome,
+        ...matchToRow(
+          match,
+          names,
+          slotCounts(rosters[match.id], slotTemplates),
+        ),
         startsAtUtc: match.startsAtUtc,
       })),
     );
-  }, [apiMatches]);
+  }, [apiMatches, apiTeams, apiVenues, rosters, slotTemplates]);
 
   const divisionOptions: NamedOption[] = (apiDivisions ?? []).map((item) => ({
     id: item.id,
@@ -93,16 +139,35 @@ export function MatchesView() {
     return names;
   }, [venueOptions, editing]);
 
-  const { data: apiTeams } = useApiData<TeamDto[]>(() => api.teams.all(), []);
+  const teamOptions = useMemo(
+    () => [...new Set((apiTeams ?? []).map((team) => team.name))],
+    [apiTeams],
+  );
 
-  const teamOptions = useMemo(() => {
-    const names = new Set<string>();
-    for (const team of apiTeams ?? []) names.add(team.name);
-    names.delete("");
-    return [...names];
-  }, [apiTeams]);
+  const statusOptions = [
+    FILTER_ALL.statuses,
+    ...Object.values(MATCH_STATUS_LABELS),
+  ];
 
-  const statusOptions = [FILTER_ALL.statuses, ...Object.values(MATCH_STATUS_LABELS)];
+  const canCancel = editing?.status === MATCH_STATUS_LABELS.Scheduled;
+
+  const cancelMatch = async () => {
+    if (!editing) return;
+    setSaving(true);
+    try {
+      await api.matches.cancel(editing.id);
+      toast.success(
+        "Le match a été annulé. Les personnes concernées sont prévenues.",
+      );
+      await reload();
+      sheet.close();
+    } catch (cause) {
+      toast.error(errorMessage(cause));
+    } finally {
+      setSaving(false);
+      setConfirmCancel(false);
+    }
+  };
 
   const save = async (payload: MatchPayload) => {
     const divisionId = divisionOptions.find(
@@ -111,46 +176,78 @@ export function MatchesView() {
     const venueId = venueOptions.find(
       (item) => item.name === payload.venueName,
     )?.id;
-    if (!divisionId || !venueId) {
-      toast.error("Sélectionnez une division et un lieu existants.");
+    const homeTeamId = (apiTeams ?? []).find(
+      (item) => item.name === payload.homeTeamName,
+    )?.id;
+    const awayTeamId = (apiTeams ?? []).find(
+      (item) => item.name === payload.awayTeamName,
+    )?.id;
+    if (!divisionId || !venueId || !homeTeamId || !awayTeamId) {
+      toast.error(
+        "Sélectionnez une division, deux équipes et un lieu existants.",
+      );
       return;
     }
 
     const input = {
       divisionId,
-      opponent: payload.opponent,
-      isHome: payload.isHome,
+      homeTeamId,
+      awayTeamId,
       venueId,
       startsAtUtc: new Date(`${payload.date}T${payload.time}:00`).toISOString(),
     };
 
-    setSaving(true);
-    try {
-      if (editing) {
-        await api.matches.update(editing.id, input);
-        toast.success("Le match a été mis à jour.");
-      } else {
-        const created = await api.matches.create(input);
-        const failures: string[] = [];
-        for (const spec of slotTemplates) {
-          const capacity = payload.slots[spec.key] ?? 0;
-          if (capacity <= 0) continue;
-          try {
-            await api.slots.create(created.id, {
+    // Creates / resizes / removes the slots so they match the form; returns the roles that failed.
+    const syncSlots = async (matchId: string, existing: RosterDto["slots"]) => {
+      const failures: string[] = [];
+      for (const spec of slotTemplates) {
+        const capacity = payload.slots[spec.key] ?? 0;
+        const current = existing.find(
+          (slot) => slot.role.toLowerCase() === spec.role.toLowerCase(),
+        );
+        try {
+          if (current) {
+            if (capacity === current.capacity) continue;
+            if (capacity <= 0) await api.slots.remove(current.slotId);
+            else
+              await api.slots.update(current.slotId, {
+                kind: spec.kind,
+                role: spec.role,
+                capacity,
+              });
+          } else if (capacity > 0) {
+            await api.slots.create(matchId, {
               kind: spec.kind,
               role: spec.role,
               capacity,
             });
-          } catch {
-            failures.push(spec.role);
           }
+        } catch {
+          failures.push(spec.role);
         }
-        (failures.length ? toast.error : toast.success)(
-          failures.length
-            ? `Le match a été créé, mais les postes suivants n'ont pas pu être ajoutés : ${failures.join(", ")}.`
-            : "Le match a été créé et publié au calendrier.",
-        );
       }
+      return failures;
+    };
+
+    setSaving(true);
+    try {
+      let matchId: string;
+      let existing: RosterDto["slots"] = [];
+      if (editing) {
+        matchId = editing.id;
+        await api.matches.update(matchId, input);
+        existing = (await api.slots.roster(matchId)).slots;
+      } else {
+        matchId = (await api.matches.create(input)).id;
+      }
+      const failures = await syncSlots(matchId, existing);
+      (failures.length ? toast.error : toast.success)(
+        failures.length
+          ? `Le match a été enregistré, mais ces postes n'ont pas pu être mis à jour : ${failures.join(", ")}.`
+          : editing
+            ? "Le match a été mis à jour."
+            : "Le match a été créé et publié au calendrier.",
+      );
       await reload();
       sheet.close();
     } catch (cause) {
@@ -205,7 +302,11 @@ export function MatchesView() {
       <DataTable
         id="tour-matches-table"
         rows={rows}
-        server={{ total: query.total, page: query.page, onPageChange: query.setPage }}
+        server={{
+          total: query.total,
+          page: query.page,
+          onPageChange: query.setPage,
+        }}
         pageSize={query.pageSize}
         rowKey={(row) => row.id}
         minWidth={1060}
@@ -305,17 +406,30 @@ export function MatchesView() {
           editing ? `${editing.home} — ${editing.away}` : "Nouvelle rencontre"
         }
         footer={
-          <FormSheetFooter
-            onCancel={sheet.close}
-            submitLabel={
-              saving
-                ? "Enregistrement…"
-                : editing
-                  ? "Enregistrer les modifications"
-                  : "Créer le match"
-            }
-            form={MATCH_FORM_ID}
-          />
+          <>
+            {canCancel && (
+              <Button
+                type="button"
+                variant="destructive"
+                className="mr-auto"
+                disabled={saving}
+                onClick={() => setConfirmCancel(true)}
+              >
+                Annuler le match
+              </Button>
+            )}
+            <FormSheetFooter
+              onCancel={sheet.close}
+              submitLabel={
+                saving
+                  ? "Enregistrement…"
+                  : editing
+                    ? "Enregistrer les modifications"
+                    : "Créer le match"
+              }
+              form={MATCH_FORM_ID}
+            />
+          </>
         }
       >
         {sheet.open && (
@@ -324,13 +438,33 @@ export function MatchesView() {
             match={editing}
             divisionOptions={divisionNames}
             venueOptions={venueNames}
-            clubName={clubName}
             teamOptions={teamOptions}
             slotTemplates={slotTemplates}
             onSave={save}
           />
         )}
       </FormSheet>
+
+      <AlertDialog open={confirmCancel} onOpenChange={setConfirmCancel}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Annuler ce match ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {editing
+                ? `${editing.home} — ${editing.away} (${editing.date}). `
+                : ""}
+              Le match sera marqué « Annulé » et les personnes inscrites seront
+              prévenues. Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Retour</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={cancelMatch}>
+              Annuler le match
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

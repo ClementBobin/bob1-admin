@@ -7,6 +7,7 @@ export type PersonDto = {
   isActive: boolean;
   suspendedFromParticipation: boolean;
   familyId: string | null;
+  divisionId: string | null;
 };
 
 export type PersonInput = {
@@ -15,6 +16,7 @@ export type PersonInput = {
   lastName: string;
   roles: string[];
   familyId?: string | null;
+  divisionId?: string | null;
   password?: string | null;
 };
 
@@ -33,6 +35,7 @@ export type Person = {
   lastLogin: string;
   /** Raw API fields, kept so the edit form can update the right records. */
   familyId?: string | null;
+  divisionId?: string | null;
   personId?: string;
 };
 
@@ -45,4 +48,6 @@ export type PersonPayload = {
   roles: string[];
   isActive: boolean;
   suspendedFromParticipation: boolean;
+  /** Players (children) belong to a division; null for everyone else. */
+  divisionId: string | null;
 };

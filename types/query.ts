@@ -14,7 +14,7 @@ export type MatchQuery = PageParams & {
   to?: string;
 };
 export type PeopleQuery = PageParams & { search?: string; role?: string; isActive?: boolean };
-export type FamilyQuery = PageParams & { search?: string; hasAccounts?: boolean; hideInactive?: boolean };
+export type FamilyQuery = PageParams & { search?: string; hideInactive?: boolean };
 export type NotificationQuery = PageParams & { search?: string; type?: string; read?: boolean };
 export type RankingQuery = PageParams & { category?: string; view?: "person" | "family"; search?: string; season?: string };
 export type RuleQuery = PageParams & { search?: string; category?: string };
