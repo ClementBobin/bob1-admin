@@ -32,7 +32,6 @@ export type Person = {
   roles: string[];
   status: string; // Actif / Suspendu / En attente
   suspendedFromParticipation: boolean;
-  lastLogin: string;
   /** Raw API fields, kept so the edit form can update the right records. */
   familyId?: string | null;
   divisionId?: string | null;

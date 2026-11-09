@@ -209,11 +209,6 @@ export function PeopleView() {
             ),
           },
           {
-            key: "lastLogin",
-            label: "Dernière connexion",
-            render: (row) => <span className="text-soft">{row.lastLogin}</span>,
-          },
-          {
             key: "actions",
             label: "",
             render: (row) => <RowActionButton onClick={() => sheet.openEdit(row)} />,
