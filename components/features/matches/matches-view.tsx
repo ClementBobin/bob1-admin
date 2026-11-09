@@ -363,22 +363,6 @@ export function MatchesView() {
             ),
           },
           {
-            key: "carpool",
-            label: "Covoiturage",
-            render: (row) => (
-              <span
-                className={cn(
-                  "text-[11.5px]",
-                  row.carpool === "Complet"
-                    ? "font-bold text-green"
-                    : "text-soft",
-                )}
-              >
-                {row.carpool}
-              </span>
-            ),
-          },
-          {
             key: "status",
             label: "Statut",
             render: (row) => (

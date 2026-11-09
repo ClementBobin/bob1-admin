@@ -59,7 +59,6 @@ export type MatchRow = {
   chrono: [number, number];
   mar: [number, number];
   buvette: [number, number];
-  carpool: string;
   status: string;
   /** Raw API fields, kept so the edit form can be prefilled. */
   startsAtUtc?: string;
