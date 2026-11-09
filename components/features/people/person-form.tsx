@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ShieldCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { EntityForm } from "@/components/shared/entity-form";
 import { FormField } from "@/components/shared/form-field";
 import { OptionSelect } from "@/components/shared/option-select";
@@ -28,7 +29,10 @@ export function PersonForm({
   const [lastName, setLastName] = useState(person?.name.split(" ").slice(1).join(" ") ?? "");
   const [email, setEmail] = useState(person?.email ?? "");
   const [roles, setRoles] = useState<string[]>(person?.roles ?? (roleOptions[0] ? [roleOptions[0]] : []));
-  const [status, setStatus] = useState(person?.status ?? "Actif");
+  const [isActive, setIsActive] = useState(person?.isActive ?? true);
+  const [suspendedFromParticipation, setSuspendedFromParticipation] = useState(
+    person?.suspendedFromParticipation ?? false,
+  );
   const [divisionId, setDivisionId] = useState<string | null>(person?.divisionId ?? null);
 
   const toggleRole = (role: string) => {
@@ -42,8 +46,8 @@ export function PersonForm({
       lastName: lastName.trim(),
       email: email.trim(),
       roles: roles.length ? roles : ["Parent"],
-      isActive: status !== "Désactivé",
-      suspendedFromParticipation: status === "Suspendu",
+      isActive,
+      suspendedFromParticipation,
       divisionId,
     });
 
@@ -93,8 +97,26 @@ export function PersonForm({
         })}
       </div>
 
+      <div className="col-span-full flex items-center justify-between gap-3 rounded-xl bg-muted px-3.5 py-3">
+        <span className="flex flex-col">
+          <strong className="text-[12px]">Statut du compte</strong>
+          <small className="mt-0.5 text-[10.5px] text-soft">Activer ou désactiver l'accès à l'application</small>
+        </span>
+        <Switch checked={isActive} onCheckedChange={setIsActive} />
+      </div>
+
+      <div className="col-span-full flex items-center justify-between gap-3 rounded-xl bg-muted px-3.5 py-3">
+        <span className="flex flex-col">
+          <strong className="text-[12px]">Suspendre la participation</strong>
+          <small className="mt-0.5 text-[10.5px] text-soft">
+            La personne pourra voir les informations mais ne pourra pas participer aux matchs en tant que joueur ou staff.
+          </small>
+        </span>
+        <Switch checked={suspendedFromParticipation} onCheckedChange={setSuspendedFromParticipation} />
+      </div>
+
       <div className="col-span-full rounded-xl bg-brand-soft px-3.5 py-3 text-[11px] leading-relaxed text-[#8e4200] dark:text-[#ffc48f]">
-        La modification prend effet immédiatement. Suspendu : la personne voit les informations mais ne peut plus participer aux matchs. Désactivé : la personne ne peut plus se connecter.
+        La modification prend effet immédiatement. Une personne désactivée ne peut plus se connecter.
       </div>
     </EntityForm>
   );
