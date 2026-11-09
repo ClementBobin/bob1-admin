@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, TrendingUp, Users, User, ChevronDown } from "lucide-react";
+import { Plus, TrendingUp } from "lucide-react";
 import { personRankingToRow, familyRankingToRow } from "@/lib/adapters";
 import { api, errorMessage } from "@/lib/api";
 import { useApiData } from "@/hooks/use-api-data";
@@ -17,6 +17,7 @@ import { DataTable } from "@/components/shared/data-table";
 import { PageHeader } from "@/components/layout/page-header";
 import { FormSheet, FormSheetFooter } from "@/components/shared/form-sheet";
 import { ErrorBanner } from "@/components/shared/error-banner";
+import { OptionSelect } from "@/components/shared/option-select";
 import type {
   FamilyRankingRow,
   FamilyRankingResponse,
@@ -27,6 +28,8 @@ import type {
   RankingResponse,
   RankingViewMode,
 } from "@/types";
+
+const VIEW_LABELS = { person: "Par personne", family: "Par famille" };
 
 export function RankingsView() {
   const { pointCategoryKeys, pointCategoryLabel } = useLookups();
@@ -89,35 +92,26 @@ export function RankingsView() {
       />
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2 rounded-lg border border-line bg-card px-3 py-1.5">
-          <User className="size-4 text-soft" />
-          <select
-            value={viewMode}
-            onChange={(e) =>
-              setRankingViewMode(e.target.value as RankingViewMode)
-            }
-            className="bg-transparent text-[12.5px] font-medium text-ink outline-none cursor-pointer"
-          >
-            <option value="person">Par personne</option>
-            <option value="family">Par famille</option>
-          </select>
-          <ChevronDown className="size-4 text-soft" />
-        </div>
-        <div className="flex items-center gap-2 rounded-lg border border-line bg-card px-3 py-1.5">
-          <Users className="size-4 text-soft" />
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value as PointCategory)}
-            className="bg-transparent text-[12.5px] font-medium text-ink outline-none cursor-pointer"
-          >
-            {pointCategoryKeys.map((cat) => (
-              <option key={cat} value={cat}>
-                {pointCategoryLabel(cat)}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="size-4 text-soft" />
-        </div>
+        <OptionSelect
+          aria-label="Mode d'affichage"
+          value={viewMode === "family" ? VIEW_LABELS.family : VIEW_LABELS.person}
+          onValueChange={(label) =>
+            setRankingViewMode(label === VIEW_LABELS.family ? "family" : "person")
+          }
+          options={[VIEW_LABELS.person, VIEW_LABELS.family]}
+          className="w-auto min-w-[150px] text-[12px] font-medium"
+        />
+        <OptionSelect
+          aria-label="Catégorie de points"
+          value={category ? pointCategoryLabel(category) : ""}
+          onValueChange={(label) =>
+            setCategory(
+              pointCategoryKeys.find((key) => pointCategoryLabel(key) === label) ?? category,
+            )
+          }
+          options={pointCategoryKeys.map((key) => pointCategoryLabel(key))}
+          className="w-auto min-w-[150px] text-[12px] font-medium"
+        />
       </div>
 
       <ErrorBanner message={error} />
