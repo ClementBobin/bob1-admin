@@ -89,34 +89,6 @@ export function ruleToRow(rule: RankingRuleDto): RuleRow {
   };
 }
 
-export function historyEntryToRow(entry: EntryDto): HistoryEntry {
-  return {
-    id: entry.id,
-    person: entry.personName,
-    category: entry.category,
-    points: entry.points,
-    reason: entry.reason,
-    match: entry.matchId ? `Match ${entry.matchId.slice(0, 8)}` : "—",
-    date: formatDate(entry.createdAtUtc),
-    isPenalty: entry.category === "penalty" && entry.points < 0,
-    isRevoked: entry.points > 0 && entry.reason.startsWith("Annulation"),
-  };
-}
-
-export function penaltyToRow(penalty: PenaltyDto): HistoryEntry {
-  return {
-    id: penalty.id,
-    person: penalty.personName,
-    category: "penalty",
-    points: penalty.points,
-    reason: penalty.reason,
-    match: penalty.matchId ? `Match ${penalty.matchId.slice(0, 8)}` : "—",
-    date: formatDate(penalty.createdAtUtc),
-    isPenalty: penalty.points < 0,
-    isRevoked: false,
-  };
-}
-
 export function divisionToRow(division: DivisionDto, teamCount = 0) {
   return {
     id: division.id,

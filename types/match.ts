@@ -64,8 +64,6 @@ export type MatchRow = {
   startsAtUtc?: string;
 };
 
-export type SlotKind = "Staff" | "Volunteer";
-
 
 /** What the match form hands back to the page. */
 export type MatchPayload = {
