@@ -256,6 +256,7 @@ export function RankingsView() {
                   personId: payload.personId,
                   points: payload.points,
                   reason: payload.reason,
+                  category,
                 });
                 await reload();
                 toast.success("L'ajustement de points a été appliqué.");
