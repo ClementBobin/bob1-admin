@@ -1,10 +1,10 @@
 import { formatDate, formatDateTime, matchStatusLabel } from "./utils";
-import type { AdminFamilyDto, DivisionDto, EntryDto, Family, FamilyRankingRow, FamilyRankingRowDto, HistoryEntry, MatchDto, MatchRow, PenaltyDto, Person, PersonDto, PersonRankingRow, PersonRankingRowDto, RankingRuleDto, RuleRow, TeamDto } from "@/types";
+import type { AdminFamilyDto, DivisionDto, EntryDto, Family, FamilyRankingRow, FamilyRankingRowDto, HistoryEntry, MatchDto, MatchRow, PenaltyDto, Person, PersonDto, PersonRankingRow, PersonRankingRowDto, RankingRuleDto, RosterDto, RuleRow, SlotTemplate, TeamDto } from "@/types";
 
 /** Team and venue names are not in the match payload: callers pass id → name maps built from the club data. */
 export type MatchNames = { teams: Map<string, string>; venues: Map<string, string> };
 
-export function matchToRow(match: MatchDto, names: MatchNames): MatchRow {
+export function matchToRow(match: MatchDto, names: MatchNames, slots: Record<string, [number, number]> = {}): MatchRow {
   return {
     id: match.id,
     date: formatDateTime(match.startsAtUtc),
@@ -12,13 +12,23 @@ export function matchToRow(match: MatchDto, names: MatchNames): MatchRow {
     home: names.teams.get(match.homeTeamId) ?? "—",
     away: names.teams.get(match.awayTeamId) ?? "—",
     venue: names.venues.get(match.venueId) ?? "—",
-    officials: [0, 0],
-    buvette: [0, 0],
-    chrono: [0, 0],
-    mar: [0, 0],
+    officials: slots.arbitres ?? [0, 0],
+    buvette: slots.buvette ?? [0, 0],
+    chrono: slots.chrono ?? [0, 0],
+    mar: slots.mar ?? [0, 0],
     carpool: "—",
     status: matchStatusLabel(match.status),
   };
+}
+
+/** [filled, capacity] per slot template key, from a match roster (slots are matched on their role). */
+export function slotCounts(roster: RosterDto | undefined, templates: SlotTemplate[]): Record<string, [number, number]> {
+  const counts: Record<string, [number, number]> = {};
+  for (const template of templates) {
+    const slot = roster?.slots.find((item) => item.role.toLowerCase() === template.role.toLowerCase());
+    counts[template.key] = slot ? [slot.people.length, slot.capacity] : [0, 0];
+  }
+  return counts;
 }
 
 export function personToRow(person: PersonDto): Person {

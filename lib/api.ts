@@ -39,6 +39,7 @@ import type {
   RankingResponse,
   RankingRuleDto,
   SlotInput,
+  RosterDto,
   TeamDto,
   UrgentSlotDto,
   VenueDto,
@@ -323,6 +324,10 @@ export const api = {
   slots: {
     create: (matchId: string, input: SlotInput) =>
       apiFetch<{ id: string }>(`/admin/matches/${matchId}/slots`, { method: "POST", body: input }),
+    roster: (matchId: string) => apiFetch<RosterDto>(`/admin/matches/${matchId}/participation`),
+    update: (id: string, input: SlotInput) =>
+      apiFetch<void>(`/admin/slots/${id}`, { method: "PUT", body: input }),
+    remove: (id: string) => apiFetch<void>(`/admin/slots/${id}`, { method: "DELETE" }),
     urgent: (params: UrgentQuery = {}) => search<UrgentSlotPage<UrgentSlotDto>>("/admin/slots/urgent", params),
   },
 

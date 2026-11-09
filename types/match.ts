@@ -28,6 +28,16 @@ export type SlotInput = {
   endsAtUtc?: string | null;
 };
 
+/** Admin roster of a match (GET /admin/matches/{id}/participation). */
+export type RosterSlotDto = {
+  slotId: string;
+  kind: string;
+  role: string;
+  capacity: number;
+  people: { userId: string; name: string }[];
+};
+export type RosterDto = { familiesConfirmed: string[]; slots: RosterSlotDto[] };
+
 export type UrgentSlotDto = {
   slotId: string;
   matchId: string;

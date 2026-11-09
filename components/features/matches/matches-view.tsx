@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
-import { matchToRow } from "@/lib/adapters";
+import { matchToRow, slotCounts } from "@/lib/adapters";
 import { api, errorMessage } from "@/lib/api";
 import { FILTER_ALL, MATCH_STATUS_LABELS, statusTone } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -25,6 +25,7 @@ import type {
   MatchPayload,
   MatchRow,
   NamedOption,
+  RosterDto,
   TeamDto,
   VenueDto,
 } from "@/types";
@@ -54,11 +55,35 @@ export function MatchesView() {
       division === FILTER_ALL.divisions
         ? undefined
         : (apiDivisions ?? []).find((item) => item.name === division)?.id,
-    status: Object.entries(MATCH_STATUS_LABELS).find(([, label]) => label === status)?.[0],
+    status: Object.entries(MATCH_STATUS_LABELS).find(
+      ([, label]) => label === status,
+    )?.[0],
   });
   const { items: apiMatches, loading, error, reload } = query;
 
   const { data: apiTeams } = useApiData<TeamDto[]>(() => api.teams.all(), []);
+
+  // Slots (officials, buvette…) live in Participation: one roster per displayed match.
+  const [rosters, setRosters] = useState<Record<string, RosterDto>>({});
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all(
+      (apiMatches ?? []).map((match) =>
+        api.slots
+          .roster(match.id)
+          .then((roster) => [match.id, roster] as const)
+          .catch(() => null),
+      ),
+    ).then((entries) => {
+      if (!cancelled)
+        setRosters(
+          Object.fromEntries(entries.filter((entry) => entry !== null)),
+        );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [apiMatches]);
 
   // Matches only carry team / venue ids: names come from the club data.
   useEffect(() => {
@@ -68,11 +93,15 @@ export function MatchesView() {
     };
     setRows(
       (apiMatches ?? []).map((match) => ({
-        ...matchToRow(match, names),
+        ...matchToRow(
+          match,
+          names,
+          slotCounts(rosters[match.id], slotTemplates),
+        ),
         startsAtUtc: match.startsAtUtc,
       })),
     );
-  }, [apiMatches, apiTeams, apiVenues]);
+  }, [apiMatches, apiTeams, apiVenues, rosters, slotTemplates]);
 
   const divisionOptions: NamedOption[] = (apiDivisions ?? []).map((item) => ({
     id: item.id,
@@ -103,7 +132,10 @@ export function MatchesView() {
     [apiTeams],
   );
 
-  const statusOptions = [FILTER_ALL.statuses, ...Object.values(MATCH_STATUS_LABELS)];
+  const statusOptions = [
+    FILTER_ALL.statuses,
+    ...Object.values(MATCH_STATUS_LABELS),
+  ];
 
   const save = async (payload: MatchPayload) => {
     const divisionId = divisionOptions.find(
@@ -112,10 +144,16 @@ export function MatchesView() {
     const venueId = venueOptions.find(
       (item) => item.name === payload.venueName,
     )?.id;
-    const homeTeamId = (apiTeams ?? []).find((item) => item.name === payload.homeTeamName)?.id;
-    const awayTeamId = (apiTeams ?? []).find((item) => item.name === payload.awayTeamName)?.id;
+    const homeTeamId = (apiTeams ?? []).find(
+      (item) => item.name === payload.homeTeamName,
+    )?.id;
+    const awayTeamId = (apiTeams ?? []).find(
+      (item) => item.name === payload.awayTeamName,
+    )?.id;
     if (!divisionId || !venueId || !homeTeamId || !awayTeamId) {
-      toast.error("Sélectionnez une division, deux équipes et un lieu existants.");
+      toast.error(
+        "Sélectionnez une division, deux équipes et un lieu existants.",
+      );
       return;
     }
 
@@ -127,33 +165,57 @@ export function MatchesView() {
       startsAtUtc: new Date(`${payload.date}T${payload.time}:00`).toISOString(),
     };
 
-    setSaving(true);
-    try {
-      if (editing) {
-        await api.matches.update(editing.id, input);
-        toast.success("Le match a été mis à jour.");
-      } else {
-        const created = await api.matches.create(input);
-        const failures: string[] = [];
-        for (const spec of slotTemplates) {
-          const capacity = payload.slots[spec.key] ?? 0;
-          if (capacity <= 0) continue;
-          try {
-            await api.slots.create(created.id, {
+    // Creates / resizes / removes the slots so they match the form; returns the roles that failed.
+    const syncSlots = async (matchId: string, existing: RosterDto["slots"]) => {
+      const failures: string[] = [];
+      for (const spec of slotTemplates) {
+        const capacity = payload.slots[spec.key] ?? 0;
+        const current = existing.find(
+          (slot) => slot.role.toLowerCase() === spec.role.toLowerCase(),
+        );
+        try {
+          if (current) {
+            if (capacity === current.capacity) continue;
+            if (capacity <= 0) await api.slots.remove(current.slotId);
+            else
+              await api.slots.update(current.slotId, {
+                kind: spec.kind,
+                role: spec.role,
+                capacity,
+              });
+          } else if (capacity > 0) {
+            await api.slots.create(matchId, {
               kind: spec.kind,
               role: spec.role,
               capacity,
             });
-          } catch {
-            failures.push(spec.role);
           }
+        } catch {
+          failures.push(spec.role);
         }
-        (failures.length ? toast.error : toast.success)(
-          failures.length
-            ? `Le match a été créé, mais les postes suivants n'ont pas pu être ajoutés : ${failures.join(", ")}.`
-            : "Le match a été créé et publié au calendrier.",
-        );
       }
+      return failures;
+    };
+
+    setSaving(true);
+    try {
+      let matchId: string;
+      let existing: RosterDto["slots"] = [];
+      if (editing) {
+        matchId = editing.id;
+        await api.matches.update(matchId, input);
+        existing = (await api.slots.roster(matchId)).slots;
+      } else {
+        matchId = (await api.matches.create(input)).id;
+      }
+      const failures = await syncSlots(matchId, existing);
+      (failures.length ? toast.error : toast.success)(
+        failures.length
+          ? `Le match a été enregistré, mais ces postes n'ont pas pu être mis à jour : ${failures.join(", ")}.`
+          : editing
+            ? "Le match a été mis à jour."
+            : "Le match a été créé et publié au calendrier.",
+      );
       await reload();
       sheet.close();
     } catch (cause) {
@@ -208,7 +270,11 @@ export function MatchesView() {
       <DataTable
         id="tour-matches-table"
         rows={rows}
-        server={{ total: query.total, page: query.page, onPageChange: query.setPage }}
+        server={{
+          total: query.total,
+          page: query.page,
+          onPageChange: query.setPage,
+        }}
         pageSize={query.pageSize}
         rowKey={(row) => row.id}
         minWidth={1060}

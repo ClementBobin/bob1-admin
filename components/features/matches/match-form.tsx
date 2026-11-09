@@ -51,7 +51,7 @@ export function MatchForm({
     slotTemplates.map((slot) => [
       slot.key,
       slotOverrides[slot.key] ??
-        (existingSlots[slot.key] || slot.defaultCapacity),
+        (match ? (existingSlots[slot.key] ?? 0) : slot.defaultCapacity),
     ]),
   );
 
