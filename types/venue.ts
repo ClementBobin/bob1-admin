@@ -6,5 +6,4 @@ export type VenueRow = {
   address: string;
   city: string;
   postalCode: string;
-  matches: string;
 };

@@ -31,7 +31,6 @@ export function VenuesView() {
         address: venue.address ?? "—",
         city: venue.city ?? "—",
         postalCode: venue.postalCode ?? "—",
-        matches: "—",
       })),
     );
   }, [apiVenues]);
@@ -96,7 +95,6 @@ export function VenuesView() {
             label: "Ville / CP",
             render: (row) => `${row.city} ${row.postalCode !== "—" ? row.postalCode : ""}`.trim(),
           },
-          { key: "matches", label: "Matchs à venir", render: (row) => row.matches },
           {
             key: "actions",
             label: "",
