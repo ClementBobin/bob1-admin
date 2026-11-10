@@ -6,7 +6,7 @@ import { api, errorMessage } from "@/lib/api";
 import { useApiData } from "@/hooks/use-api-data";
 import { usePagedQuery } from "@/hooks/use-paged-query";
 import { useLookups } from "@/hooks/use-lookups";
-import { cn, fullName, pointsAdjustmentError } from "@/lib/utils";
+import { cn, formatDateTime, fullName, pointsAdjustmentError } from "@/lib/utils";
 import { useFormSheet } from "@/hooks/use-form-sheet";
 import { HISTORY_FORM_ID, HistoryForm } from "./history-form";
 import { toast } from "sonner";
@@ -268,7 +268,7 @@ export function HistoryView() {
           {
             key: "date",
             label: "Date",
-            render: (row) => <span className="text-soft">{row.date}</span>,
+            render: (row) => <span className="text-soft">{formatDateTime(row.date)}</span>,
           },
           {
             key: "type",

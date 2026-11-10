@@ -198,11 +198,6 @@ export function RankingsView() {
             ),
           },
           {
-            key: "details",
-            label: "Détails",
-            render: () => <span className="text-soft">—</span>,
-          },
-          {
             key: "total",
             label: "Total",
             render: (row) => (
