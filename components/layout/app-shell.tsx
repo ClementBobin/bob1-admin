@@ -114,7 +114,6 @@ function GlobalSearch() {
 }
 
 function AppSidebar() {
-  const pathname = usePathname();
   const { startTour } = useAppTour();
   const { setOpenMobile } = useSidebar();
   const { user, logout } = useAuth();
