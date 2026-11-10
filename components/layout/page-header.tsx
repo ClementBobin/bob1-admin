@@ -53,7 +53,7 @@ export function PageHeader({
 
 export function CardHeading({ title, subtitle, action }: { title: string; subtitle?: string; action?: ReactNode }) {
   return (
-    <CardHeader className="min-h-[66px] items-center gap-1 border-b px-5 py-4 pb-4!">
+    <CardHeader className="min-h-16.5 items-center gap-1 border-b px-5 py-4 pb-4!">
       <CardTitle className="font-display text-[15px] font-extrabold leading-snug">{title}</CardTitle>
       {subtitle && <CardDescription className="text-[11px]">{subtitle}</CardDescription>}
       {action && <CardAction className="row-span-2 self-center">{action}</CardAction>}

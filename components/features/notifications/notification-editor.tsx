@@ -239,14 +239,14 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
                 />
               </Field>
               <div className="col-span-full flex flex-col gap-2 border-t border-line pt-3">
-                <div className="flex min-h-[64px] items-center justify-between gap-4 px-5 py-3">
+                <div className="flex min-h-16 items-center justify-between gap-4 px-5 py-3">
                   <span className="flex flex-col">
                     <strong className="text-[12.5px]">Notification récurrente</strong>
                     <small className="mt-0.5 text-[11px] text-soft">Renvoyer selon une fréquence définie</small>
                   </span>
                   <Switch checked={recurring} onCheckedChange={setRecurring} />
                 </div>
-                <div className="flex min-h-[64px] items-center justify-between gap-4 px-5 py-3">
+                <div className="flex min-h-16 items-center justify-between gap-4 px-5 py-3">
                   <span className="flex flex-col">
                     <strong className="text-[12.5px]">Afficher au démarrage</strong>
                     <small className="mt-0.5 text-[11px] text-soft">Présenter comme message prioritaire</small>
@@ -314,8 +314,8 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
 
             <Card id="tour-notifications-preview" className="gap-0 py-0 shadow-soft">
               <CardHeading title="Aperçu mobile" subtitle="Rendu dans l'application BOB1" />
-              <div className="mx-auto my-4 w-[272px]">
-                <div className="overflow-hidden rounded-[32px] border-[7px] border-[#1c1815] bg-canvas shadow-float">
+              <div className="mx-auto my-4 w-68">
+                <div className="overflow-hidden rounded-4xl border-[7px] border-[#1c1815] bg-canvas shadow-float">
                   <div className="flex h-10 items-center justify-between px-4">
                     <span className="text-[10px] font-semibold">9:41</span>
                     <span className="flex items-center gap-1">
@@ -338,11 +338,11 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
                       <span className="grid size-11 place-items-center rounded-2xl bg-brand-soft text-brand">
                         <Bell size={20} />
                       </span>
-                      <span className="mt-2.5 text-[9px] font-extrabold uppercase tracking-[0.1em] text-brand">
+                      <span className="mt-2.5 text-[9px] font-extrabold uppercase tracking-widest text-brand">
                         {type}
                       </span>
                       <strong className="mt-1.5 font-display text-[15px] font-extrabold">{title}</strong>
-                      <p className="mt-2 max-w-[210px] text-[10px] leading-relaxed text-soft">{message}</p>
+                      <p className="mt-2 max-w-52.5 text-[10px] leading-relaxed text-soft">{message}</p>
                       <button className="mt-4 h-9 w-full rounded-full bg-brand text-[11px] font-bold text-brand-foreground">
                         J'ai compris
                       </button>

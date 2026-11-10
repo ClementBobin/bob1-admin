@@ -99,7 +99,7 @@ export function RankingsView() {
             setRankingViewMode(label === VIEW_LABELS.family ? "family" : "person")
           }
           options={[VIEW_LABELS.person, VIEW_LABELS.family]}
-          className="w-auto min-w-[150px] text-[12px] font-medium"
+          className="w-auto min-w-37.5 text-[12px] font-medium"
         />
         <OptionSelect
           aria-label="Catégorie de points"
@@ -110,7 +110,7 @@ export function RankingsView() {
             )
           }
           options={pointCategoryKeys.map((key) => pointCategoryLabel(key))}
-          className="w-auto min-w-[150px] text-[12px] font-medium"
+          className="w-auto min-w-37.5 text-[12px] font-medium"
         />
       </div>
 

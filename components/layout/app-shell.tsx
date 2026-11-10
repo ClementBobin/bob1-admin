@@ -66,9 +66,9 @@ function GlobalSearch() {
         variant="outline"
         onClick={() => setOpen(true)}
         aria-label="Recherche globale"
-        className="h-10 w-full min-w-0 max-w-[430px] justify-start gap-2.5 rounded-[11px] bg-canvas px-3 text-[12px] font-normal text-muted-foreground shadow-none"
+        className="h-10 w-full min-w-0 max-w-107.5 justify-start gap-2.5 rounded-[11px] bg-canvas px-3 text-[12px] font-normal text-muted-foreground shadow-none"
       >
-        <Search className="size-[17px]" />
+        <Search className="size-4.25" />
         <span className="truncate">Rechercher une page, un match, une équipe…</span>
         <Kbd className="ml-auto hidden sm:inline-flex">Ctrl K</Kbd>
       </Button>
@@ -204,13 +204,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
     <SidebarProvider style={{ "--sidebar-width": "264px" } as CSSProperties} className="bg-canvas">
       <a
         href="#contenu"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[70] focus:rounded-lg focus:bg-brand focus:px-4 focus:py-2 focus:text-brand-foreground"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-70 focus:rounded-lg focus:bg-brand focus:px-4 focus:py-2 focus:text-brand-foreground"
       >
         Aller au contenuile
       </a>
       <AppSidebar />
       <SidebarInset id="contenu" className="min-w-0 bg-canvas">
-        <header className="sticky top-0 z-30 flex h-[70px] items-center gap-2.5 border-b bg-card/95 px-4 backdrop-blur sm:gap-3 lg:px-8">
+        <header className="sticky top-0 z-30 flex h-17.5 items-center gap-2.5 border-b bg-card/95 px-4 backdrop-blur sm:gap-3 lg:px-8">
           <SidebarTrigger className="size-10 shrink-0 rounded-xl border md:hidden" aria-label="Ouvrir le menu" />
           <GlobalSearch />
           <div className="ml-auto flex items-center gap-2">
@@ -223,7 +223,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             </Button>
           </div>
         </header>
-        <div className="mx-auto w-full max-w-[1480px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
+        <div className="mx-auto w-full max-w-370 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
       </SidebarInset>
     </SidebarProvider>
   );

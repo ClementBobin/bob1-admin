@@ -183,7 +183,7 @@ export function MatchForm({
         {slotTemplates.map(({ key, role: label }) => (
           <div
             key={key}
-            className="flex min-h-[50px] items-center justify-between gap-3 border-b border-line px-3.5 last:border-b-0"
+            className="flex min-h-12.5 items-center justify-between gap-3 border-b border-line px-3.5 last:border-b-0"
           >
             <span className="text-[12.5px] font-medium">{label}</span>
             <div className="flex items-center gap-2.5">

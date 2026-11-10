@@ -92,7 +92,7 @@ export function NotificationsListView() {
           {
             key: "body",
             label: "Message",
-            render: (row) => <span className="line-clamp-2 max-w-[360px] text-muted-foreground">{row.body}</span>,
+            render: (row) => <span className="line-clamp-2 max-w-90 text-muted-foreground">{row.body}</span>,
           },
           {
             key: "type",

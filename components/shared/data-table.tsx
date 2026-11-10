@@ -72,7 +72,7 @@ export function DataTable<T>({
           {visible.length === 0 && (
             <TableRow className="hover:bg-transparent">
               <TableCell colSpan={columns.length}>
-                <Empty className="min-h-[180px] p-8">
+                <Empty className="min-h-45 p-8">
                   <EmptyHeader>
                     <EmptyMedia variant="icon">
                       <SearchX />
@@ -95,7 +95,7 @@ export function DataTable<T>({
           ))}
         </TableBody>
       </Table>
-      <div className="flex min-h-[54px] flex-wrap items-center justify-between gap-3 border-t px-4 py-2 text-[11px] text-muted-foreground">
+      <div className="flex min-h-13.5 flex-wrap items-center justify-between gap-3 border-t px-4 py-2 text-[11px] text-muted-foreground">
         <span>{formatCount(total, currentPage, pageSize)}</span>
         <Pagination className="mx-0 w-auto">
           <PaginationContent>
