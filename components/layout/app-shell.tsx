@@ -37,6 +37,8 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { SeasonProvider } from "@/components/season/season-provider";
+import { SeasonSelect } from "@/components/season/season-select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 function GlobalSearch() {
@@ -161,7 +163,7 @@ function AppSidebar() {
             <InitialsAvatar name={displayName(user) || "Utilisateur"} tone="orange" size="sm" />
             <span className="flex min-w-0 flex-col">
               <strong className="truncate text-[11.5px] font-bold">{displayName(user) || "Utilisateur"}</strong>
-              <small className="mt-0.5 text-[10px] text-muted-foreground">{primaryRole(user) || "Admin"} · Saison 2024–2025</small>
+              <small className="mt-0.5 text-[10px] text-muted-foreground">{primaryRole(user) || "Admin"}</small>
             </span>
           </div>
           <Button variant="destructive" size="sm" onClick={signOut} className="w-full justify-start gap-2.5 text-[12px] font-bold">
@@ -201,6 +203,7 @@ function ThemeToggle() {
 
 export default function AppShell({ children }: { children: ReactNode }) {
   return (
+    <SeasonProvider>
     <SidebarProvider style={{ "--sidebar-width": "264px" } as CSSProperties} className="bg-canvas">
       <a
         href="#contenu"
@@ -214,6 +217,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <SidebarTrigger className="size-10 shrink-0 rounded-xl border md:hidden" aria-label="Ouvrir le menu" />
           <GlobalSearch />
           <div className="ml-auto flex items-center gap-2">
+            <SeasonSelect />
             <ThemeToggle />
             <Button id="tour-bell" variant="outline" size="icon" className="relative size-10 rounded-xl" asChild>
               <Link href="/notifications" aria-label="Ouvrir les notifications">
@@ -226,5 +230,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <div className="mx-auto w-full max-w-[1480px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
       </SidebarInset>
     </SidebarProvider>
+    </SeasonProvider>
   );
 }

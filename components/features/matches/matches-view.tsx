@@ -19,6 +19,7 @@ import { api, errorMessage } from "@/lib/api";
 import { FILTER_ALL, MATCH_STATUS_LABELS, statusTone } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { useApiData } from "@/hooks/use-api-data";
+import { useSeason } from "@/components/season/season-provider";
 import { usePagedQuery } from "@/hooks/use-paged-query";
 import { useLookups } from "@/hooks/use-lookups";
 import { useFormSheet } from "@/hooks/use-form-sheet";
@@ -62,8 +63,10 @@ export function MatchesView() {
     [],
   );
 
+  const { season, isCurrent } = useSeason();
   const query = usePagedQuery((params) => api.matches.list(params), {
     search,
+    season: season || undefined,
     divisionId:
       division === FILTER_ALL.divisions
         ? undefined
@@ -280,12 +283,12 @@ export function MatchesView() {
         id="tour-matches-header"
         eyebrow="Organisation"
         title="Matchs"
-        description="Planifiez les rencontres et suivez les besoins du club."
-        action={{
-          label: "Créer un match",
-          icon: Plus,
-          onClick: sheet.openCreate,
-        }}
+        description={isCurrent ? "Planifiez les rencontres et suivez les besoins du club." : `Saison ${season} : consultation uniquement.`}
+        action={
+          isCurrent
+            ? { label: "Créer un match", icon: Plus, onClick: sheet.openCreate }
+            : undefined
+        }
       />
 
       <Filters
@@ -389,12 +392,13 @@ export function MatchesView() {
           {
             key: "actions",
             label: "",
-            render: (row) => (
-              <RowActionButton
-                onClick={() => sheet.openEdit(row)}
-                label={`Modifier le match ${row.home} — ${row.away}`}
-              />
-            ),
+            render: (row) =>
+              isCurrent ? (
+                <RowActionButton
+                  onClick={() => sheet.openEdit(row)}
+                  label={`Modifier le match ${row.home} — ${row.away}`}
+                />
+              ) : null,
           },
         ]}
       />

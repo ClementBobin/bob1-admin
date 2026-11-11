@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Pencil, Plus, Undo2 } from "lucide-react";
 import { api, errorMessage } from "@/lib/api";
 import { useApiData } from "@/hooks/use-api-data";
+import { useSeason } from "@/components/season/season-provider";
 import { usePagedQuery } from "@/hooks/use-paged-query";
 import { useLookups } from "@/hooks/use-lookups";
 import { cn, formatDateTime, fullName, pointsAdjustmentError } from "@/lib/utils";
@@ -44,8 +45,10 @@ export function HistoryView() {
 
   const { pointCategoryKeys, pointCategoryLabel } = useLookups();
 
+  const { season, isCurrent } = useSeason();
   const query = usePagedQuery((params) => api.rankings.history(params), {
     search,
+    season: season || undefined,
     category:
       categoryFilter === FILTER_ALL.categories
         ? undefined
@@ -162,11 +165,11 @@ export function HistoryView() {
         eyebrow="Modération"
         title="Historique des points"
         description="Consultez tous les ajustements de points. Les lignes créées manuellement peuvent être modifiées ou révoquées."
-        action={{
-          label: "Ajouter des points",
-          icon: Plus,
-          onClick: sheet.openCreate,
-        }}
+        action={
+          isCurrent
+            ? { label: "Ajouter des points", icon: Plus, onClick: sheet.openCreate }
+            : undefined
+        }
       />
 
       <Filters
@@ -298,7 +301,7 @@ export function HistoryView() {
             key: "actions",
             label: "",
             render: (row) =>
-              row.isManual && !row.isRevoked ? (
+              isCurrent && row.isManual && !row.isRevoked ? (
                 <div className="flex items-center justify-center gap-1.5">
                   <button
                     onClick={() => sheet.openEdit(row)}

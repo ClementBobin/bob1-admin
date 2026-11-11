@@ -10,6 +10,7 @@ export type MatchDto = {
   venueId: string;
   startsAtUtc: string;
   status: MatchStatus;
+  season: string;
 };
 
 export type MatchInput = {

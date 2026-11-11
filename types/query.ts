@@ -10,10 +10,11 @@ export type MatchQuery = PageParams & {
   search?: string;
   divisionId?: string;
   status?: string;
+  season?: string;
   from?: string;
   to?: string;
 };
-export type PeopleQuery = PageParams & { search?: string; role?: string; isActive?: boolean; status?: "active" | "suspended" | "deactivated" };
+export type PeopleQuery = PageParams & { search?: string; role?: string; isActive?: boolean; status?: "active" | "suspended" | "deactivated"; season?: string };
 export type FamilyQuery = PageParams & { search?: string; hideInactive?: boolean };
 export type NotificationQuery = PageParams & { search?: string; type?: string; read?: boolean };
 export type RankingQuery = PageParams & { category?: string; view?: "person" | "family"; search?: string; season?: string };

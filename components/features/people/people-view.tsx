@@ -7,6 +7,7 @@ import { personToRow } from "@/lib/adapters";
 import { api, errorMessage } from "@/lib/api";
 import { FILTER_ALL, PERSON_STATUS_OPTIONS, ROLE_TONE_CLASSES, statusTone } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { useSeason } from "@/components/season/season-provider";
 import { usePagedQuery } from "@/hooks/use-paged-query";
 import { useFormSheet } from "@/hooks/use-form-sheet";
 import { useApiData } from "@/hooks/use-api-data";
@@ -38,8 +39,10 @@ export function PeopleView() {
   const [tempPassword, setTempPassword] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  const { season, isCurrent } = useSeason();
   const query = usePagedQuery((params) => api.people.list(params), {
     search,
+    season: season || undefined,
     role: role === FILTER_ALL.roles ? undefined : role,
     status: PERSON_STATUS_KEYS[status],
   });
@@ -118,8 +121,8 @@ export function PeopleView() {
         id="tour-people-header"
         eyebrow="Membres"
         title="Personnes"
-        description="Gérez les comptes et leurs différents rôles."
-        action={{ label: "Ajouter une personne", icon: Plus, onClick: sheet.openCreate }}
+        description={isCurrent ? "Gérez les comptes et leurs différents rôles." : `Saison ${season} : divisions telles qu'elles étaient à l'époque (lecture seule).`}
+        action={isCurrent ? { label: "Ajouter une personne", icon: Plus, onClick: sheet.openCreate } : undefined}
       />
 
       {tempPassword && (
@@ -217,7 +220,7 @@ export function PeopleView() {
           {
             key: "actions",
             label: "",
-            render: (row) => <RowActionButton onClick={() => sheet.openEdit(row)} />,
+            render: (row) => (isCurrent ? <RowActionButton onClick={() => sheet.openEdit(row)} /> : null),
           },
         ]}
       />

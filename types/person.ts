@@ -8,6 +8,7 @@ export type PersonDto = {
   suspendedFromParticipation: boolean;
   familyId: string | null;
   divisionId: string | null;
+  /** Division for the requested season (current by default). */
 };
 
 export type PersonInput = {

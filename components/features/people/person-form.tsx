@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ShieldCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { EntityForm } from "@/components/shared/entity-form";
 import { FormField } from "@/components/shared/form-field";
 import { OptionSelect } from "@/components/shared/option-select";
+import { api } from "@/lib/api";
 import { useLookups } from "@/hooks/use-lookups";
 import { cn } from "@/lib/utils";
-import type { DivisionDto, Person, PersonPayload } from "@/types";
+import type { DivisionDto, MembershipDto, Person, PersonPayload } from "@/types";
 
 export const PERSON_FORM_ID = "person-form";
 
@@ -34,6 +35,13 @@ export function PersonForm({
     person?.suspendedFromParticipation ?? false,
   );
   const [divisionId, setDivisionId] = useState<string | null>(person?.divisionId ?? null);
+
+  const [parcours, setParcours] = useState<MembershipDto[]>([]);
+  const personId = person?.personId ?? person?.id;
+  useEffect(() => {
+    if (!personId) return;
+    api.people.memberships(personId).then(setParcours).catch(() => setParcours([]));
+  }, [personId]);
 
   const toggleRole = (role: string) => {
     setRoles((current) => (current.includes(role) ? current.filter((item) => item !== role) : [...current, role]));
@@ -72,6 +80,19 @@ export function PersonForm({
           />
         )}
       </FormField>
+
+      {parcours.length > 0 && (
+        <div className="col-span-full flex flex-col gap-1.5">
+          <span className="text-[10px] font-extrabold uppercase tracking-[0.08em] text-soft">Parcours</span>
+          <ul className="flex flex-wrap gap-1.5">
+            {parcours.map((item) => (
+              <li key={item.season} className="rounded-full bg-muted px-2.5 py-1 text-[11px]">
+                <strong>{item.season}</strong> · {item.divisionName}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <span className="col-span-full mt-1 text-[10px] font-extrabold uppercase tracking-[0.08em] text-soft">Rôles</span>
       <div className="col-span-full flex flex-wrap gap-2">
