@@ -17,4 +17,9 @@ export type SeasonOverview = {
 };
 
 /** One line of a person's Parcours. */
-export type MembershipDto = { season: string; divisionId: string; divisionName: string };
+export type MembershipDto = {
+  season: string;
+  divisionId: string;
+  divisionName: string;
+  teams: { id: string; name: string }[];
+};

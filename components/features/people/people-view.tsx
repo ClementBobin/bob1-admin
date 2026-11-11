@@ -21,7 +21,7 @@ import { InitialsAvatar } from "@/components/shared/initials-avatar";
 import { RowActionButton } from "@/components/shared/row-action-button";
 import { Status } from "@/components/shared/status";
 import { PERSON_FORM_ID, PersonForm } from "./person-form";
-import type { DivisionDto, Person, PersonPayload } from "@/types";
+import type { DivisionDto, Person, PersonPayload, TeamDto } from "@/types";
 
 const PERSON_STATUS_KEYS: Record<string, "active" | "suspended" | "deactivated" | undefined> = {
   Actif: "active",
@@ -47,6 +47,7 @@ export function PeopleView() {
     status: PERSON_STATUS_KEYS[status],
   });
   const { items: apiPeople, loading, error, reload } = query;
+  const { data: apiTeams } = useApiData<TeamDto[]>(() => api.teams.all(), []);
   const { data: apiDivisions } = useApiData<DivisionDto[]>(() => api.divisions.all(), []);
 
   useEffect(() => {
@@ -55,6 +56,7 @@ export function PeopleView() {
         ...personToRow(person),
         familyId: person.familyId,
         divisionId: person.divisionId,
+        teamIds: person.teamIds,
         personId: person.id,
       })),
     );
@@ -71,6 +73,7 @@ export function PeopleView() {
           lastName: payload.lastName,
           familyId: editing.familyId,
           divisionId: payload.divisionId,
+          teamIds: payload.teamIds,
         });
 
         const rolesChanged =
@@ -94,6 +97,7 @@ export function PeopleView() {
           roles: payload.roles,
           familyId: null,
           divisionId: payload.divisionId,
+          teamIds: payload.teamIds,
           password: null,
         });
         setTempPassword(created.temporaryPassword);
@@ -238,7 +242,7 @@ export function PeopleView() {
           />
         }
       >
-        {sheet.open && <PersonForm key={sheet.editing?.id ?? "new"} person={sheet.editing} divisions={apiDivisions ?? []} onSave={save} />}
+        {sheet.open && <PersonForm key={sheet.editing?.id ?? "new"} person={sheet.editing} divisions={apiDivisions ?? []} teams={apiTeams ?? []} onSave={save} />}
       </FormSheet>
     </>
   );
