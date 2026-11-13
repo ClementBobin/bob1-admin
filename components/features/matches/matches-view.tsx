@@ -33,7 +33,6 @@ import { RowActionButton } from "@/components/shared/row-action-button";
 import { Status } from "@/components/shared/status";
 import { MATCH_FORM_ID, MatchForm } from "./match-form";
 import type {
-  DivisionDto,
   MatchPayload,
   MatchRow,
   NamedOption,
@@ -46,7 +45,6 @@ export function MatchesView() {
   const { slotTemplates } = useLookups();
   const [rows, setRows] = useState<MatchRow[]>([]);
   const [search, setSearch] = useState("");
-  const [division, setDivision] = useState(FILTER_ALL.divisions);
   const [status, setStatus] = useState(FILTER_ALL.statuses);
   const sheet = useFormSheet<MatchRow>();
   const editing = sheet.editing;
@@ -54,10 +52,6 @@ export function MatchesView() {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmPlayed, setConfirmPlayed] = useState(false);
 
-  const { data: apiDivisions } = useApiData<DivisionDto[]>(
-    () => api.divisions.all(),
-    [],
-  );
   const { data: apiVenues } = useApiData<VenueDto[]>(
     () => api.venues.all(),
     [],
@@ -67,10 +61,6 @@ export function MatchesView() {
   const query = usePagedQuery((params) => api.matches.list(params), {
     search,
     season: season || undefined,
-    divisionId:
-      division === FILTER_ALL.divisions
-        ? undefined
-        : (apiDivisions ?? []).find((item) => item.name === division)?.id,
     status: Object.entries(MATCH_STATUS_LABELS).find(
       ([, label]) => label === status,
     )?.[0],
@@ -119,22 +109,10 @@ export function MatchesView() {
     );
   }, [apiMatches, apiTeams, apiVenues, rosters, slotTemplates]);
 
-  const divisionOptions: NamedOption[] = (apiDivisions ?? []).map((item) => ({
-    id: item.id,
-    name: item.name,
-  }));
-
   const venueOptions: NamedOption[] = (apiVenues ?? []).map((item) => ({
     id: item.id,
     name: item.name,
   }));
-
-  const divisionNames = useMemo(() => {
-    const names = divisionOptions.map((item) => item.name);
-    if (editing && !names.includes(editing.division))
-      return [editing.division, ...names];
-    return names;
-  }, [divisionOptions, editing]);
 
   const venueNames = useMemo(() => {
     const names = venueOptions.map((item) => item.name);
@@ -190,9 +168,6 @@ export function MatchesView() {
   };
 
   const save = async (payload: MatchPayload) => {
-    const divisionId = divisionOptions.find(
-      (item) => item.name === payload.divisionName,
-    )?.id;
     const venueId = venueOptions.find(
       (item) => item.name === payload.venueName,
     )?.id;
@@ -202,15 +177,14 @@ export function MatchesView() {
     const awayTeamId = (apiTeams ?? []).find(
       (item) => item.name === payload.awayTeamName,
     )?.id;
-    if (!divisionId || !venueId || !homeTeamId || !awayTeamId) {
+    if (!venueId || !homeTeamId || !awayTeamId) {
       toast.error(
-        "Sélectionnez une division, deux équipes et un lieu existants.",
+        "Sélectionnez deux équipes et un lieu existants.",
       );
       return;
     }
 
     const input = {
-      divisionId,
       homeTeamId,
       awayTeamId,
       venueId,
@@ -298,12 +272,6 @@ export function MatchesView() {
         searchPlaceholder="Rechercher un match, une équipe…"
         selects={[
           {
-            label: "Division",
-            value: division,
-            options: [FILTER_ALL.divisions, ...divisionNames],
-            onChange: setDivision,
-          },
-          {
             label: "Statut",
             value: status,
             options: statusOptions,
@@ -312,7 +280,6 @@ export function MatchesView() {
         ]}
         onReset={() => {
           setSearch("");
-          setDivision(FILTER_ALL.divisions);
           setStatus(FILTER_ALL.statuses);
         }}
       />
@@ -330,7 +297,7 @@ export function MatchesView() {
         pageSize={query.pageSize}
         rowKey={(row) => row.id}
         minWidth={1060}
-        grid="1.1fr .65fr 1.4fr 1.1fr .9fr .9fr 1fr .8fr 36px"
+        grid="1.1fr 1.4fr 1.1fr .9fr .9fr 1fr .8fr 36px"
         emptyMessage={
           loading
             ? "Chargement des matchs…"
@@ -342,15 +309,6 @@ export function MatchesView() {
             label: "Date",
             render: (row) => (
               <strong className="text-[12.5px] font-bold">{row.date}</strong>
-            ),
-          },
-          {
-            key: "division",
-            label: "Division",
-            render: (row) => (
-              <span className="inline-flex w-fit rounded-full bg-mint px-2.5 py-1 text-[10.5px] font-bold text-mint-foreground">
-                {row.division}
-              </span>
             ),
           },
           {
@@ -451,7 +409,6 @@ export function MatchesView() {
           <MatchForm
             key={editing?.id ?? "new"}
             match={editing}
-            divisionOptions={divisionNames}
             venueOptions={venueNames}
             teamOptions={teamOptions}
             slotTemplates={slotTemplates}

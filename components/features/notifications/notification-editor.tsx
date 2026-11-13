@@ -97,14 +97,14 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
     }
 
     let divisionId: string | null = null;
+    let teamId: string | null = null;
     if (target === "Tous les membres") {
       divisionId = null;
     } else if (target.startsWith("Division:")) {
       divisionId = (apiDivisions ?? []).find((division) => division.name === target.replace("Division: ", ""))?.id ?? null;
     } else if (target.startsWith("Équipe:")) {
-      // Team-based: resolve to the team's division
-      const team = (apiTeams ?? []).find((t) => t.name === target.replace("Équipe: ", ""));
-      divisionId = team?.divisionId ?? null;
+      // A team targets its players and their families directly.
+      teamId = (apiTeams ?? []).find((t) => t.name === target.replace("Équipe: ", ""))?.id ?? null;
     } else {
       // Legacy: division name directly
       divisionId = (apiDivisions ?? []).find((division) => division.name === target)?.id ?? null;
@@ -119,6 +119,7 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
         expiry ? new Date(expiry).toISOString() : null,
         recurring,
         startup,
+        teamId,
       );
       setSent(true);
       setRecipients(response.recipients);

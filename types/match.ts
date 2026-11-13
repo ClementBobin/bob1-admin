@@ -3,8 +3,6 @@ export type MatchStatus = "Scheduled" | "Cancelled" | "Played";
 export type MatchDto = {
   id: string;
   title: string;
-  divisionId: string;
-  divisionName: string;
   homeTeamId: string;
   awayTeamId: string;
   venueId: string;
@@ -14,7 +12,6 @@ export type MatchDto = {
 };
 
 export type MatchInput = {
-  divisionId: string;
   homeTeamId: string;
   awayTeamId: string;
   venueId: string;
@@ -52,7 +49,6 @@ export type UrgentSlotDto = {
 export type MatchRow = {
   id: string;
   date: string;
-  division: string;
   home: string;
   away: string;
   venue: string;
@@ -68,7 +64,6 @@ export type MatchRow = {
 
 /** What the match form hands back to the page. */
 export type MatchPayload = {
-  divisionName: string;
   homeTeamName: string;
   awayTeamName: string;
   venueName: string;

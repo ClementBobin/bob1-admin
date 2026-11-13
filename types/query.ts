@@ -8,7 +8,7 @@ export type TeamQuery = PageParams & { search?: string; divisionId?: string; isA
 export type VenueQuery = PageParams & { search?: string };
 export type MatchQuery = PageParams & {
   search?: string;
-  divisionId?: string;
+  memberId?: string;
   status?: string;
   season?: string;
   from?: string;
