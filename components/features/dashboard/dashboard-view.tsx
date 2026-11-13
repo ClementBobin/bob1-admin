@@ -84,7 +84,6 @@ export function DashboardView() {
       return {
         id: matchId,
         date: formatDateTime(entry.startsAt),
-        division: match?.divisionName ?? "—",
         title: match?.title ?? entry.title,
         slots: `${entry.missing} poste${entry.missing > 1 ? "s" : ""}`,
         urgent: days <= 3,
@@ -222,7 +221,7 @@ export function DashboardView() {
                     {match.title}
                   </strong>
                   <small className="mt-1 text-[11px] text-soft">
-                    {match.date} · {match.division}
+                    {match.date}
                   </small>
                 </span>
                 <Status tone={match.urgent ? "danger" : "warning"}>
@@ -276,7 +275,7 @@ export function DashboardView() {
                         {match.title}
                       </strong>
                       <small className="mt-0.5 truncate text-[10.5px] text-soft">
-                        {match.divisionName} · {venueNames.get(match.venueId) ?? "—"}
+                        {venueNames.get(match.venueId) ?? "—"}
                       </small>
                     </span>
                   </Link>

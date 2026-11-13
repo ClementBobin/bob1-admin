@@ -16,23 +16,18 @@ const withCurrent = (options: string[], current: string) =>
 
 export function MatchForm({
   match,
-  divisionOptions,
   venueOptions,
   teamOptions,
   slotTemplates,
   onSave,
 }: {
   match: MatchRow | null;
-  divisionOptions: string[];
   venueOptions: string[];
   teamOptions: string[];
   slotTemplates: SlotTemplate[];
   onSave: (payload: MatchPayload) => void;
 }) {
   const initial = localDateParts(match?.startsAtUtc);
-  const [division, setDivision] = useState(
-    match?.division ?? divisionOptions[0] ?? "",
-  );
   const [homeTeam, setHomeTeam] = useState(match?.home ?? "");
   const [awayTeam, setAwayTeam] = useState(match?.away ?? "");
   const [date, setDate] = useState(initial.date);
@@ -55,12 +50,7 @@ export function MatchForm({
     ]),
   );
 
-  // Divisions/venues load asynchronously; keep the selects on a valid option.
-  useEffect(() => {
-    if (divisionOptions.length > 0 && !divisionOptions.includes(division))
-      setDivision(divisionOptions[0]);
-  }, [divisionOptions, division]);
-
+  // Venues load asynchronously; keep the select on a valid option.
   useEffect(() => {
     if (venueOptions.length > 0 && !venueOptions.includes(venue))
       setVenue(venueOptions[0]);
@@ -86,7 +76,6 @@ export function MatchForm({
         id={MATCH_FORM_ID}
         onSubmit={() => {
           onSave({
-            divisionName: division,
             homeTeamName: homeTeam,
             awayTeamName: awayTeam,
             venueName: venue,
@@ -96,7 +85,6 @@ export function MatchForm({
             row: {
               id: match?.id ?? `m${Date.now()}`,
               date: formatDateLabel(date, time),
-              division,
               home: homeTeam,
               away: awayTeam,
               venue,
@@ -110,17 +98,6 @@ export function MatchForm({
           });
         }}
       >
-        <FormField label="Division" full>
-          {(id) => (
-            <OptionSelect
-              id={id}
-              value={division}
-              onValueChange={setDivision}
-              options={divisionOptions}
-            />
-          )}
-        </FormField>
-
         <FormField label="Équipe à domicile">
           {(id) => (
             <OptionSelect

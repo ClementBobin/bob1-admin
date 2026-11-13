@@ -8,7 +8,6 @@ export function matchToRow(match: MatchDto, names: MatchNames, slots: Record<str
   return {
     id: match.id,
     date: formatDateTime(match.startsAtUtc),
-    division: match.divisionName,
     home: names.teams.get(match.homeTeamId) ?? "—",
     away: names.teams.get(match.awayTeamId) ?? "—",
     venue: names.venues.get(match.venueId) ?? "—",

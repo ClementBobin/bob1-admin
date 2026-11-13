@@ -8,6 +8,8 @@ export type PersonDto = {
   suspendedFromParticipation: boolean;
   familyId: string | null;
   divisionId: string | null;
+  /** Teams for the requested season (a player can be in several). */
+  teamIds: string[];
 };
 
 export type PersonInput = {
@@ -17,6 +19,7 @@ export type PersonInput = {
   roles: string[];
   familyId?: string | null;
   divisionId?: string | null;
+  teamIds?: string[];
   password?: string | null;
 };
 
@@ -36,6 +39,7 @@ export type Person = {
   /** Raw API fields, kept so the edit form can update the right records. */
   familyId?: string | null;
   divisionId?: string | null;
+  teamIds?: string[];
   personId?: string;
 };
 
@@ -49,5 +53,6 @@ export type PersonPayload = {
   isActive: boolean;
   suspendedFromParticipation: boolean;
   /** Players (children) belong to a division; null for everyone else. */
-  divisionId: string | null;
+  divisionId: string | null;  /** Teams of the current season. */
+  teamIds: string[];
 };

@@ -17,6 +17,9 @@ import type {
   EntryDto,
   FamilyRankingResponse,
   MatchDto,
+  MembershipDto,
+  SeasonDto,
+  SeasonOverview,
   DivisionQuery,
   FamilyQuery,
   MatchQuery,
@@ -303,6 +306,12 @@ export const api = {
     remove: (id: string) => apiFetch<void>(`/admin/venues/${id}`, { method: "DELETE" }),
   },
 
+  // ---- Seasons ----
+  seasons: {
+    list: () => search<SeasonDto[]>("/seasons", {}),
+    overview: () => search<SeasonOverview[]>("/admin/seasons/overview", {}),
+  },
+
   // ---- Matches ----
   matches: {
     list: (params: MatchQuery = {}) => search<Paged<MatchDto>>("/matches", params),
@@ -338,6 +347,7 @@ export const api = {
       apiFetch<CreatePersonResponse>("/admin/people", { method: "POST", body: input }),
     update: (id: string, input: Omit<PersonInput, "roles" | "password">) =>
       apiFetch<PersonDto>(`/admin/people/${id}`, { method: "PUT", body: input }),
+    memberships: (id: string) => search<MembershipDto[]>(`/admin/people/${id}/memberships`, {}),
     setRoles: (id: string, roles: string[]) =>
       apiFetch<PersonDto>(`/admin/people/${id}/roles`, { method: "PUT", body: { roles } }),
     setActive: (id: string, isActive: boolean) =>
@@ -398,10 +408,10 @@ export const api = {
     markRead: (id: string) =>
       apiFetch<void>(`/notifications/${id}/read`, { method: "POST" }),
     readAll: () => apiFetch<void>("/notifications/read-all", { method: "POST" }),
-    broadcast: (title: string, body: string, divisionId?: string | null, expiresAtUtc?: string | null, recurring?: boolean, startup?: boolean) =>
+    broadcast: (title: string, body: string, divisionId?: string | null, expiresAtUtc?: string | null, recurring?: boolean, startup?: boolean, teamId?: string | null) =>
       apiFetch<BroadcastResponse>("/admin/notifications", {
         method: "POST",
-        body: { title, body, divisionId, expiresAtUtc, recurring, startup },
+        body: { title, body, divisionId, teamId, expiresAtUtc, recurring, startup },
       }),
     adminList: (params: NotificationQuery = {}) => search<Paged<NotificationDto>>("/admin/notifications", params),
     update: (id: string, input: { title: string; body: string; expiresAtUtc?: string | null; recurring?: boolean; startup?: boolean }) =>

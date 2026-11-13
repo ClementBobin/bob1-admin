@@ -1,6 +1,7 @@
 import {
   Bell,
   CalendarDays,
+  CalendarRange,
   LayoutDashboard,
   MapPin,
   ShieldCheck,
@@ -28,6 +29,7 @@ export const adminNavGroups: NavGroup[] = [
     label: "Organisation",
     icon: CalendarDays,
     items: [
+      { href: "/seasons", label: "Saisons", icon: CalendarRange },
       { href: "/matches", label: "Matchs", icon: CalendarDays },
       { href: "/divisions", label: "Divisions", icon: ShieldCheck },
       { href: "/teams", label: "Équipes", icon: Users },

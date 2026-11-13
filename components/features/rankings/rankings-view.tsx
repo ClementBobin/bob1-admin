@@ -5,6 +5,7 @@ import { Plus, TrendingUp } from "lucide-react";
 import { personRankingToRow, familyRankingToRow } from "@/lib/adapters";
 import { api, errorMessage } from "@/lib/api";
 import { useApiData } from "@/hooks/use-api-data";
+import { useSeason } from "@/components/season/season-provider";
 import { usePagedQuery } from "@/hooks/use-paged-query";
 import { useLookups } from "@/hooks/use-lookups";
 import { cn, pointsAdjustmentError } from "@/lib/utils";
@@ -41,11 +42,12 @@ export function RankingsView() {
 
   const isPersonView = viewMode === "person";
 
+  const { season: selectedSeason, isCurrent } = useSeason();
   const [season, setSeason] = useState("");
 
   const query = usePagedQuery<
     PersonRankingRow | FamilyRankingRow,
-    { category: string; view: RankingViewMode }
+    { category: string; view: RankingViewMode; season?: string }
   >(
     async (params) => {
       if (!params.category) return { items: [], total: 0 };
@@ -63,7 +65,7 @@ export function RankingsView() {
             total: response.total,
           };
     },
-    { category, view: viewMode },
+    { category, view: viewMode, season: selectedSeason || undefined },
   );
 
   const { data: apiPerson } = useApiData<Paged<PersonDto>>(
@@ -207,12 +209,13 @@ export function RankingsView() {
           {
             key: "actions",
             label: "",
-            render: () => (
-              <RowActionButton
-                onClick={sheet.openCreate}
-                label="Ajuster les points"
-              />
-            ),
+            render: () =>
+              isCurrent ? (
+                <RowActionButton
+                  onClick={sheet.openCreate}
+                  label="Ajuster les points"
+                />
+              ) : null,
           },
         ]}
       />

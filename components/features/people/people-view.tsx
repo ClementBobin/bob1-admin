@@ -7,6 +7,7 @@ import { personToRow } from "@/lib/adapters";
 import { api, errorMessage } from "@/lib/api";
 import { FILTER_ALL, PERSON_STATUS_OPTIONS, ROLE_TONE_CLASSES, statusTone } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { useSeason } from "@/components/season/season-provider";
 import { usePagedQuery } from "@/hooks/use-paged-query";
 import { useFormSheet } from "@/hooks/use-form-sheet";
 import { useApiData } from "@/hooks/use-api-data";
@@ -20,7 +21,7 @@ import { InitialsAvatar } from "@/components/shared/initials-avatar";
 import { RowActionButton } from "@/components/shared/row-action-button";
 import { Status } from "@/components/shared/status";
 import { PERSON_FORM_ID, PersonForm } from "./person-form";
-import type { DivisionDto, Person, PersonPayload } from "@/types";
+import type { DivisionDto, Person, PersonPayload, TeamDto } from "@/types";
 
 const PERSON_STATUS_KEYS: Record<string, "active" | "suspended" | "deactivated" | undefined> = {
   Actif: "active",
@@ -38,12 +39,15 @@ export function PeopleView() {
   const [tempPassword, setTempPassword] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  const { season, isCurrent } = useSeason();
   const query = usePagedQuery((params) => api.people.list(params), {
     search,
+    season: season || undefined,
     role: role === FILTER_ALL.roles ? undefined : role,
     status: PERSON_STATUS_KEYS[status],
   });
   const { items: apiPeople, loading, error, reload } = query;
+  const { data: apiTeams } = useApiData<TeamDto[]>(() => api.teams.all(), []);
   const { data: apiDivisions } = useApiData<DivisionDto[]>(() => api.divisions.all(), []);
 
   useEffect(() => {
@@ -52,6 +56,7 @@ export function PeopleView() {
         ...personToRow(person),
         familyId: person.familyId,
         divisionId: person.divisionId,
+        teamIds: person.teamIds,
         personId: person.id,
       })),
     );
@@ -68,6 +73,7 @@ export function PeopleView() {
           lastName: payload.lastName,
           familyId: editing.familyId,
           divisionId: payload.divisionId,
+          teamIds: payload.teamIds,
         });
 
         const rolesChanged =
@@ -91,6 +97,7 @@ export function PeopleView() {
           roles: payload.roles,
           familyId: null,
           divisionId: payload.divisionId,
+          teamIds: payload.teamIds,
           password: null,
         });
         setTempPassword(created.temporaryPassword);
@@ -118,8 +125,8 @@ export function PeopleView() {
         id="tour-people-header"
         eyebrow="Membres"
         title="Personnes"
-        description="Gérez les comptes et leurs différents rôles."
-        action={{ label: "Ajouter une personne", icon: Plus, onClick: sheet.openCreate }}
+        description={isCurrent ? "Gérez les comptes et leurs différents rôles." : `Saison ${season} : divisions telles qu'elles étaient à l'époque (lecture seule).`}
+        action={isCurrent ? { label: "Ajouter une personne", icon: Plus, onClick: sheet.openCreate } : undefined}
       />
 
       {tempPassword && (
@@ -217,7 +224,7 @@ export function PeopleView() {
           {
             key: "actions",
             label: "",
-            render: (row) => <RowActionButton onClick={() => sheet.openEdit(row)} />,
+            render: (row) => (isCurrent ? <RowActionButton onClick={() => sheet.openEdit(row)} /> : null),
           },
         ]}
       />
@@ -235,7 +242,7 @@ export function PeopleView() {
           />
         }
       >
-        {sheet.open && <PersonForm key={sheet.editing?.id ?? "new"} person={sheet.editing} divisions={apiDivisions ?? []} onSave={save} />}
+        {sheet.open && <PersonForm key={sheet.editing?.id ?? "new"} person={sheet.editing} divisions={apiDivisions ?? []} teams={apiTeams ?? []} onSave={save} />}
       </FormSheet>
     </>
   );
