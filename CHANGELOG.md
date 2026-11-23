@@ -1,3 +1,9 @@
+## [1.1.1](https://github.com/ClementBobin/bob1-admin/compare/v1.1.0...v1.1.1) (2026-11-23)
+
+### Bug Fixes
+
+* public not build ([908eaed](https://github.com/ClementBobin/bob1-admin/commit/908eaed181943b9f9c7eeda79338b72410db3cd4))
+
 ## [1.1.0](https://github.com/ClementBobin/bob1-admin/compare/v1.0.0...v1.1.0) (2026-11-23)
 
 ### Features
