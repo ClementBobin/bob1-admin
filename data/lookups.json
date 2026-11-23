@@ -19,8 +19,6 @@
   ],
   "notificationTypes": [
     { "value": "Général", "label": "Général" },
-    { "value": "Match", "label": "Match" },
-    { "value": "Urgent", "label": "Urgent" },
-    { "value": "Pénalité", "label": "Pénalité" }
+    { "value": "Urgent", "label": "Urgent" }
   ]
 }
