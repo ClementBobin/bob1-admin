@@ -1,3 +1,9 @@
+## [1.1.0](https://github.com/ClementBobin/bob1-admin/compare/v1.0.0...v1.1.0) (2026-11-23)
+
+### Features
+
+* added icon ([e5b189b](https://github.com/ClementBobin/bob1-admin/commit/e5b189bc07d96743c3df713cbefa0ce1c7d37c68))
+
 ## 1.0.0 (2026-11-23)
 
 ### Features
