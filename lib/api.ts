@@ -410,10 +410,10 @@ export const api = {
     markRead: (id: string) =>
       apiFetch<void>(`/notifications/${id}/read`, { method: "POST" }),
     readAll: () => apiFetch<void>("/notifications/read-all", { method: "POST" }),
-    broadcast: (title: string, body: string, divisionId?: string | null, expiresAtUtc?: string | null, recurring?: boolean, startup?: boolean, teamId?: string | null) =>
+    broadcast: (title: string, body: string, divisionId?: string | null, expiresAtUtc?: string | null, recurring?: boolean, startup?: boolean, teamId?: string | null, role?: string | null) =>
       apiFetch<BroadcastResponse>("/admin/notifications", {
         method: "POST",
-        body: { title, body, divisionId, teamId, expiresAtUtc, recurring, startup },
+        body: { title, body, divisionId, teamId, role, expiresAtUtc, recurring, startup },
       }),
     adminList: (params: NotificationQuery = {}) => search<Paged<AdminNotificationDto>>("/admin/notifications", params),
     recipients: (id: string) => apiFetch<NotificationRecipientDto[]>(`/admin/notifications/${id}/recipients`),
