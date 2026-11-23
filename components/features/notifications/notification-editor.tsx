@@ -25,7 +25,7 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
 
   const router = useRouter();
   const editing = Boolean(notificationId);
-  const { notificationTypeNames } = useLookups();
+  const { notificationTypeNames, roles } = useLookups();
   const [selectedType, setType] = useState("");
   const type = selectedType || notificationTypeNames[0] || "";
   const [target, setTarget] = useState(targetChoices[0].value);
@@ -66,6 +66,10 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
       options: (apiDivisions ?? []).map((division) => ({ value: `Division: ${division.name}`, label: division.name })),
     },
     {
+      heading: "Rôles",
+      options: roles.map((role) => ({ value: `Rôle: ${role}`, label: `Tous les ${role}` })),
+    },
+    {
       heading: "Équipes",
       options: (apiTeams ?? []).map((team) => ({ value: `Équipe: ${team.name}`, label: team.name })),
     },
@@ -104,10 +108,14 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
 
     let divisionId: string | null = null;
     let teamId: string | null = null;
+    let role: string | null = null;
     if (target === "Tous les membres") {
       divisionId = null;
     } else if (target.startsWith("Division:")) {
       divisionId = (apiDivisions ?? []).find((division) => division.name === target.replace("Division: ", ""))?.id ?? null;
+    } else if (target.startsWith("Rôle:")) {
+      // A role targets every active user holding it (e.g. all Staff).
+      role = target.replace("Rôle: ", "");
     } else if (target.startsWith("Équipe:")) {
       // A team targets its players and their families directly.
       teamId = (apiTeams ?? []).find((t) => t.name === target.replace("Équipe: ", ""))?.id ?? null;
@@ -126,6 +134,7 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
         recurring,
         startup,
         teamId,
+        role,
       );
       setSent(true);
       setRecipients(response.recipients);
@@ -145,7 +154,9 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
             ? `${recipients} destinataire${recipients > 1 ? "s" : ""}`
             : target === "Tous les membres"
               ? "Tous les membres du club"
-              : target.startsWith("Équipe:")
+              : target.startsWith("Rôle:")
+                ? `Tous les utilisateurs avec le rôle ${target.replace("Rôle: ", "")}`
+                : target.startsWith("Équipe:")
                 ? `Membres de l'équipe ${target.replace("Équipe: ", "")}`
                 : `Membres de la division ${target.replace("Division: ", "")}`,
         icon: Users,
