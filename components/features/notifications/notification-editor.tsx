@@ -19,6 +19,21 @@ import { PageHeader, CardHeading } from "@/components/layout/page-header";
 import { cn } from "@/lib/utils";
 import type { AdminNotificationDto, DivisionDto, TeamDto } from "@/types";
 
+/** Recurrence presets: label shown in the select -> interval in hours sent to the API. */
+const RECURRENCE_PRESETS: { label: string; hours: number }[] = [
+  { label: "Toutes les 6 heures", hours: 6 },
+  { label: "Toutes les 12 heures", hours: 12 },
+  { label: "Tous les jours", hours: 24 },
+  { label: "Tous les 2 jours", hours: 48 },
+  { label: "Toutes les semaines", hours: 168 },
+];
+const DEFAULT_RECURRENCE = "Tous les jours";
+
+/** The expiry picker is a date: the notification stays active through the end of that day (local time). */
+function endOfDayIso(date: string) {
+  return new Date(`${date}T23:59:59`).toISOString();
+}
+
 /** Shared by "Nouvelle notification" and "Modifier la notification". */
 export function NotificationEditor({ notificationId }: { notificationId?: string }) {
   const targetChoices: SelectChoice[] = [{ value: "Tous les membres", label: "Tous les membres" }];
@@ -33,6 +48,7 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
   const [message, setMessage] = useState("");
   const [expiry, setExpiry] = useState("");
   const [recurring, setRecurring] = useState(false);
+  const [recurrence, setRecurrence] = useState(DEFAULT_RECURRENCE);
   const [startup, setStartup] = useState(false);
   const [sent, setSent] = useState(false);
   const [sending, setSending] = useState(false);
@@ -57,6 +73,7 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
     setMessage(existing.body);
     setExpiry(existing.expiresAtUtc ? existing.expiresAtUtc.slice(0, 10) : "");
     setRecurring(existing.recurring);
+    setRecurrence(RECURRENCE_PRESETS.find((p) => p.hours === existing.recurrenceHours)?.label ?? DEFAULT_RECURRENCE);
     setStartup(existing.startup);
   }, [existing]);
 
@@ -75,6 +92,22 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
     },
   ].filter((group) => group.options.length > 0);
 
+  /** Recurrence needs an end date, so it never repeats forever. Returns the API values, or null after showing an error. */
+  const recurrenceOptions = () => {
+    const expiresAtUtc = expiry ? endOfDayIso(expiry) : null;
+    if (!recurring) return { expiresAtUtc, recurrenceHours: null };
+    if (!expiry) {
+      toast.error("Une notification récurrente doit avoir une date d'expiration.");
+      return null;
+    }
+    if (new Date(expiresAtUtc!).getTime() <= Date.now()) {
+      toast.error("La date d'expiration doit être dans le futur.");
+      return null;
+    }
+    const hours = RECURRENCE_PRESETS.find((p) => p.label === recurrence)?.hours ?? 24;
+    return { expiresAtUtc, recurrenceHours: hours };
+  };
+
   // One content row is shared by every recipient: saving updates the notification for all of them.
   const save = async () => {
     if (!notificationId) return;
@@ -82,13 +115,16 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
       toast.error("Renseignez un titre et un message.");
       return;
     }
+    const options = recurrenceOptions();
+    if (!options) return;
     setSending(true);
     try {
       await api.notifications.update(notificationId, {
         title: title.trim(),
         body: message.trim(),
-        expiresAtUtc: expiry ? new Date(expiry).toISOString() : null,
+        expiresAtUtc: options.expiresAtUtc,
         recurring,
+        recurrenceHours: options.recurrenceHours,
         startup,
       });
       toast.success("Notification mise à jour pour tous les destinataires.");
@@ -105,6 +141,8 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
       toast.error("Renseignez un titre et un message.");
       return;
     }
+    const options = recurrenceOptions();
+    if (!options) return;
 
     let divisionId: string | null = null;
     let teamId: string | null = null;
@@ -130,11 +168,12 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
         title.trim(),
         message.trim(),
         divisionId,
-        expiry ? new Date(expiry).toISOString() : null,
+        options.expiresAtUtc,
         recurring,
         startup,
         teamId,
         role,
+        options.recurrenceHours,
       );
       setSent(true);
       setRecipients(response.recipients);
@@ -247,7 +286,7 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
               </Field>
               <Field className="col-span-full">
                 <FieldLabel htmlFor="notifications-field-13" className="text-[11px] font-bold text-muted-foreground">
-                  Date d'expiration (optionnel)
+                  {recurring ? "Date d'expiration (obligatoire)" : "Date d'expiration (optionnel)"}
                 </FieldLabel>
                 <Input
                   id="notifications-field-13"
@@ -264,6 +303,24 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
                   </span>
                   <Switch checked={recurring} onCheckedChange={setRecurring} />
                 </div>
+                {recurring && (
+                  <div className="flex flex-col gap-1.5 px-5 pb-3">
+                    <FieldLabel htmlFor="notifications-field-recurrence" className="text-[11px] font-bold text-muted-foreground">
+                      Fréquence
+                    </FieldLabel>
+                    <OptionSelect
+                      id="notifications-field-recurrence"
+                      value={recurrence}
+                      onValueChange={setRecurrence}
+                      options={RECURRENCE_PRESETS.map((preset) => preset.label)}
+                    />
+                    <small className="text-[11px] text-soft">
+                      {expiry
+                        ? `Renvoyée aux destinataires jusqu'au ${new Date(`${expiry}T00:00:00`).toLocaleDateString("fr-FR")} inclus (elle redevient non lue).`
+                        : "Choisissez une date d'expiration ci-dessus : la récurrence s'arrête à cette date."}
+                    </small>
+                  </div>
+                )}
                 <div className="flex min-h-16 items-center justify-between gap-4 px-5 py-3">
                   <span className="flex flex-col">
                     <strong className="text-[12.5px]">Afficher au démarrage</strong>

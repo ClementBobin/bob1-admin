@@ -23,6 +23,8 @@ export type AdminNotificationDto = {
   startup: boolean;
   recipientCount: number;
   readCount: number;
+  recurrenceHours: number | null;
+  lastSentAtUtc: string | null;
 };
 
 export type NotificationRecipientDto = {

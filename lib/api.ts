@@ -410,14 +410,14 @@ export const api = {
     markRead: (id: string) =>
       apiFetch<void>(`/notifications/${id}/read`, { method: "POST" }),
     readAll: () => apiFetch<void>("/notifications/read-all", { method: "POST" }),
-    broadcast: (title: string, body: string, divisionId?: string | null, expiresAtUtc?: string | null, recurring?: boolean, startup?: boolean, teamId?: string | null, role?: string | null) =>
+    broadcast: (title: string, body: string, divisionId?: string | null, expiresAtUtc?: string | null, recurring?: boolean, startup?: boolean, teamId?: string | null, role?: string | null, recurrenceHours?: number | null) =>
       apiFetch<BroadcastResponse>("/admin/notifications", {
         method: "POST",
-        body: { title, body, divisionId, teamId, role, expiresAtUtc, recurring, startup },
+        body: { title, body, divisionId, teamId, role, expiresAtUtc, recurring, recurrenceHours, startup },
       }),
     adminList: (params: NotificationQuery = {}) => search<Paged<AdminNotificationDto>>("/admin/notifications", params),
     recipients: (id: string) => apiFetch<NotificationRecipientDto[]>(`/admin/notifications/${id}/recipients`),
-    update: (id: string, input: { title: string; body: string; expiresAtUtc?: string | null; recurring?: boolean; startup?: boolean }) =>
+    update: (id: string, input: { title: string; body: string; expiresAtUtc?: string | null; recurring?: boolean; recurrenceHours?: number | null; startup?: boolean }) =>
       apiFetch<AdminNotificationDto>(`/admin/notifications/${id}`, { method: "PUT", body: input }),
     remove: (id: string) => apiFetch<void>(`/admin/notifications/${id}`, { method: "DELETE" }),
   },
