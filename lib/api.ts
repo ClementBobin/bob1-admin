@@ -49,11 +49,10 @@ import type {
   UrgentSlotDto,
   VenueDto,
 } from "@/types";
+import { getApiBaseUrl } from "@/lib/runtime-env";
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
-if (!API_BASE_URL) {
-  throw new Error("NEXT_PUBLIC_API_URL is not configured");
-}
+// Resolved at call time (not import time) so the URL can come from the container's
+// runtime environment. See lib/runtime-env.ts.
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -158,7 +157,7 @@ async function refreshAccessToken(): Promise<string | null> {
   if (!refreshPromise) {
     refreshPromise = (async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        const response = await fetch(`${getApiBaseUrl()}/auth/refresh`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ refreshToken }),
@@ -194,7 +193,10 @@ async function parseBody(response: Response): Promise<unknown> {
   }
 }
 
-export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
+export async function apiFetch<T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<T> {
   const { method = "GET", body, auth = true, retry = true } = options;
 
   const headers: Record<string, string> = {};
@@ -206,7 +208,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
 
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetch(`${getApiBaseUrl()}${path}`, {
       method,
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),
@@ -215,7 +217,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   } catch {
     throw new ApiError(
       "Impossible de joindre l'API. Vérifiez que Bob1-api est démarrée et que NEXT_PUBLIC_API_URL est correct.",
-      0
+      0,
     );
   }
 
@@ -234,7 +236,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
     throw new ApiError(
       problem.detail || problem.title || `Erreur HTTP ${response.status}`,
       response.status,
-      problem.code || problem.title
+      problem.code || problem.title,
     );
   }
 
@@ -251,7 +253,9 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
  */
 function search<T>(path: string, criteria: object = {}) {
   const body = Object.fromEntries(
-    Object.entries(criteria).filter(([, value]) => value !== undefined && value !== null && value !== ""),
+    Object.entries(criteria).filter(
+      ([, value]) => value !== undefined && value !== null && value !== "",
+    ),
   );
   return apiFetch<T>(path, { method: "QUERY", body });
 }
@@ -279,33 +283,96 @@ export const api = {
 
   // ---- Club ----
   divisions: {
-    list: (params: DivisionQuery = {}) => search<Paged<DivisionDto>>("/divisions", params),
-    all: () => search<Paged<DivisionDto>>("/divisions", { take: ALL }).then((page) => page.items),
-    create: (input: { name: string; category: string; gender: string; isActive: boolean }) =>
-      apiFetch<DivisionDto>("/admin/divisions", { method: "POST", body: input }),
-    update: (id: string, input: { name: string; category: string; gender: string; isActive: boolean }) =>
-      apiFetch<DivisionDto>(`/admin/divisions/${id}`, { method: "PUT", body: input }),
-    remove: (id: string) => apiFetch<void>(`/admin/divisions/${id}`, { method: "DELETE" }),
+    list: (params: DivisionQuery = {}) =>
+      search<Paged<DivisionDto>>("/divisions", params),
+    all: () =>
+      search<Paged<DivisionDto>>("/divisions", { take: ALL }).then(
+        (page) => page.items,
+      ),
+    create: (input: {
+      name: string;
+      category: string;
+      gender: string;
+      isActive: boolean;
+    }) =>
+      apiFetch<DivisionDto>("/admin/divisions", {
+        method: "POST",
+        body: input,
+      }),
+    update: (
+      id: string,
+      input: {
+        name: string;
+        category: string;
+        gender: string;
+        isActive: boolean;
+      },
+    ) =>
+      apiFetch<DivisionDto>(`/admin/divisions/${id}`, {
+        method: "PUT",
+        body: input,
+      }),
+    remove: (id: string) =>
+      apiFetch<void>(`/admin/divisions/${id}`, { method: "DELETE" }),
   },
 
   teams: {
     list: (params: TeamQuery = {}) => search<Paged<TeamDto>>("/teams", params),
-    all: () => search<Paged<TeamDto>>("/teams", { take: ALL }).then((page) => page.items),
-    create: (input: { name: string; divisionId: string; coachName?: string | null; coachUserId?: string | null; logoUrl?: string | null; isActive?: boolean; trainingVenueId?: string | null }) =>
-      apiFetch<TeamDto>("/admin/teams", { method: "POST", body: input }),
-    update: (id: string, input: { name: string; divisionId: string; coachName?: string | null; coachUserId?: string | null; logoUrl?: string | null; isActive?: boolean; trainingVenueId?: string | null }) =>
+    all: () =>
+      search<Paged<TeamDto>>("/teams", { take: ALL }).then(
+        (page) => page.items,
+      ),
+    create: (input: {
+      name: string;
+      divisionId: string;
+      coachName?: string | null;
+      coachUserId?: string | null;
+      logoUrl?: string | null;
+      isActive?: boolean;
+      trainingVenueId?: string | null;
+    }) => apiFetch<TeamDto>("/admin/teams", { method: "POST", body: input }),
+    update: (
+      id: string,
+      input: {
+        name: string;
+        divisionId: string;
+        coachName?: string | null;
+        coachUserId?: string | null;
+        logoUrl?: string | null;
+        isActive?: boolean;
+        trainingVenueId?: string | null;
+      },
+    ) =>
       apiFetch<TeamDto>(`/admin/teams/${id}`, { method: "PUT", body: input }),
-    remove: (id: string) => apiFetch<void>(`/admin/teams/${id}`, { method: "DELETE" }),
+    remove: (id: string) =>
+      apiFetch<void>(`/admin/teams/${id}`, { method: "DELETE" }),
   },
 
   venues: {
-    list: (params: VenueQuery = {}) => search<Paged<VenueDto>>("/venues", params),
-    all: () => search<Paged<VenueDto>>("/venues", { take: ALL }).then((page) => page.items),
-    create: (input: { name: string; address: string | null; city: string | null; postalCode: string | null }) =>
-      apiFetch<VenueDto>("/admin/venues", { method: "POST", body: input }),
-    update: (id: string, input: { name: string; address: string | null; city: string | null; postalCode: string | null }) =>
+    list: (params: VenueQuery = {}) =>
+      search<Paged<VenueDto>>("/venues", params),
+    all: () =>
+      search<Paged<VenueDto>>("/venues", { take: ALL }).then(
+        (page) => page.items,
+      ),
+    create: (input: {
+      name: string;
+      address: string | null;
+      city: string | null;
+      postalCode: string | null;
+    }) => apiFetch<VenueDto>("/admin/venues", { method: "POST", body: input }),
+    update: (
+      id: string,
+      input: {
+        name: string;
+        address: string | null;
+        city: string | null;
+        postalCode: string | null;
+      },
+    ) =>
       apiFetch<VenueDto>(`/admin/venues/${id}`, { method: "PUT", body: input }),
-    remove: (id: string) => apiFetch<void>(`/admin/venues/${id}`, { method: "DELETE" }),
+    remove: (id: string) =>
+      apiFetch<void>(`/admin/venues/${id}`, { method: "DELETE" }),
   },
 
   // ---- Seasons ----
@@ -316,13 +383,19 @@ export const api = {
 
   // ---- Matches ----
   matches: {
-    list: (params: MatchQuery = {}) => search<Paged<MatchDto>>("/matches", params),
+    list: (params: MatchQuery = {}) =>
+      search<Paged<MatchDto>>("/matches", params),
     all: (params: MatchQuery = {}) =>
-      search<Paged<MatchDto>>("/matches", { ...params, take: 300 }).then((page) => page.items),
+      search<Paged<MatchDto>>("/matches", { ...params, take: 300 }).then(
+        (page) => page.items,
+      ),
     create: (input: MatchInput) =>
       apiFetch<MatchDto>("/admin/matches", { method: "POST", body: input }),
     update: (id: string, input: MatchInput) =>
-      apiFetch<MatchDto>(`/admin/matches/${id}`, { method: "PUT", body: input }),
+      apiFetch<MatchDto>(`/admin/matches/${id}`, {
+        method: "PUT",
+        body: input,
+      }),
     cancel: (id: string) =>
       apiFetch<MatchDto>(`/admin/matches/${id}/cancel`, { method: "POST" }),
     markPlayed: (id: string) =>
@@ -332,30 +405,55 @@ export const api = {
   // ---- Participation (admin) ----
   slots: {
     create: (matchId: string, input: SlotInput) =>
-      apiFetch<{ id: string }>(`/admin/matches/${matchId}/slots`, { method: "POST", body: input }),
-    roster: (matchId: string) => apiFetch<RosterDto>(`/admin/matches/${matchId}/participation`),
+      apiFetch<{ id: string }>(`/admin/matches/${matchId}/slots`, {
+        method: "POST",
+        body: input,
+      }),
+    roster: (matchId: string) =>
+      apiFetch<RosterDto>(`/admin/matches/${matchId}/participation`),
     update: (id: string, input: SlotInput) =>
       apiFetch<void>(`/admin/slots/${id}`, { method: "PUT", body: input }),
-    remove: (id: string) => apiFetch<void>(`/admin/slots/${id}`, { method: "DELETE" }),
-    urgent: (params: UrgentQuery = {}) => search<UrgentSlotPage<UrgentSlotDto>>("/admin/slots/urgent", params),
+    remove: (id: string) =>
+      apiFetch<void>(`/admin/slots/${id}`, { method: "DELETE" }),
+    urgent: (params: UrgentQuery = {}) =>
+      search<UrgentSlotPage<UrgentSlotDto>>("/admin/slots/urgent", params),
   },
 
   // ---- People (admin) ----
   people: {
     list: (params: PeopleQuery = {}) =>
       search<Paged<PersonDto>>("/admin/people", params),
-    all: () => search<Paged<PersonDto>>("/admin/people", { take: 200 }).then((page) => page.items),
+    all: () =>
+      search<Paged<PersonDto>>("/admin/people", { take: 200 }).then(
+        (page) => page.items,
+      ),
     create: (input: PersonInput) =>
-      apiFetch<CreatePersonResponse>("/admin/people", { method: "POST", body: input }),
+      apiFetch<CreatePersonResponse>("/admin/people", {
+        method: "POST",
+        body: input,
+      }),
     update: (id: string, input: Omit<PersonInput, "roles" | "password">) =>
-      apiFetch<PersonDto>(`/admin/people/${id}`, { method: "PUT", body: input }),
-    memberships: (id: string) => search<MembershipDto[]>(`/admin/people/${id}/memberships`, {}),
+      apiFetch<PersonDto>(`/admin/people/${id}`, {
+        method: "PUT",
+        body: input,
+      }),
+    memberships: (id: string) =>
+      search<MembershipDto[]>(`/admin/people/${id}/memberships`, {}),
     setRoles: (id: string, roles: string[]) =>
-      apiFetch<PersonDto>(`/admin/people/${id}/roles`, { method: "PUT", body: { roles } }),
+      apiFetch<PersonDto>(`/admin/people/${id}/roles`, {
+        method: "PUT",
+        body: { roles },
+      }),
     setActive: (id: string, isActive: boolean) =>
-      apiFetch<void>(`/admin/people/${id}/active`, { method: "PUT", body: { isActive } }),
+      apiFetch<void>(`/admin/people/${id}/active`, {
+        method: "PUT",
+        body: { isActive },
+      }),
     setSuspendedFromParticipation: (id: string, suspended: boolean) =>
-      apiFetch<void>(`/admin/people/${id}/suspended-from-participation`, { method: "PUT", body: { isActive: suspended } }),
+      apiFetch<void>(`/admin/people/${id}/suspended-from-participation`, {
+        method: "PUT",
+        body: { isActive: suspended },
+      }),
   },
 
   // ---- Families (admin) ----
@@ -363,28 +461,52 @@ export const api = {
     list: (params: FamilyQuery = {}) =>
       search<Paged<AdminFamilyDto>>("/admin/families", params),
     create: (name: string) =>
-      apiFetch<AdminFamilyDto>("/admin/families", { method: "POST", body: { name } }),
+      apiFetch<AdminFamilyDto>("/admin/families", {
+        method: "POST",
+        body: { name },
+      }),
     update: (id: string, name: string) =>
-      apiFetch<AdminFamilyDto>(`/admin/families/${id}`, { method: "PUT", body: { name } }),
-    remove: (id: string) => apiFetch<void>(`/admin/families/${id}`, { method: "DELETE" }),
+      apiFetch<AdminFamilyDto>(`/admin/families/${id}`, {
+        method: "PUT",
+        body: { name },
+      }),
+    remove: (id: string) =>
+      apiFetch<void>(`/admin/families/${id}`, { method: "DELETE" }),
   },
 
   // ---- Ranking ----
   rankings: {
     // Person rankings
     get: (params: RankingQuery = {}) =>
-      search<RankingResponse | FamilyRankingResponse>("/admin/rankings", params),
+      search<RankingResponse | FamilyRankingResponse>(
+        "/admin/rankings",
+        params,
+      ),
     // My entries
     myEntries: (season?: string, take?: number) =>
       search<EntryDto[]>("/rankings/me/entries", { season, take }),
-    rules: (params: RuleQuery = {}) => search<Paged<RankingRuleDto>>("/ranking-rules", params),
-    allRules: () => search<Paged<RankingRuleDto>>("/ranking-rules", { take: ALL }).then((page) => page.items),
-    updateRule: (key: string, points: number, label?: string, pointsJ15?: number, pointsJ4?: number) =>
-      apiFetch<RankingRuleDto>(`/admin/ranking-rules/${encodeURIComponent(key)}`, {
-        method: "PUT",
-        body: { points, label, pointsJ15, pointsJ4 },
-      }),
-    penalties: (params: PenaltyQuery = {}) => search<Paged<PenaltyDto>>("/admin/penalties", params),
+    rules: (params: RuleQuery = {}) =>
+      search<Paged<RankingRuleDto>>("/ranking-rules", params),
+    allRules: () =>
+      search<Paged<RankingRuleDto>>("/ranking-rules", { take: ALL }).then(
+        (page) => page.items,
+      ),
+    updateRule: (
+      key: string,
+      points: number,
+      label?: string,
+      pointsJ15?: number,
+      pointsJ4?: number,
+    ) =>
+      apiFetch<RankingRuleDto>(
+        `/admin/ranking-rules/${encodeURIComponent(key)}`,
+        {
+          method: "PUT",
+          body: { points, label, pointsJ15, pointsJ4 },
+        },
+      ),
+    penalties: (params: PenaltyQuery = {}) =>
+      search<Paged<PenaltyDto>>("/admin/penalties", params),
     createPenalty: (input: {
       personId: string;
       ruleKey?: string;
@@ -393,32 +515,86 @@ export const api = {
       matchId?: string | null;
       /** Points category (presence, volunteer…); negative points = penalty. */
       category?: string;
-    }) => apiFetch<{ id: string }>("/admin/penalties", { method: "POST", body: input }),
+    }) =>
+      apiFetch<{ id: string }>("/admin/penalties", {
+        method: "POST",
+        body: input,
+      }),
     /** Edit a manual entry. */
-    updatePoints: (id: string, input: { category: string; points: number; reason: string; matchId?: string | null }) =>
+    updatePoints: (
+      id: string,
+      input: {
+        category: string;
+        points: number;
+        reason: string;
+        matchId?: string | null;
+      },
+    ) =>
       apiFetch<EntryDto>(`/admin/points/${id}`, { method: "PUT", body: input }),
     /** Revoke a manual entry (an opposite entry is appended). */
-    revokePoints: (id: string) => apiFetch<void>(`/admin/points/${id}/revoke`, { method: "POST" }),
+    revokePoints: (id: string) =>
+      apiFetch<void>(`/admin/points/${id}/revoke`, { method: "POST" }),
     // Points history
-    history: (params: PointsHistoryQuery = {}) => search<Paged<EntryDto>>("/admin/points-history", params),
+    history: (params: PointsHistoryQuery = {}) =>
+      search<Paged<EntryDto>>("/admin/points-history", params),
   },
 
   // ---- Notifications ----
   notifications: {
     list: (take = 100) => search<NotificationDto[]>("/notifications", { take }),
-    unreadCount: () => apiFetch<{ count: number }>("/notifications/unread-count"),
+    unreadCount: () =>
+      apiFetch<{ count: number }>("/notifications/unread-count"),
     markRead: (id: string) =>
       apiFetch<void>(`/notifications/${id}/read`, { method: "POST" }),
-    readAll: () => apiFetch<void>("/notifications/read-all", { method: "POST" }),
-    broadcast: (title: string, body: string, divisionId?: string | null, expiresAtUtc?: string | null, recurring?: boolean, startup?: boolean, teamId?: string | null, role?: string | null, recurrenceHours?: number | null) =>
+    readAll: () =>
+      apiFetch<void>("/notifications/read-all", { method: "POST" }),
+    broadcast: (
+      title: string,
+      body: string,
+      divisionId?: string | null,
+      expiresAtUtc?: string | null,
+      recurring?: boolean,
+      startup?: boolean,
+      teamId?: string | null,
+      role?: string | null,
+      recurrenceHours?: number | null,
+    ) =>
       apiFetch<BroadcastResponse>("/admin/notifications", {
         method: "POST",
-        body: { title, body, divisionId, teamId, role, expiresAtUtc, recurring, recurrenceHours, startup },
+        body: {
+          title,
+          body,
+          divisionId,
+          teamId,
+          role,
+          expiresAtUtc,
+          recurring,
+          recurrenceHours,
+          startup,
+        },
       }),
-    adminList: (params: NotificationQuery = {}) => search<Paged<AdminNotificationDto>>("/admin/notifications", params),
-    recipients: (id: string) => apiFetch<NotificationRecipientDto[]>(`/admin/notifications/${id}/recipients`),
-    update: (id: string, input: { title: string; body: string; expiresAtUtc?: string | null; recurring?: boolean; recurrenceHours?: number | null; startup?: boolean }) =>
-      apiFetch<AdminNotificationDto>(`/admin/notifications/${id}`, { method: "PUT", body: input }),
-    remove: (id: string) => apiFetch<void>(`/admin/notifications/${id}`, { method: "DELETE" }),
+    adminList: (params: NotificationQuery = {}) =>
+      search<Paged<AdminNotificationDto>>("/admin/notifications", params),
+    recipients: (id: string) =>
+      apiFetch<NotificationRecipientDto[]>(
+        `/admin/notifications/${id}/recipients`,
+      ),
+    update: (
+      id: string,
+      input: {
+        title: string;
+        body: string;
+        expiresAtUtc?: string | null;
+        recurring?: boolean;
+        recurrenceHours?: number | null;
+        startup?: boolean;
+      },
+    ) =>
+      apiFetch<AdminNotificationDto>(`/admin/notifications/${id}`, {
+        method: "PUT",
+        body: input,
+      }),
+    remove: (id: string) =>
+      apiFetch<void>(`/admin/notifications/${id}`, { method: "DELETE" }),
   },
 };

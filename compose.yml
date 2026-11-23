@@ -1,0 +1,30 @@
+services:
+  bob1-admin:
+    image: ghcr.io/clementbobin/bob1-admin:latest
+    container_name: bob1-admin
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      API_URL: http://host/api/v1
+    ports:
+      - "3000:3000"
+    read_only: true
+    tmpfs:
+      - /tmp
+      # Next.js may write its runtime cache here; the app runs as uid/gid 1001
+      - /app/.next/cache:uid=1001,gid=1001
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/login"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

@@ -27,7 +27,8 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
-import { API_BASE_URL, errorMessage } from "@/lib/api";
+import { errorMessage } from "@/lib/api";
+import { getApiBaseUrl } from "@/lib/runtime-env";
 
 function LoginForm() {
   const router = useRouter();
@@ -144,7 +145,7 @@ function LoginForm() {
 
           <CardFooter className="gap-2 border-t px-6 py-3.5 text-[10.5px] text-muted-foreground">
             <ShieldCheck className="size-3.5 shrink-0" />
-            <span className="truncate">{`API : ${API_BASE_URL}`}</span>
+            <span className="truncate">{`API : ${getApiBaseUrl()}`}</span>
           </CardFooter>
         </Card>
 
