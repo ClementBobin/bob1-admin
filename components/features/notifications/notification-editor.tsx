@@ -17,17 +17,7 @@ import { GroupedSelect, type SelectChoice, type SelectGroup } from "@/components
 import { OptionSelect } from "@/components/shared/option-select";
 import { PageHeader, CardHeading } from "@/components/layout/page-header";
 import { cn } from "@/lib/utils";
-import type { DivisionDto, NotificationDto, TeamDto } from "@/types";
-
-function parseType(dataJson: string | null) {
-  if (!dataJson) return null;
-  try {
-    const type = JSON.parse(dataJson)?.type;
-    return typeof type === "string" ? type : null;
-  } catch {
-    return null;
-  }
-}
+import type { AdminNotificationDto, DivisionDto, TeamDto } from "@/types";
 
 /** Shared by "Nouvelle notification" and "Modifier la notification". */
 export function NotificationEditor({ notificationId }: { notificationId?: string }) {
@@ -51,7 +41,7 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
 
   const { data: apiDivisions } = useApiData<DivisionDto[]>(() => api.divisions.all(), []);
   const { data: apiTeams } = useApiData<TeamDto[]>(() => api.teams.all(), []);
-  const { data: notifications, loading: loadingNotification } = useApiData<NotificationDto[]>(
+  const { data: notifications, loading: loadingNotification } = useApiData<AdminNotificationDto[]>(
     () => (editing ? api.notifications.adminList({ take: 200 }).then((page) => page.items) : Promise.resolve([])),
     [editing],
   );
@@ -62,7 +52,7 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
   useEffect(() => {
     if (!existing || prefilled.current) return;
     prefilled.current = true;
-    setType(parseType(existing.dataJson) ?? "");
+    setType(existing.type);
     setTitle(existing.title);
     setMessage(existing.body);
     setExpiry(existing.expiresAtUtc ? existing.expiresAtUtc.slice(0, 10) : "");
@@ -81,13 +71,29 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
     },
   ].filter((group) => group.options.length > 0);
 
-  const save = () => {
+  // One content row is shared by every recipient: saving updates the notification for all of them.
+  const save = async () => {
+    if (!notificationId) return;
     if (!title.trim() || !message.trim()) {
       toast.error("Renseignez un titre et un message.");
       return;
     }
-    // Bob1-api has no update endpoint yet: keep the user on the form so nothing is lost.
-    toast.info("La modification n'est pas encore disponible via l'API.");
+    setSending(true);
+    try {
+      await api.notifications.update(notificationId, {
+        title: title.trim(),
+        body: message.trim(),
+        expiresAtUtc: expiry ? new Date(expiry).toISOString() : null,
+        recurring,
+        startup,
+      });
+      toast.success("Notification mise à jour pour tous les destinataires.");
+      router.push("/notifications");
+    } catch (cause) {
+      toast.error(errorMessage(cause));
+    } finally {
+      setSending(false);
+    }
   };
 
   const send = async () => {
@@ -263,7 +269,7 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
                   <Button variant="ghost" onClick={() => router.push("/notifications")}>
                     Annuler
                   </Button>
-                  <Button onClick={save}>
+                  <Button onClick={() => void save()} disabled={sending}>
                     <Save className="mr-2 h-4 w-4" />
                     Enregistrer les modifications
                   </Button>

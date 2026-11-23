@@ -11,32 +11,19 @@ import { DataTable } from "@/components/shared/data-table";
 import { Filters } from "@/components/shared/filters";
 import { PageHeader } from "@/components/layout/page-header";
 import { Status } from "@/components/shared/status";
-import { FILTER_ALL, READ_STATUS_OPTIONS } from "@/lib/constants";
+import { FILTER_ALL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/utils";
 import { ErrorBanner } from "@/components/shared/error-banner";
-import type { NotificationDto } from "@/types";
-
-function notificationType(row: NotificationDto) {
-  if (!row.dataJson) return "broadcast";
-  try {
-    return JSON.parse(row.dataJson).type ?? "broadcast";
-  } catch {
-    return "broadcast";
-  }
-}
-
 export function NotificationsListView() {
   const { notificationTypeNames } = useLookups();
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState(FILTER_ALL.types);
-  const [statusFilter, setStatusFilter] = useState(FILTER_ALL.statuses);
   // No delete for sent notifications
 
   const query = usePagedQuery((params) => api.notifications.adminList(params), {
     search,
     type: typeFilter === FILTER_ALL.types ? undefined : typeFilter,
-    read: statusFilter === FILTER_ALL.statuses ? undefined : statusFilter === "Lue",
   });
   const { items: rows, loading, error } = query;
 
@@ -63,17 +50,10 @@ export function NotificationsListView() {
             options: [FILTER_ALL.types, ...notificationTypeNames],
             onChange: setTypeFilter,
           },
-          {
-            label: "Statut",
-            value: statusFilter,
-            options: [FILTER_ALL.statuses, ...READ_STATUS_OPTIONS],
-            onChange: setStatusFilter,
-          },
         ]}
         onReset={() => {
           setSearch("");
           setTypeFilter(FILTER_ALL.types);
-          setStatusFilter(FILTER_ALL.statuses);
         }}
       />
 
@@ -97,7 +77,7 @@ export function NotificationsListView() {
           {
             key: "type",
             label: "Type",
-            render: (row) => <Badge variant="outline">{notificationType(row)}</Badge>,
+            render: (row) => <Badge variant="outline">{row.type}</Badge>,
           },
           {
             key: "createdAt",
@@ -105,10 +85,12 @@ export function NotificationsListView() {
             render: (row) => <span className="text-muted-foreground">{formatDateTime(row.createdAtUtc)}</span>,
           },
           {
-            key: "status",
-            label: "Statut",
+            key: "reads",
+            label: "Lecture",
             render: (row) => (
-              <Status tone={row.isRead ? "success" : "warning"}>{row.isRead ? "Lue" : "Non lue"}</Status>
+              <Status tone={row.recipientCount > 0 && row.readCount === row.recipientCount ? "success" : "warning"}>
+                {row.readCount} / {row.recipientCount} lues
+              </Status>
             ),
           },
         ]}

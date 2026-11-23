@@ -16,7 +16,7 @@ export type MatchQuery = PageParams & {
 };
 export type PeopleQuery = PageParams & { search?: string; role?: string; isActive?: boolean; status?: "active" | "suspended" | "deactivated"; season?: string };
 export type FamilyQuery = PageParams & { search?: string; hideInactive?: boolean };
-export type NotificationQuery = PageParams & { search?: string; type?: string; read?: boolean };
+export type NotificationQuery = PageParams & { search?: string; type?: string };
 export type RankingQuery = PageParams & { category?: string; view?: "person" | "family"; search?: string; season?: string };
 export type RuleQuery = PageParams & { search?: string; category?: string };
 export type PenaltyQuery = PageParams & { personId?: string; search?: string; from?: string; season?: string };
