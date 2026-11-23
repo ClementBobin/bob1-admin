@@ -35,7 +35,9 @@ import type {
   UrgentSlotPage,
   VenueQuery,
   MatchInput,
+  AdminNotificationDto,
   NotificationDto,
+  NotificationRecipientDto,
   PenaltyDto,
   PersonDto,
   PersonInput,
@@ -413,9 +415,10 @@ export const api = {
         method: "POST",
         body: { title, body, divisionId, teamId, expiresAtUtc, recurring, startup },
       }),
-    adminList: (params: NotificationQuery = {}) => search<Paged<NotificationDto>>("/admin/notifications", params),
+    adminList: (params: NotificationQuery = {}) => search<Paged<AdminNotificationDto>>("/admin/notifications", params),
+    recipients: (id: string) => apiFetch<NotificationRecipientDto[]>(`/admin/notifications/${id}/recipients`),
     update: (id: string, input: { title: string; body: string; expiresAtUtc?: string | null; recurring?: boolean; startup?: boolean }) =>
-      apiFetch<NotificationDto>(`/admin/notifications/${id}`, { method: "PUT", body: input }),
+      apiFetch<AdminNotificationDto>(`/admin/notifications/${id}`, { method: "PUT", body: input }),
     remove: (id: string) => apiFetch<void>(`/admin/notifications/${id}`, { method: "DELETE" }),
   },
 };
