@@ -1,3 +1,9 @@
+## [1.2.0](https://github.com/ClementBobin/bob1-admin/compare/v1.1.1...v1.2.0) (2026-11-24)
+
+### Features
+
+* added pswd and email reset ([3260eac](https://github.com/ClementBobin/bob1-admin/commit/3260eac1a2fca145f0eb1bc6c954957d6c499feb))
+
 ## [1.1.1](https://github.com/ClementBobin/bob1-admin/compare/v1.1.0...v1.1.1) (2026-11-23)
 
 ### Bug Fixes
