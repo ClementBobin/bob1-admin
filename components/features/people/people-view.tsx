@@ -68,9 +68,6 @@ export function PeopleView() {
     try {
       if (editing) {
         await api.people.update(editing.id, {
-          email: payload.email,
-          firstName: payload.firstName,
-          lastName: payload.lastName,
           familyId: editing.familyId,
           divisionId: payload.divisionId,
           teamIds: payload.teamIds,

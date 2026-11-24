@@ -8,6 +8,8 @@
  */
 
 import type {
+  AccountLinkInfo,
+  AccountLinkResponse,
   AdminFamilyDto,
   AuthResponse,
   AuthUser,
@@ -281,6 +283,28 @@ export const api = {
 
   me: () => apiFetch<AuthUser>("/me"),
 
+  // ---- Public pages behind a one-time link (no session: the token is the credential) ----
+  accountLinks: {
+    inspect: (token: string) =>
+      apiFetch<AccountLinkInfo>("/auth/account-links/inspect", {
+        method: "POST",
+        body: { token },
+        auth: false,
+      }),
+    resetPassword: (token: string, newPassword: string) =>
+      apiFetch<void>("/auth/account-links/reset-password", {
+        method: "POST",
+        body: { token, newPassword },
+        auth: false,
+      }),
+    changeEmail: (token: string, newEmail: string) =>
+      apiFetch<void>("/auth/account-links/change-email", {
+        method: "POST",
+        body: { token, newEmail },
+        auth: false,
+      }),
+  },
+
   // ---- Club ----
   divisions: {
     list: (params: DivisionQuery = {}) =>
@@ -432,10 +456,24 @@ export const api = {
         method: "POST",
         body: input,
       }),
-    update: (id: string, input: Omit<PersonInput, "roles" | "password">) =>
+    // Name and email are not editable by an admin: the person changes them (email via a one-time link).
+    update: (
+      id: string,
+      input: Omit<PersonInput, "roles" | "password" | "email" | "firstName" | "lastName">,
+    ) =>
       apiFetch<PersonDto>(`/admin/people/${id}`, {
         method: "PUT",
         body: input,
+      }),
+    /** One-time link (24 h) where the person chooses a new password. The token is shown once. */
+    passwordResetLink: (id: string) =>
+      apiFetch<AccountLinkResponse>(`/admin/people/${id}/password-reset-link`, {
+        method: "POST",
+      }),
+    /** One-time link (24 h) where the person enters a new sign-in email. The token is shown once. */
+    emailChangeLink: (id: string) =>
+      apiFetch<AccountLinkResponse>(`/admin/people/${id}/email-change-link`, {
+        method: "POST",
       }),
     memberships: (id: string) =>
       search<MembershipDto[]>(`/admin/people/${id}/memberships`, {}),

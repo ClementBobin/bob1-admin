@@ -8,6 +8,7 @@ import { EntityForm } from "@/components/shared/entity-form";
 import { FormField } from "@/components/shared/form-field";
 import { OptionSelect } from "@/components/shared/option-select";
 import { api } from "@/lib/api";
+import { AccountLinkPanel } from "./account-link-panel";
 import { useLookups } from "@/hooks/use-lookups";
 import { cn } from "@/lib/utils";
 import type { DivisionDto, MembershipDto, Person, PersonPayload, TeamDto } from "@/types";
@@ -68,15 +69,30 @@ export function PersonForm({
 
   return (
     <EntityForm id={PERSON_FORM_ID} onSubmit={submit}>
-      <FormField label="Prénom">
-        {(id) => <Input id={id} value={firstName} onChange={(e) => setFirstName(e.target.value)} required />}
-      </FormField>
-      <FormField label="Nom">
-        {(id) => <Input id={id} value={lastName} onChange={(e) => setLastName(e.target.value)} required />}
-      </FormField>
-      <FormField label="E-mail" full>
-        {(id) => <Input id={id} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />}
-      </FormField>
+      {person ? (
+        <>
+          {/* Identity is read-only for admins: the person changes it themselves (email through a one-time link). */}
+          <FormField label="Prénom et nom" full>
+            {(id) => <Input id={id} value={person.name} disabled readOnly />}
+          </FormField>
+          <FormField label="E-mail" full>
+            {(id) => <Input id={id} type="email" value={person.email} disabled readOnly />}
+          </FormField>
+          <AccountLinkPanel personId={person.personId ?? person.id} isActive={person.isActive} />
+        </>
+      ) : (
+        <>
+          <FormField label="Prénom">
+            {(id) => <Input id={id} value={firstName} onChange={(e) => setFirstName(e.target.value)} required />}
+          </FormField>
+          <FormField label="Nom">
+            {(id) => <Input id={id} value={lastName} onChange={(e) => setLastName(e.target.value)} required />}
+          </FormField>
+          <FormField label="E-mail" full>
+            {(id) => <Input id={id} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />}
+          </FormField>
+        </>
+      )}
       <FormField label="Division (joueur)" full>
         {(id) => (
           <OptionSelect

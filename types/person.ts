@@ -56,3 +56,19 @@ export type PersonPayload = {
   divisionId: string | null;  /** Teams of the current season. */
   teamIds: string[];
 };
+
+export type AccountLinkPurpose = "PasswordReset" | "EmailChange";
+
+/** A one-time link issued by an admin. The token is returned once; the admin app turns it into a URL for the person. */
+export type AccountLinkResponse = {
+  token: string;
+  expiresAtUtc: string;
+};
+
+/** What the public page may show before the person acts. */
+export type AccountLinkInfo = {
+  purpose: AccountLinkPurpose;
+  firstName: string;
+  maskedEmail: string;
+  expiresAtUtc: string;
+};
