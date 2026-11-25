@@ -34,3 +34,11 @@ export type NotificationRecipientDto = {
 };
 
 export type BroadcastResponse = { recipients: number };
+
+/** Recipients per audience; an audience nobody belongs to is absent, so the picker never offers an empty one. */
+export type AudienceSizesDto = {
+  divisions: Record<string, number>;
+  teams: Record<string, number>;
+  families: { id: string; name: string; members: number }[];
+  roles: Record<string, number>;
+};

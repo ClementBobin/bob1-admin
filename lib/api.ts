@@ -8,6 +8,7 @@
  */
 
 import type {
+  AudienceSizesDto,
   AccountLinkInfo,
   AccountLinkResponse,
   AdminFamilyDto,
@@ -620,6 +621,7 @@ export const api = {
       teamId?: string | null,
       role?: string | null,
       recurrenceHours?: number | null,
+      familyId?: string | null,
     ) =>
       apiFetch<BroadcastResponse>("/admin/notifications", {
         method: "POST",
@@ -628,6 +630,7 @@ export const api = {
           body,
           divisionId,
           teamId,
+          familyId,
           role,
           expiresAtUtc,
           recurring,
@@ -637,6 +640,8 @@ export const api = {
       }),
     adminList: (params: NotificationQuery = {}) =>
       search<Paged<AdminNotificationDto>>("/admin/notifications", params),
+    /** Divisions, teams, families and roles that have at least one recipient (with their size). */
+    audiences: () => apiFetch<AudienceSizesDto>("/admin/notifications/audiences"),
     recipients: (id: string) =>
       apiFetch<NotificationRecipientDto[]>(
         `/admin/notifications/${id}/recipients`,

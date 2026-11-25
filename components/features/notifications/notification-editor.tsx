@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Bell, Save, Send, Users, Smartphone } from "lucide-react";
-import { api, errorMessage } from "@/lib/api";
+import { api, ApiError, errorMessage } from "@/lib/api";
 import { useApiData } from "@/hooks/use-api-data";
 import { useLookups } from "@/hooks/use-lookups";
 import { toast } from "sonner";
@@ -17,7 +17,7 @@ import { GroupedSelect, type SelectChoice, type SelectGroup } from "@/components
 import { OptionSelect } from "@/components/shared/option-select";
 import { PageHeader, CardHeading } from "@/components/layout/page-header";
 import { cn } from "@/lib/utils";
-import type { AdminNotificationDto, DivisionDto, TeamDto } from "@/types";
+import type { AdminNotificationDto, AudienceSizesDto, DivisionDto, TeamDto } from "@/types";
 
 /** Recurrence presets: label shown in the select -> interval in hours sent to the API. */
 const RECURRENCE_PRESETS: { label: string; hours: number }[] = [
@@ -57,6 +57,14 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
 
   const { data: apiDivisions } = useApiData<DivisionDto[]>(() => api.divisions.all(), []);
   const { data: apiTeams } = useApiData<TeamDto[]>(() => api.teams.all(), []);
+  // Who each audience reaches: the picker only offers divisions, teams, families and roles that have at least one member.
+  const {
+    data: audienceData,
+    loading: loadingAudiences,
+    error: audiencesError,
+  } = useApiData<AudienceSizesDto>(() => api.notifications.audiences(), []);
+  // null = sizes unavailable (loading or failed): the API still refuses a send that would reach nobody.
+  const audiences = !loadingAudiences && !audiencesError ? audienceData : null;
   const { data: notifications, loading: loadingNotification } = useApiData<AdminNotificationDto[]>(
     () => (editing ? api.notifications.adminList({ take: 200 }).then((page) => page.items) : Promise.resolve([])),
     [editing],
@@ -77,20 +85,41 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
     setStartup(existing.startup);
   }, [existing]);
 
-  const targetGroups: SelectGroup[] = [
-    {
-      heading: "Divisions",
-      options: (apiDivisions ?? []).map((division) => ({ value: `Division: ${division.name}`, label: division.name })),
-    },
-    {
-      heading: "Rôles",
-      options: roles.map((role) => ({ value: `Rôle: ${role}`, label: `Tous les ${role}` })),
-    },
-    {
-      heading: "Équipes",
-      options: (apiTeams ?? []).map((team) => ({ value: `Équipe: ${team.name}`, label: team.name })),
-    },
-  ].filter((group) => group.options.length > 0);
+  const roleSize = (role: string) =>
+    audiences ? (Object.entries(audiences.roles).find(([name]) => name.toLowerCase() === role.toLowerCase())?.[1] ?? 0) : null;
+  const divisionSize = (id: string) => (audiences ? (audiences.divisions[id] ?? 0) : null);
+  const teamSize = (id: string) => (audiences ? (audiences.teams[id] ?? 0) : null);
+
+  /** Keeps an audience unless we know it is empty; shows how many people it reaches when known. */
+  const audienceOptions = <T,>(items: T[], size: (item: T) => number | null, value: (item: T) => string, label: (item: T) => string) =>
+    items
+      .map((item) => ({ item, size: size(item) }))
+      .filter(({ size: n }) => n === null || n > 0)
+      .map(({ item, size: n }) => ({ value: value(item), label: n === null ? label(item) : `${label(item)} (${n})` }));
+
+  const targetGroups: SelectGroup[] = loadingAudiences
+    ? []
+    : [
+        {
+          heading: "Divisions",
+          options: audienceOptions(apiDivisions ?? [], (d) => divisionSize(d.id), (d) => `Division: ${d.name}`, (d) => d.name),
+        },
+        {
+          heading: "Rôles",
+          options: audienceOptions(roles, roleSize, (role) => `Rôle: ${role}`, (role) => `Tous les ${role}`),
+        },
+        {
+          heading: "Équipes",
+          options: audienceOptions(apiTeams ?? [], (t) => teamSize(t.id), (t) => `Équipe: ${t.name}`, (t) => t.name),
+        },
+        {
+          heading: "Familles",
+          options: (audiences?.families ?? []).map((family) => ({
+            value: `Famille: ${family.id}`,
+            label: `${family.name} (${family.members})`,
+          })),
+        },
+      ].filter((group) => group.options.length > 0);
 
   /** Recurrence needs an end date, so it never repeats forever. Returns the API values, or null after showing an error. */
   const recurrenceOptions = () => {
@@ -147,6 +176,7 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
     let divisionId: string | null = null;
     let teamId: string | null = null;
     let role: string | null = null;
+    let familyId: string | null = null;
     if (target === "Tous les membres") {
       divisionId = null;
     } else if (target.startsWith("Division:")) {
@@ -154,6 +184,9 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
     } else if (target.startsWith("Rôle:")) {
       // A role targets every active user holding it (e.g. all Staff).
       role = target.replace("Rôle: ", "");
+    } else if (target.startsWith("Famille:")) {
+      // A family targets its active members.
+      familyId = target.replace("Famille: ", "");
     } else if (target.startsWith("Équipe:")) {
       // A team targets its players and their families directly.
       teamId = (apiTeams ?? []).find((t) => t.name === target.replace("Équipe: ", ""))?.id ?? null;
@@ -174,30 +207,58 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
         teamId,
         role,
         options.recurrenceHours,
+        familyId,
       );
       setSent(true);
       setRecipients(response.recipients);
       toast.success(`Notification envoyée à ${response.recipients} destinataire${response.recipients > 1 ? "s" : ""}.`);
     } catch (cause) {
-      toast.error(errorMessage(cause));
+      toast.error(
+        cause instanceof ApiError && cause.code === "notification.no_recipients"
+          ? "Personne n'appartient à ce groupe : rien n'a été envoyé."
+          : errorMessage(cause),
+      );
     } finally {
       setSending(false);
     }
   };
 
+  const familyName = (id: string) => audiences?.families.find((family) => family.id === id)?.name ?? "sélectionnée";
+  // How many people the current choice reaches, when the sizes are known.
+  const selectedSize = (): number | null => {
+    if (!audiences) return null;
+    if (target.startsWith("Division:")) {
+      const id = (apiDivisions ?? []).find((division) => division.name === target.replace("Division: ", ""))?.id;
+      return id ? divisionSize(id) : null;
+    }
+    if (target.startsWith("Équipe:")) {
+      const id = (apiTeams ?? []).find((team) => team.name === target.replace("Équipe: ", ""))?.id;
+      return id ? teamSize(id) : null;
+    }
+    if (target.startsWith("Rôle:")) return roleSize(target.replace("Rôle: ", ""));
+    if (target.startsWith("Famille:")) {
+      return audiences.families.find((family) => family.id === target.replace("Famille: ", ""))?.members ?? null;
+    }
+    return null;
+  };
+  const size = selectedSize();
+  const sizeText = size === null ? "" : ` · ${size} destinataire${size > 1 ? "s" : ""}`;
+
   const activeTarget = {
         id: target,
-        label: target,
+        label: target.startsWith("Famille:") ? `Famille ${familyName(target.replace("Famille: ", ""))}` : target,
         count:
           recipients !== null
             ? `${recipients} destinataire${recipients > 1 ? "s" : ""}`
             : target === "Tous les membres"
               ? "Tous les membres du club"
               : target.startsWith("Rôle:")
-                ? `Tous les utilisateurs avec le rôle ${target.replace("Rôle: ", "")}`
+                ? `Tous les utilisateurs avec le rôle ${target.replace("Rôle: ", "")}${sizeText}`
+                : target.startsWith("Famille:")
+                ? `Membres de la famille${sizeText}`
                 : target.startsWith("Équipe:")
-                ? `Membres de l'équipe ${target.replace("Équipe: ", "")}`
-                : `Membres de la division ${target.replace("Division: ", "")}`,
+                ? `Membres de l'équipe ${target.replace("Équipe: ", "")}${sizeText}`
+                : `Membres de la division ${target.replace("Division: ", "")}${sizeText}`,
         icon: Users,
       };
   const TargetIcon = activeTarget.icon;
@@ -263,7 +324,7 @@ export function NotificationEditor({ notificationId }: { notificationId?: string
                   choices={targetChoices}
                   groups={targetGroups}
                   placeholder="Choisir les destinataires"
-                  searchPlaceholder="Rechercher une division, une équipe…"
+                  searchPlaceholder="Rechercher une division, une équipe, une famille…"
                 />
               </Field>
               <Field className="col-span-full">
