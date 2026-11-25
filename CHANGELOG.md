@@ -1,3 +1,9 @@
+## [1.4.0](https://github.com/ClementBobin/bob1-admin/compare/v1.3.0...v1.4.0) (2026-11-25)
+
+### Features
+
+* **account-link:** password rules checklist (12+ chars, ([60958e6](https://github.com/ClementBobin/bob1-admin/commit/60958e63f7734ca8468bb5675a5a4fcd641416cc))
+
 ## [1.3.0](https://github.com/ClementBobin/bob1-admin/compare/v1.2.0...v1.3.0) (2026-11-25)
 
 ### Features
