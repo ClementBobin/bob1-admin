@@ -1,3 +1,9 @@
+## [1.3.0](https://github.com/ClementBobin/bob1-admin/compare/v1.2.0...v1.3.0) (2026-11-25)
+
+### Features
+
+* RGPD data export and account deletion links (admin ([ed68bc8](https://github.com/ClementBobin/bob1-admin/commit/ed68bc849ee8c422d341d1f989c6f2bade611fea))
+
 ## [1.2.0](https://github.com/ClementBobin/bob1-admin/compare/v1.1.1...v1.2.0) (2026-11-24)
 
 ### Features
