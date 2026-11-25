@@ -1,3 +1,9 @@
+## [1.5.0](https://github.com/ClementBobin/bob1-admin/compare/v1.4.0...v1.5.0) (2026-11-25)
+
+### Features
+
+* notifcation familly ([b965a38](https://github.com/ClementBobin/bob1-admin/commit/b965a388353856d55df1fa42684aadf953bfc8ea))
+
 ## [1.4.0](https://github.com/ClementBobin/bob1-admin/compare/v1.3.0...v1.4.0) (2026-11-25)
 
 ### Features
