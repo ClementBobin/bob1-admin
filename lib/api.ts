@@ -303,6 +303,20 @@ export const api = {
         body: { token, newEmail },
         auth: false,
       }),
+    /** Every piece of data held about the person, as one JSON document. Uses the link up. */
+    exportData: (token: string) =>
+      apiFetch<unknown>("/auth/account-links/export-data", {
+        method: "POST",
+        body: { token },
+        auth: false,
+      }),
+    /** Erases the account and its data for good. The person types their full email to confirm. */
+    deleteAccount: (token: string, confirmEmail: string) =>
+      apiFetch<void>("/auth/account-links/delete-account", {
+        method: "POST",
+        body: { token, confirmEmail },
+        auth: false,
+      }),
   },
 
   // ---- Club ----
@@ -473,6 +487,16 @@ export const api = {
     /** One-time link (24 h) where the person enters a new sign-in email. The token is shown once. */
     emailChangeLink: (id: string) =>
       apiFetch<AccountLinkResponse>(`/admin/people/${id}/email-change-link`, {
+        method: "POST",
+      }),
+    /** One-time link (24 h) where the person downloads all their data (GDPR access / portability). Works for a deactivated account. */
+    dataExportLink: (id: string) =>
+      apiFetch<AccountLinkResponse>(`/admin/people/${id}/data-export-link`, {
+        method: "POST",
+      }),
+    /** One-time link (24 h) where the person erases their account and data for good (GDPR erasure). Works for a deactivated account. */
+    accountDeletionLink: (id: string) =>
+      apiFetch<AccountLinkResponse>(`/admin/people/${id}/account-deletion-link`, {
         method: "POST",
       }),
     memberships: (id: string) =>

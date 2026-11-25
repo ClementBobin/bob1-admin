@@ -57,7 +57,7 @@ export type PersonPayload = {
   teamIds: string[];
 };
 
-export type AccountLinkPurpose = "PasswordReset" | "EmailChange";
+export type AccountLinkPurpose = "PasswordReset" | "EmailChange" | "DataExport" | "AccountDeletion";
 
 /** A one-time link issued by an admin. The token is returned once; the admin app turns it into a URL for the person. */
 export type AccountLinkResponse = {

@@ -1,23 +1,39 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy, KeyRound, Mail } from "lucide-react";
+import { Check, Copy, Download, KeyRound, Mail, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api, errorMessage } from "@/lib/api";
 import { buildAccountLinkUrl } from "@/lib/account-links";
 
-type Kind = "password" | "email";
+type Kind = "password" | "email" | "export" | "delete";
 
-const KINDS: Record<Kind, { label: string; icon: typeof KeyRound; issue: (id: string) => ReturnType<typeof api.people.passwordResetLink> }> = {
-  password: { label: "Lien de réinitialisation du mot de passe", icon: KeyRound, issue: (id) => api.people.passwordResetLink(id) },
-  email: { label: "Lien de changement d'e-mail", icon: Mail, issue: (id) => api.people.emailChangeLink(id) },
+const KINDS: Record<
+  Kind,
+  {
+    label: string;
+    icon: typeof KeyRound;
+    /** Password / email links need a working account; the GDPR ones also serve people who left the club. */
+    requiresActive: boolean;
+    destructive?: boolean;
+    issue: (id: string) => ReturnType<typeof api.people.passwordResetLink>;
+  }
+> = {
+  password: { label: "Lien de réinitialisation du mot de passe", icon: KeyRound, requiresActive: true, issue: (id) => api.people.passwordResetLink(id) },
+  email: { label: "Lien de changement d'e-mail", icon: Mail, requiresActive: true, issue: (id) => api.people.emailChangeLink(id) },
+  export: { label: "Lien d'export des données", icon: Download, requiresActive: false, issue: (id) => api.people.dataExportLink(id) },
+  delete: { label: "Lien de suppression du compte", icon: Trash2, requiresActive: false, destructive: true, issue: (id) => api.people.accountDeletionLink(id) },
 };
 
+const IDENTITY_KINDS: Kind[] = ["password", "email"];
+const PRIVACY_KINDS: Kind[] = ["export", "delete"];
+
 /**
- * Name and email can't be edited by an admin. Instead the admin generates a one-time link (copy / paste, no email) and the
- * person sets the new password or the new email on a public page.
+ * Name and email can't be edited by an admin, and a person's data is not handled by an admin either. Instead the admin generates
+ * a one-time link (copy / paste, no email) and the person acts on a public page: new password, new email, download their data
+ * (RGPD: accès / portabilité) or erase their account (RGPD: effacement).
  */
 export function AccountLinkPanel({ personId, isActive }: { personId: string; isActive: boolean }) {
   const [busy, setBusy] = useState<Kind | null>(null);
@@ -48,6 +64,27 @@ export function AccountLinkPanel({ personId, isActive }: { personId: string; isA
     }
   };
 
+  const buttons = (kinds: Kind[]) => (
+    <div className="flex flex-wrap gap-2">
+      {kinds.map((kind) => {
+        const { icon: Icon, label, requiresActive, destructive } = KINDS[kind];
+        return (
+          <Button
+            key={kind}
+            type="button"
+            variant={destructive ? "destructive" : "outline"}
+            size="sm"
+            disabled={(requiresActive && !isActive) || busy !== null}
+            onClick={() => void generate(kind)}
+          >
+            <Icon />
+            {busy === kind ? "Génération…" : label}
+          </Button>
+        );
+      })}
+    </div>
+  );
+
   return (
     <div className="col-span-full flex flex-col gap-2.5 rounded-xl bg-muted px-3.5 py-3">
       <span className="flex flex-col">
@@ -57,28 +94,20 @@ export function AccountLinkPanel({ personId, isActive }: { personId: string; isA
           choisira elle-même son nouveau mot de passe ou son nouvel e-mail.
         </small>
       </span>
-
-      <div className="flex flex-wrap gap-2">
-        {(Object.keys(KINDS) as Kind[]).map((kind) => {
-          const Icon = KINDS[kind].icon;
-          return (
-            <Button
-              key={kind}
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={!isActive || busy !== null}
-              onClick={() => void generate(kind)}
-            >
-              <Icon />
-              {busy === kind ? "Génération…" : KINDS[kind].label}
-            </Button>
-          );
-        })}
-      </div>
+      {buttons(IDENTITY_KINDS)}
       {!isActive && (
-        <small className="text-[10.5px] text-soft">Compte désactivé : réactivez-le pour générer un lien.</small>
+        <small className="text-[10.5px] text-soft">Compte désactivé : réactivez-le pour générer ces liens.</small>
       )}
+
+      <span className="mt-1 flex flex-col border-t pt-2.5">
+        <strong className="text-[12px]">Données personnelles (RGPD)</strong>
+        <small className="mt-0.5 text-[10.5px] leading-relaxed text-soft">
+          À la demande de la personne : un lien pour télécharger toutes ses données, ou pour supprimer son compte et ses
+          données. La suppression est définitive et irréversible ; la personne doit saisir son adresse e-mail complète pour
+          confirmer. Ces liens fonctionnent aussi pour un compte désactivé.
+        </small>
+      </span>
+      {buttons(PRIVACY_KINDS)}
 
       {issued && (
         <div className="flex flex-col gap-1.5">

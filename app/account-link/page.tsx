@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { CheckCircle2, LockKeyhole, Mail, ShieldCheck } from "lucide-react";
+import { CheckCircle2, Download, LockKeyhole, Mail, ShieldCheck, Trash2 } from "lucide-react";
 import { Logo } from "@/components/layout/logo";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { api, errorMessage } from "@/lib/api";
-import { clearAccountLinkToken, readAccountLinkToken } from "@/lib/account-links";
+import { clearAccountLinkToken, downloadJson, readAccountLinkToken } from "@/lib/account-links";
 import type { AccountLinkInfo } from "@/types";
 
 const MIN_PASSWORD = 8;
@@ -18,7 +18,8 @@ type Phase = "loading" | "invalid" | "ready" | "done";
 
 /**
  * Public page opened from a one-time link an admin gave to the person (no email involved).
- * The token is read from the URL fragment, checked with the API, then used once to set a new password or a new sign-in email.
+ * The token is read from the URL fragment, checked with the API, then used once to set a new password or a new sign-in email,
+ * to download the person's data (export), or to erase the account (the person types their full email to confirm).
  */
 export default function AccountLinkPage() {
   const [phase, setPhase] = useState<Phase>("loading");
@@ -47,11 +48,43 @@ export default function AccountLinkPage() {
   }, []);
 
   const isPassword = info?.purpose === "PasswordReset";
+  const isExport = info?.purpose === "DataExport";
+  const isDeletion = info?.purpose === "AccountDeletion";
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!token || !info) return;
     setError(null);
+
+    if (isExport) {
+      setSubmitting(true);
+      try {
+        const data = await api.accountLinks.exportData(token);
+        downloadJson(`bob1-mes-donnees-${new Date().toISOString().slice(0, 10)}.json`, data);
+        clearAccountLinkToken();
+        setPhase("done");
+      } catch (cause) {
+        setError(errorMessage(cause));
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    if (isDeletion) {
+      if (!value.trim()) return setError("Saisissez votre adresse e-mail complète pour confirmer.");
+      setSubmitting(true);
+      try {
+        await api.accountLinks.deleteAccount(token, value.trim());
+        clearAccountLinkToken();
+        setPhase("done");
+      } catch (cause) {
+        setError(errorMessage(cause));
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
 
     if (isPassword) {
       if (value.length < MIN_PASSWORD) return setError(`Le mot de passe doit contenir au moins ${MIN_PASSWORD} caractères.`);
@@ -103,13 +136,17 @@ export default function AccountLinkPage() {
             <CardHeader className="px-6 py-8">
               <CheckCircle2 className="mb-2 size-9 text-green" />
               <CardTitle role="heading" aria-level={1} className="font-display text-[22px] font-extrabold tracking-[-0.03em]">
-                {isPassword ? "Mot de passe modifié" : "Adresse e-mail modifiée"}
+                {isExport ? "Données téléchargées" : isDeletion ? "Compte supprimé" : isPassword ? "Mot de passe modifié" : "Adresse e-mail modifiée"}
               </CardTitle>
               <CardDescription className="text-[12.5px] leading-relaxed">
-                {isPassword
-                  ? "Votre mot de passe a été modifié. Reconnectez-vous dans l'application BOB1 avec ce nouveau mot de passe."
-                  : "Votre adresse e-mail a été modifiée. Reconnectez-vous dans l'application BOB1 avec cette nouvelle adresse."}
-                {" "}Vous avez été déconnecté(e) de vos appareils. Vous pouvez fermer cette page.
+                {isExport
+                  ? "Le fichier de vos données a été enregistré sur votre appareil. Ce lien n'est plus valable : conservez le fichier en lieu sûr, il contient des informations personnelles. Vous pouvez fermer cette page."
+                  : isDeletion
+                    ? "Votre compte et vos données personnelles ont été supprimés. Vous avez été déconnecté(e) de vos appareils. Vous pouvez fermer cette page."
+                    : (isPassword
+                        ? "Votre mot de passe a été modifié. Reconnectez-vous dans l'application BOB1 avec ce nouveau mot de passe."
+                        : "Votre adresse e-mail a été modifiée. Reconnectez-vous dans l'application BOB1 avec cette nouvelle adresse.") +
+                      " Vous avez été déconnecté(e) de vos appareils. Vous pouvez fermer cette page."}
               </CardDescription>
             </CardHeader>
           )}
@@ -119,52 +156,89 @@ export default function AccountLinkPage() {
               <CardHeader className="border-b px-6 py-6">
                 <span className="text-[10.5px] font-extrabold uppercase tracking-[0.12em] text-brand">Compte BOB1</span>
                 <CardTitle role="heading" aria-level={1} className="mt-1 font-display text-[25px] font-extrabold leading-tight tracking-[-0.03em]">
-                  {isPassword ? "Nouveau mot de passe" : "Nouvelle adresse e-mail"}
+                  {isExport ? "Télécharger mes données" : isDeletion ? "Supprimer mon compte" : isPassword ? "Nouveau mot de passe" : "Nouvelle adresse e-mail"}
                 </CardTitle>
                 <CardDescription className="text-[12.5px] leading-relaxed">
                   Bonjour {info.firstName}, ce lien concerne le compte <strong>{info.maskedEmail}</strong>.{" "}
-                  {isPassword
-                    ? `Choisissez un mot de passe d'au moins ${MIN_PASSWORD} caractères.`
-                    : "Saisissez l'adresse avec laquelle vous vous connecterez désormais. Vérifiez-la bien : aucun e-mail de confirmation n'est envoyé."}
+                  {isExport
+                    ? "Vous allez télécharger un fichier JSON avec toutes les données que BOB1 détient à votre sujet : compte, famille, inscriptions, covoiturages, notifications et points."
+                    : isDeletion
+                      ? "Votre compte et l'ensemble de vos données personnelles seront supprimés définitivement."
+                      : isPassword
+                        ? `Choisissez un mot de passe d'au moins ${MIN_PASSWORD} caractères.`
+                        : "Saisissez l'adresse avec laquelle vous vous connecterez désormais. Vérifiez-la bien : aucun e-mail de confirmation n'est envoyé."}
                 </CardDescription>
               </CardHeader>
 
               <CardContent className="px-6 py-6">
                 <form onSubmit={submit}>
                   <FieldGroup className="gap-4">
-                    <Field>
-                      <FieldLabel htmlFor="account-link-value">
-                        {isPassword ? "Nouveau mot de passe" : "Nouvelle adresse e-mail"}
-                      </FieldLabel>
-                      <InputGroup className="h-10">
-                        <InputGroupAddon>{isPassword ? <LockKeyhole /> : <Mail />}</InputGroupAddon>
-                        <InputGroupInput
-                          id="account-link-value"
-                          type={isPassword ? "password" : "email"}
-                          autoComplete={isPassword ? "new-password" : "email"}
-                          value={value}
-                          onChange={(event) => setValue(event.target.value)}
-                          required
-                        />
-                      </InputGroup>
-                    </Field>
+                    {isDeletion && (
+                      <>
+                        <Alert variant="danger">
+                          <AlertDescription className="text-current">
+                            Action définitive et irréversible : vos inscriptions, covoiturages, notifications et points seront effacés, et vous
+                            ne pourrez plus vous connecter. Pensez à télécharger vos données avant si vous le souhaitez.
+                          </AlertDescription>
+                        </Alert>
+                        <Field>
+                          <FieldLabel htmlFor="account-link-value">Votre adresse e-mail complète</FieldLabel>
+                          <InputGroup className="h-10">
+                            <InputGroupAddon>
+                              <Mail />
+                            </InputGroupAddon>
+                            <InputGroupInput
+                              id="account-link-value"
+                              type="email"
+                              autoComplete="off"
+                              placeholder={info.maskedEmail}
+                              value={value}
+                              onChange={(event) => setValue(event.target.value)}
+                              required
+                            />
+                          </InputGroup>
+                        </Field>
+                      </>
+                    )}
 
-                    <Field>
-                      <FieldLabel htmlFor="account-link-confirm">
-                        {isPassword ? "Confirmer le mot de passe" : "Confirmer l'adresse e-mail"}
-                      </FieldLabel>
-                      <InputGroup className="h-10">
-                        <InputGroupAddon>{isPassword ? <LockKeyhole /> : <Mail />}</InputGroupAddon>
-                        <InputGroupInput
-                          id="account-link-confirm"
-                          type={isPassword ? "password" : "email"}
-                          autoComplete={isPassword ? "new-password" : "off"}
-                          value={confirm}
-                          onChange={(event) => setConfirm(event.target.value)}
-                          required
-                        />
-                      </InputGroup>
-                    </Field>
+                    {!isExport && !isDeletion && (
+                      <>
+                        <Field>
+                          <FieldLabel htmlFor="account-link-value">
+                            {isPassword ? "Nouveau mot de passe" : "Nouvelle adresse e-mail"}
+                          </FieldLabel>
+                          <InputGroup className="h-10">
+                            <InputGroupAddon>{isPassword ? <LockKeyhole /> : <Mail />}</InputGroupAddon>
+                            <InputGroupInput
+                              id="account-link-value"
+                              type={isPassword ? "password" : "email"}
+                              autoComplete={isPassword ? "new-password" : "email"}
+                              value={value}
+                              onChange={(event) => setValue(event.target.value)}
+                              required
+                            />
+                          </InputGroup>
+                        </Field>
+
+                        <Field>
+                          <FieldLabel htmlFor="account-link-confirm">
+                            {isPassword ? "Confirmer le mot de passe" : "Confirmer l'adresse e-mail"}
+                          </FieldLabel>
+                          <InputGroup className="h-10">
+                            <InputGroupAddon>{isPassword ? <LockKeyhole /> : <Mail />}</InputGroupAddon>
+                            <InputGroupInput
+                              id="account-link-confirm"
+                              type={isPassword ? "password" : "email"}
+                              autoComplete={isPassword ? "new-password" : "off"}
+                              value={confirm}
+                              onChange={(event) => setConfirm(event.target.value)}
+                              required
+                            />
+                          </InputGroup>
+                        </Field>
+
+                      </>
+                    )}
 
                     {error && (
                       <Alert variant="danger">
@@ -172,8 +246,19 @@ export default function AccountLinkPage() {
                       </Alert>
                     )}
 
-                    <Button type="submit" disabled={submitting} className="mt-1 h-10 w-full">
-                      {submitting ? "Enregistrement…" : isPassword ? "Enregistrer le mot de passe" : "Enregistrer l'adresse"}
+                    <Button
+                      type="submit"
+                      variant={isDeletion ? "destructive" : "default"}
+                      disabled={submitting || (isDeletion && !value.trim())}
+                      className="mt-1 h-10 w-full"
+                    >
+                      {isExport && <Download />}
+                      {isDeletion && <Trash2 />}
+                      {isExport
+                        ? submitting ? "Préparation…" : "Télécharger mes données"
+                        : isDeletion
+                          ? submitting ? "Suppression…" : "Supprimer définitivement mon compte"
+                          : submitting ? "Enregistrement…" : isPassword ? "Enregistrer le mot de passe" : "Enregistrer l'adresse"}
                     </Button>
                   </FieldGroup>
                 </form>
