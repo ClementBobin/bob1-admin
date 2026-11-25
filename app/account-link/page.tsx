@@ -1,18 +1,17 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { CheckCircle2, Download, LockKeyhole, Mail, ShieldCheck, Trash2 } from "lucide-react";
+import { Check, CheckCircle2, Circle, Download, LockKeyhole, Mail, ShieldCheck, Trash2 } from "lucide-react";
 import { Logo } from "@/components/layout/logo";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
-import { api, errorMessage } from "@/lib/api";
+import { ApiError, api, errorMessage } from "@/lib/api";
 import { clearAccountLinkToken, downloadJson, readAccountLinkToken } from "@/lib/account-links";
+import { PASSWORD_API_MESSAGES, PASSWORD_MAX, PASSWORD_MIN, passwordRules } from "@/lib/password-policy";
 import type { AccountLinkInfo } from "@/types";
-
-const MIN_PASSWORD = 8;
 
 type Phase = "loading" | "invalid" | "ready" | "done";
 
@@ -50,6 +49,8 @@ export default function AccountLinkPage() {
   const isPassword = info?.purpose === "PasswordReset";
   const isExport = info?.purpose === "DataExport";
   const isDeletion = info?.purpose === "AccountDeletion";
+  const rules = isPassword ? passwordRules(value, info ? [info.firstName] : []) : [];
+  const passwordOk = rules.every((rule) => rule.ok);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -87,7 +88,7 @@ export default function AccountLinkPage() {
     }
 
     if (isPassword) {
-      if (value.length < MIN_PASSWORD) return setError(`Le mot de passe doit contenir au moins ${MIN_PASSWORD} caractères.`);
+      if (!passwordOk) return setError("Le mot de passe ne respecte pas toutes les règles ci-dessous.");
       if (value !== confirm) return setError("Les deux mots de passe ne sont pas identiques.");
     } else if (value.trim().toLowerCase() !== confirm.trim().toLowerCase()) {
       // No verification email is sent: a typo would lock the person out, so the address is typed twice.
@@ -101,7 +102,9 @@ export default function AccountLinkPage() {
       clearAccountLinkToken();
       setPhase("done");
     } catch (cause) {
-      setError(errorMessage(cause));
+      setError(isPassword && cause instanceof ApiError && cause.code && PASSWORD_API_MESSAGES[cause.code]
+        ? PASSWORD_API_MESSAGES[cause.code]
+        : errorMessage(cause));
     } finally {
       setSubmitting(false);
     }
@@ -165,7 +168,7 @@ export default function AccountLinkPage() {
                     : isDeletion
                       ? "Votre compte et l'ensemble de vos données personnelles seront supprimés définitivement."
                       : isPassword
-                        ? `Choisissez un mot de passe d'au moins ${MIN_PASSWORD} caractères.`
+                        ? `Choisissez un mot de passe d'au moins ${PASSWORD_MIN} caractères, difficile à deviner : une phrase de passe fonctionne très bien.`
                         : "Saisissez l'adresse avec laquelle vous vous connecterez désormais. Vérifiez-la bien : aucun e-mail de confirmation n'est envoyé."}
                 </CardDescription>
               </CardHeader>
@@ -213,12 +216,25 @@ export default function AccountLinkPage() {
                               id="account-link-value"
                               type={isPassword ? "password" : "email"}
                               autoComplete={isPassword ? "new-password" : "email"}
+                              maxLength={isPassword ? PASSWORD_MAX : undefined}
+                              aria-describedby={isPassword ? "account-link-rules" : undefined}
                               value={value}
                               onChange={(event) => setValue(event.target.value)}
                               required
                             />
                           </InputGroup>
                         </Field>
+
+                        {isPassword && (
+                          <ul id="account-link-rules" className="grid gap-1 rounded-lg bg-muted px-3 py-2.5 text-[11.5px]">
+                            {rules.map((rule) => (
+                              <li key={rule.id} className={rule.ok ? "flex items-center gap-1.5 text-green" : "flex items-center gap-1.5 text-soft"}>
+                                {rule.ok ? <Check className="size-3.5 shrink-0" /> : <Circle className="size-3.5 shrink-0" />}
+                                {rule.label}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
 
                         <Field>
                           <FieldLabel htmlFor="account-link-confirm">
@@ -230,6 +246,7 @@ export default function AccountLinkPage() {
                               id="account-link-confirm"
                               type={isPassword ? "password" : "email"}
                               autoComplete={isPassword ? "new-password" : "off"}
+                              maxLength={isPassword ? PASSWORD_MAX : undefined}
                               value={confirm}
                               onChange={(event) => setConfirm(event.target.value)}
                               required
@@ -249,7 +266,7 @@ export default function AccountLinkPage() {
                     <Button
                       type="submit"
                       variant={isDeletion ? "destructive" : "default"}
-                      disabled={submitting || (isDeletion && !value.trim())}
+                      disabled={submitting || (isDeletion && !value.trim()) || (isPassword && !passwordOk)}
                       className="mt-1 h-10 w-full"
                     >
                       {isExport && <Download />}
